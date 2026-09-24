@@ -3669,3 +3669,28 @@ main {
   .lp-cta-buttons { flex-direction: column; align-items: center; }
   .lp-cta-phone, .lp-cta-wa { width: 100%; max-width: 300px; justify-content: center; }
 }
+
+/* Dropdown navigation (service/area pages). These classes were in the page HTML but had no styles,
+   so every sub-link spilled into the header. Desktop: hover/focus dropdown. Mobile: parent links only. */
+.nav-item-dropdown { position: relative; display: flex; align-items: center; }
+.nav-dropdown-menu {
+  display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 1000;
+  min-width: 230px; max-height: 70vh; overflow-y: auto;
+  flex-direction: column; gap: 2px; padding: 0.5rem;
+  background: #fff; border: 1px solid var(--border); border-radius: 0.75rem; box-shadow: var(--shadow-md);
+}
+.nav-item-dropdown::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 8px; }
+.nav-item-dropdown:hover > .nav-dropdown-menu,
+.nav-item-dropdown:focus-within > .nav-dropdown-menu { display: flex; }
+.site-nav .nav-dropdown-menu a { display: block; white-space: nowrap; font-size: 14px; padding: 0.45rem 0.75rem; border-radius: 0.5rem; }
+@media (max-width: 720px) {
+  .nav-item-dropdown { display: block; }
+  .site-nav .nav-item-dropdown > a { display: block; padding: 0.75rem 1rem; font-size: 1rem; }
+  .nav-item-dropdown::after { display: none; }
+  .nav-dropdown-menu, .nav-item-dropdown:hover > .nav-dropdown-menu, .nav-item-dropdown:focus-within > .nav-dropdown-menu { display: none; }
+}
+
+/* Booking section: its two-column layout was set inline and never stacked, so the form was cut off on phones. */
+@media (max-width: 900px) {
+  #get-a-quote div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; gap: 2rem !important; }
+}

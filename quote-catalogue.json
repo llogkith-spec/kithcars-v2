@@ -1,0 +1,1308 @@
+{
+ "_readme": "KITH instant-quote price book. Edit numbers here; the website and the AI estimate both read this file. All customer-facing prices include VAT. Labour follows SOP v8 retail: LOW tier for servicing and brakes, TOP for everything else; multiplier x2 under 2.0 hrs, x1.5 at 2.0 hrs and over; 'x2' jobs are always x2. Hours and parts ranges per vehicle size are STARTING ASSUMPTIONS to be checked by KITH before launch.",
+ "version": "2026-09-22",
+ "rates_inc_vat": {
+  "LOW": 60,
+  "TOP": 84,
+  "BODY": 108
+ },
+ "threshold_hours": 2.0,
+ "dealer": {
+  "labour_rate_inc_vat": 190,
+  "parts_factor": 1.35,
+  "show_if_saving_at_least": 0.1
+ },
+ "bands": {
+  "small": {
+   "label": "Small car",
+   "hint": "Fiesta, Corsa, Polo, Yaris"
+  },
+  "medium": {
+   "label": "Family car / estate",
+   "hint": "Focus, Golf, Astra, Qashqai"
+  },
+  "large": {
+   "label": "SUV / 7-seater",
+   "hint": "Kuga, Tiguan, Zafira, Sportage"
+  },
+  "prestige": {
+   "label": "Prestige / performance",
+   "hint": "BMW, Mercedes, Audi, Land Rover"
+  },
+  "van": {
+   "label": "Van",
+   "hint": "Transit, Vivaro, Sprinter, NV200"
+  }
+ },
+ "body_panels_ex_vat": {
+  "roof": 400,
+  "boot": 350,
+  "front-bumper": 320,
+  "bonnet": 300,
+  "door": 300,
+  "rear-bumper": 275,
+  "front-wing": 275,
+  "rear-quarter": 275,
+  "trim": 200
+ },
+ "body_band_surcharge_ex_vat": {
+  "small": 0,
+  "medium": 0,
+  "prestige": 0,
+  "large": 40,
+  "van": 100
+ },
+ "body_blend_ex_vat": {
+  "default": 50,
+  "door": 100
+ },
+ "categories": [
+  {
+   "id": "bodywork",
+   "label": "Bodywork",
+   "blurb": "Bumpers, panels, dents, scratches, accident repair"
+  },
+  {
+   "id": "mechanical",
+   "label": "Mechanical",
+   "blurb": "Brakes, clutch, timing, suspension, electrics"
+  },
+  {
+   "id": "servicing",
+   "label": "Servicing & MOT",
+   "blurb": "Interim, full and major services, MOT"
+  },
+  {
+   "id": "tyres",
+   "label": "Tyres",
+   "blurb": "Supply and fit, any size"
+  },
+  {
+   "id": "tuning",
+   "label": "Tuning",
+   "blurb": "ECU remaps, lowering, coilovers, wheels"
+  }
+ ],
+ "jobs": [
+  {
+   "id": "panel-front-bumper",
+   "cat": "bodywork",
+   "name": "Front bumper repair & paint",
+   "type": "panel",
+   "panel": "front-bumper"
+  },
+  {
+   "id": "panel-rear-bumper",
+   "cat": "bodywork",
+   "name": "Rear bumper repair & paint",
+   "type": "panel",
+   "panel": "rear-bumper"
+  },
+  {
+   "id": "panel-door",
+   "cat": "bodywork",
+   "name": "Door repair & paint",
+   "type": "panel",
+   "panel": "door"
+  },
+  {
+   "id": "panel-front-wing",
+   "cat": "bodywork",
+   "name": "Front wing repair & paint",
+   "type": "panel",
+   "panel": "front-wing"
+  },
+  {
+   "id": "panel-rear-quarter",
+   "cat": "bodywork",
+   "name": "Rear quarter repair & paint",
+   "type": "panel",
+   "panel": "rear-quarter"
+  },
+  {
+   "id": "panel-bonnet",
+   "cat": "bodywork",
+   "name": "Bonnet repair & paint",
+   "type": "panel",
+   "panel": "bonnet"
+  },
+  {
+   "id": "panel-boot",
+   "cat": "bodywork",
+   "name": "Boot / tailgate repair & paint",
+   "type": "panel",
+   "panel": "boot"
+  },
+  {
+   "id": "panel-roof",
+   "cat": "bodywork",
+   "name": "Roof repair & paint",
+   "type": "panel",
+   "panel": "roof"
+  },
+  {
+   "id": "dent",
+   "cat": "bodywork",
+   "name": "Dent repair (per dent)",
+   "type": "fixed-range",
+   "low": 60,
+   "high": 600,
+   "note": "Small dings with the paint intact sit at the low end; creased or painted repairs cost more."
+  },
+  {
+   "id": "accident",
+   "cat": "bodywork",
+   "name": "Accident damage (insurance or private)",
+   "type": "photo",
+   "note": "Send us photos and we'll price it properly. We can deal with your insurer for you."
+  },
+  {
+   "id": "brake-pads-front",
+   "cat": "mechanical",
+   "name": "Front brake pads",
+   "type": "labour",
+   "tier": "LOW",
+   "ai": true,
+   "hours": {
+    "small": [
+     0.5,
+     0.7
+    ],
+    "medium": [
+     0.6,
+     0.8
+    ],
+    "large": [
+     0.7,
+     0.9
+    ],
+    "prestige": [
+     0.7,
+     1.0
+    ],
+    "van": [
+     0.7,
+     0.9
+    ]
+   },
+   "parts": {
+    "small": [
+     30,
+     55
+    ],
+    "medium": [
+     40,
+     70
+    ],
+    "large": [
+     55,
+     95
+    ],
+    "prestige": [
+     75,
+     150
+    ],
+    "van": [
+     50,
+     90
+    ]
+   }
+  },
+  {
+   "id": "brake-discs-front",
+   "cat": "mechanical",
+   "name": "Front brake discs & pads",
+   "type": "labour",
+   "tier": "LOW",
+   "ai": true,
+   "hours": {
+    "small": [
+     0.8,
+     1.1
+    ],
+    "medium": [
+     0.9,
+     1.2
+    ],
+    "large": [
+     1.0,
+     1.4
+    ],
+    "prestige": [
+     1.1,
+     1.5
+    ],
+    "van": [
+     1.0,
+     1.4
+    ]
+   },
+   "parts": {
+    "small": [
+     80,
+     140
+    ],
+    "medium": [
+     100,
+     170
+    ],
+    "large": [
+     140,
+     240
+    ],
+    "prestige": [
+     190,
+     380
+    ],
+    "van": [
+     130,
+     220
+    ]
+   }
+  },
+  {
+   "id": "brake-discs-rear",
+   "cat": "mechanical",
+   "name": "Rear brake discs & pads",
+   "type": "labour",
+   "tier": "LOW",
+   "ai": true,
+   "hours": {
+    "small": [
+     0.9,
+     1.3
+    ],
+    "medium": [
+     1.0,
+     1.4
+    ],
+    "large": [
+     1.1,
+     1.5
+    ],
+    "prestige": [
+     1.2,
+     1.7
+    ],
+    "van": [
+     1.1,
+     1.5
+    ]
+   },
+   "parts": {
+    "small": [
+     75,
+     130
+    ],
+    "medium": [
+     90,
+     160
+    ],
+    "large": [
+     130,
+     220
+    ],
+    "prestige": [
+     170,
+     340
+    ],
+    "van": [
+     120,
+     210
+    ]
+   }
+  },
+  {
+   "id": "clutch",
+   "cat": "mechanical",
+   "name": "Clutch replacement",
+   "type": "labour",
+   "tier": "TOP",
+   "ai": true,
+   "hours": {
+    "small": [
+     3.5,
+     4.5
+    ],
+    "medium": [
+     4.0,
+     5.5
+    ],
+    "large": [
+     5.0,
+     7.0
+    ],
+    "prestige": [
+     5.5,
+     8.0
+    ],
+    "van": [
+     4.5,
+     6.5
+    ]
+   },
+   "parts": {
+    "small": [
+     170,
+     300
+    ],
+    "medium": [
+     220,
+     420
+    ],
+    "large": [
+     320,
+     700
+    ],
+    "prestige": [
+     450,
+     950
+    ],
+    "van": [
+     300,
+     650
+    ]
+   },
+   "note": "Upper end allows for a dual mass flywheel. We check it when the gearbox is out and confirm before fitting."
+  },
+  {
+   "id": "cambelt",
+   "cat": "mechanical",
+   "name": "Cambelt & water pump",
+   "type": "labour",
+   "tier": "TOP",
+   "ai": true,
+   "hours": {
+    "small": [
+     2.2,
+     3.0
+    ],
+    "medium": [
+     2.5,
+     3.5
+    ],
+    "large": [
+     3.0,
+     4.5
+    ],
+    "prestige": [
+     3.5,
+     5.0
+    ],
+    "van": [
+     3.0,
+     4.5
+    ]
+   },
+   "parts": {
+    "small": [
+     110,
+     190
+    ],
+    "medium": [
+     130,
+     230
+    ],
+    "large": [
+     160,
+     300
+    ],
+    "prestige": [
+     200,
+     380
+    ],
+    "van": [
+     150,
+     280
+    ]
+   }
+  },
+  {
+   "id": "timing-chain",
+   "cat": "mechanical",
+   "name": "Timing chain replacement",
+   "type": "labour",
+   "tier": "TOP",
+   "ai": true,
+   "confidence": "low",
+   "hours": {
+    "small": [
+     4.0,
+     7.0
+    ],
+    "medium": [
+     5.0,
+     9.0
+    ],
+    "large": [
+     7.0,
+     12.0
+    ],
+    "prestige": [
+     8.0,
+     14.0
+    ],
+    "van": [
+     6.0,
+     10.0
+    ]
+   },
+   "parts": {
+    "small": [
+     220,
+     450
+    ],
+    "medium": [
+     280,
+     600
+    ],
+    "large": [
+     400,
+     850
+    ],
+    "prestige": [
+     500,
+     1100
+    ],
+    "van": [
+     350,
+     700
+    ]
+   },
+   "note": "Varies a lot by engine. Some chains sit at the back and need the engine out, which we confirm before quoting in writing."
+  },
+  {
+   "id": "wheel-bearing",
+   "cat": "mechanical",
+   "name": "Wheel bearing (one side)",
+   "type": "labour",
+   "tier": "TOP",
+   "x2": true,
+   "ai": true,
+   "hours": {
+    "small": [
+     0.8,
+     1.3
+    ],
+    "medium": [
+     1.0,
+     1.5
+    ],
+    "large": [
+     1.2,
+     1.8
+    ],
+    "prestige": [
+     1.3,
+     2.0
+    ],
+    "van": [
+     1.2,
+     1.8
+    ]
+   },
+   "parts": {
+    "small": [
+     40,
+     80
+    ],
+    "medium": [
+     50,
+     100
+    ],
+    "large": [
+     70,
+     150
+    ],
+    "prestige": [
+     90,
+     200
+    ],
+    "van": [
+     70,
+     140
+    ]
+   }
+  },
+  {
+   "id": "shocks-front",
+   "cat": "mechanical",
+   "name": "Front shock absorbers (pair)",
+   "type": "labour",
+   "tier": "TOP",
+   "x2": true,
+   "ai": true,
+   "hours": {
+    "small": [
+     1.2,
+     1.8
+    ],
+    "medium": [
+     1.4,
+     2.0
+    ],
+    "large": [
+     1.6,
+     2.4
+    ],
+    "prestige": [
+     1.8,
+     2.8
+    ],
+    "van": [
+     1.6,
+     2.4
+    ]
+   },
+   "parts": {
+    "small": [
+     90,
+     170
+    ],
+    "medium": [
+     110,
+     220
+    ],
+    "large": [
+     160,
+     320
+    ],
+    "prestige": [
+     220,
+     500
+    ],
+    "van": [
+     150,
+     300
+    ]
+   }
+  },
+  {
+   "id": "springs-front",
+   "cat": "mechanical",
+   "name": "Front coil springs (pair)",
+   "type": "labour",
+   "tier": "TOP",
+   "x2": true,
+   "ai": true,
+   "hours": {
+    "small": [
+     1.2,
+     1.8
+    ],
+    "medium": [
+     1.4,
+     2.0
+    ],
+    "large": [
+     1.6,
+     2.4
+    ],
+    "prestige": [
+     1.8,
+     2.8
+    ],
+    "van": [
+     1.6,
+     2.4
+    ]
+   },
+   "parts": {
+    "small": [
+     50,
+     100
+    ],
+    "medium": [
+     60,
+     120
+    ],
+    "large": [
+     90,
+     180
+    ],
+    "prestige": [
+     120,
+     250
+    ],
+    "van": [
+     90,
+     180
+    ]
+   }
+  },
+  {
+   "id": "alternator",
+   "cat": "mechanical",
+   "name": "Alternator replacement",
+   "type": "labour",
+   "tier": "TOP",
+   "ai": true,
+   "hours": {
+    "small": [
+     0.8,
+     1.5
+    ],
+    "medium": [
+     1.0,
+     1.8
+    ],
+    "large": [
+     1.2,
+     2.5
+    ],
+    "prestige": [
+     1.5,
+     3.0
+    ],
+    "van": [
+     1.2,
+     2.2
+    ]
+   },
+   "parts": {
+    "small": [
+     140,
+     260
+    ],
+    "medium": [
+     170,
+     320
+    ],
+    "large": [
+     220,
+     420
+    ],
+    "prestige": [
+     300,
+     600
+    ],
+    "van": [
+     200,
+     380
+    ]
+   }
+  },
+  {
+   "id": "battery",
+   "cat": "mechanical",
+   "name": "Battery replacement (incl. coding)",
+   "type": "labour",
+   "tier": "TOP",
+   "ai": true,
+   "hours": {
+    "small": [
+     0.3,
+     0.5
+    ],
+    "medium": [
+     0.3,
+     0.5
+    ],
+    "large": [
+     0.4,
+     0.7
+    ],
+    "prestige": [
+     0.5,
+     0.8
+    ],
+    "van": [
+     0.4,
+     0.6
+    ]
+   },
+   "parts": {
+    "small": [
+     90,
+     140
+    ],
+    "medium": [
+     110,
+     180
+    ],
+    "large": [
+     150,
+     240
+    ],
+    "prestige": [
+     180,
+     300
+    ],
+    "van": [
+     140,
+     220
+    ]
+   }
+  },
+  {
+   "id": "exhaust-backbox",
+   "cat": "mechanical",
+   "name": "Exhaust back box",
+   "type": "labour",
+   "tier": "TOP",
+   "ai": true,
+   "hours": {
+    "small": [
+     0.5,
+     0.9
+    ],
+    "medium": [
+     0.6,
+     1.0
+    ],
+    "large": [
+     0.7,
+     1.2
+    ],
+    "prestige": [
+     0.8,
+     1.4
+    ],
+    "van": [
+     0.7,
+     1.2
+    ]
+   },
+   "parts": {
+    "small": [
+     55,
+     120
+    ],
+    "medium": [
+     70,
+     150
+    ],
+    "large": [
+     100,
+     220
+    ],
+    "prestige": [
+     150,
+     400
+    ],
+    "van": [
+     90,
+     200
+    ]
+   }
+  },
+  {
+   "id": "warning-light",
+   "cat": "mechanical",
+   "name": "Warning light / fault finding",
+   "type": "diagnose",
+   "note": "Every fault is different, so we start with a diagnostic check and quote the repair in writing before any work."
+  },
+  {
+   "id": "dpf",
+   "cat": "mechanical",
+   "name": "DPF light / loss of power (diesel)",
+   "type": "diagnose",
+   "note": "We check the soot load and sensors first, then quote the right fix. We never remove DPFs."
+  },
+  {
+   "id": "service-interim",
+   "cat": "servicing",
+   "name": "Interim service",
+   "type": "labour",
+   "tier": "LOW",
+   "ai": true,
+   "hours": {
+    "small": [
+     0.8,
+     1.0
+    ],
+    "medium": [
+     0.9,
+     1.1
+    ],
+    "large": [
+     1.0,
+     1.2
+    ],
+    "prestige": [
+     1.0,
+     1.3
+    ],
+    "van": [
+     1.0,
+     1.3
+    ]
+   },
+   "parts": {
+    "small": [
+     35,
+     60
+    ],
+    "medium": [
+     45,
+     75
+    ],
+    "large": [
+     60,
+     95
+    ],
+    "prestige": [
+     80,
+     140
+    ],
+    "van": [
+     60,
+     100
+    ]
+   }
+  },
+  {
+   "id": "service-full",
+   "cat": "servicing",
+   "name": "Full service",
+   "type": "labour",
+   "tier": "LOW",
+   "ai": true,
+   "hours": {
+    "small": [
+     1.2,
+     1.5
+    ],
+    "medium": [
+     1.3,
+     1.7
+    ],
+    "large": [
+     1.5,
+     2.0
+    ],
+    "prestige": [
+     1.6,
+     2.2
+    ],
+    "van": [
+     1.5,
+     2.0
+    ]
+   },
+   "parts": {
+    "small": [
+     55,
+     90
+    ],
+    "medium": [
+     65,
+     110
+    ],
+    "large": [
+     85,
+     140
+    ],
+    "prestige": [
+     110,
+     190
+    ],
+    "van": [
+     85,
+     140
+    ]
+   }
+  },
+  {
+   "id": "service-major",
+   "cat": "servicing",
+   "name": "Major service",
+   "type": "labour",
+   "tier": "LOW",
+   "ai": true,
+   "hours": {
+    "small": [
+     1.8,
+     2.4
+    ],
+    "medium": [
+     2.0,
+     2.8
+    ],
+    "large": [
+     2.4,
+     3.2
+    ],
+    "prestige": [
+     2.6,
+     3.6
+    ],
+    "van": [
+     2.4,
+     3.2
+    ]
+   },
+   "parts": {
+    "small": [
+     90,
+     150
+    ],
+    "medium": [
+     110,
+     180
+    ],
+    "large": [
+     140,
+     230
+    ],
+    "prestige": [
+     180,
+     300
+    ],
+    "van": [
+     140,
+     230
+    ]
+   }
+  },
+  {
+   "id": "mot",
+   "cat": "servicing",
+   "name": "MOT test",
+   "type": "fixed",
+   "price": 54.85,
+   "label": "£54.85 max",
+   "note": "Never more than the DVSA maximum fee."
+  },
+  {
+   "id": "tyres",
+   "cat": "tyres",
+   "name": "Tyre supply & fitting",
+   "type": "tyres",
+   "fit_each": 20,
+   "note": "Fitting, balancing and a new valve for £20 a tyre. Tell us your size and we'll send prices for budget, mid-range and premium tyres."
+  },
+  {
+   "id": "remap",
+   "cat": "tuning",
+   "name": "Stage 1 / Stage 2 ECU remap",
+   "type": "enquiry",
+   "note": "We health-check the car first and quote once we know the engine and the map available. We never remove DPF, EGR or AdBlue systems."
+  },
+  {
+   "id": "lowering-springs",
+   "cat": "tuning",
+   "name": "Lowering springs fitted",
+   "type": "labour",
+   "tier": "TOP",
+   "x2": true,
+   "labour_only": true,
+   "hours": {
+    "small": [
+     2.0,
+     3.0
+    ],
+    "medium": [
+     2.2,
+     3.2
+    ],
+    "large": [
+     2.5,
+     3.5
+    ],
+    "prestige": [
+     2.5,
+     4.0
+    ],
+    "van": [
+     2.5,
+     3.5
+    ]
+   },
+   "note": "Fitting price. Supply your own springs or we'll source them. Wheel alignment is advised afterwards."
+  },
+  {
+   "id": "coilovers",
+   "cat": "tuning",
+   "name": "Coilovers fitted & set up",
+   "type": "labour",
+   "tier": "TOP",
+   "x2": true,
+   "labour_only": true,
+   "hours": {
+    "small": [
+     2.5,
+     3.5
+    ],
+    "medium": [
+     2.8,
+     4.0
+    ],
+    "large": [
+     3.0,
+     4.5
+    ],
+    "prestige": [
+     3.5,
+     5.0
+    ],
+    "van": [
+     3.0,
+     4.5
+    ]
+   },
+   "note": "Fitting and ride-height set-up. Parts supplied by you or sourced by us. Wheel alignment is advised afterwards."
+  },
+  {
+   "id": "wheels-fit",
+   "cat": "tuning",
+   "name": "Fit a set of alloy wheels",
+   "type": "fixed",
+   "price": 80,
+   "label": "£80",
+   "note": "Four wheels fitted and balanced at £20 each. Tyres transferred or supplied separately."
+  }
+ ],
+ "draft": true,
+ "coupon": {
+  "amount": 50,
+  "min_spend": 150,
+  "code": "KITHWEB50",
+  "hold_minutes": 15,
+  "_note": "Shown as '£50 off if you book online now' with a hold timer. min_spend is a suggestion - confirm."
+ },
+ "booking": {
+  "open_days": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6
+  ],
+  "book_ahead_days": 21,
+  "slots": {
+   "mechanical": {
+    "weekday": [
+     "08:30",
+     "09:30",
+     "10:30",
+     "11:30",
+     "13:30",
+     "14:30",
+     "15:30"
+    ],
+    "saturday": [
+     "08:30",
+     "09:30",
+     "10:30",
+     "11:30"
+    ]
+   },
+   "bodywork": {
+    "weekday": [
+     "08:30",
+     "09:00",
+     "09:30",
+     "10:00"
+    ],
+    "saturday": [
+     "09:00",
+     "09:30"
+    ]
+   }
+  },
+  "_note": "Bodywork times are drop-offs (the car stays in). Confirm these against how the workshop actually books."
+ },
+ "crm": {
+  "supabase_url": "",
+  "anon_key": "",
+  "table": "jobs",
+  "_note": "Fill these in to write web leads straight into the CRM's jobs table. Leads are emailed either way."
+ },
+ "tyres": {
+  "widths": [
+   155,
+   165,
+   175,
+   185,
+   195,
+   205,
+   215,
+   225,
+   235,
+   245,
+   255,
+   265,
+   275,
+   285
+  ],
+  "profiles": [
+   30,
+   35,
+   40,
+   45,
+   50,
+   55,
+   60,
+   65,
+   70
+  ],
+  "rims": [
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20,
+   21
+  ],
+  "fit_each": 20,
+  "mid_by_rim": {
+   "14": 62,
+   "15": 70,
+   "16": 82,
+   "17": 98,
+   "18": 118,
+   "19": 140,
+   "20": 165,
+   "21": 190
+  },
+  "width_factor_per_mm": 0.004,
+  "runflat_multiplier": 1.3,
+  "tiers": [
+   {
+    "id": "budget",
+    "label": "Budget",
+    "sub": "Reliable everyday tyres",
+    "mult": 0.72
+   },
+   {
+    "id": "mid",
+    "label": "Mid-range",
+    "sub": "Good grip and wear, our usual recommendation",
+    "mult": 1.0
+   },
+   {
+    "id": "premium",
+    "label": "Premium",
+    "sub": "Michelin, Continental, Pirelli, Bridgestone",
+    "mult": 1.45
+   }
+  ],
+  "_note": "DRAFT tyre prices, inc VAT per tyre before fitting. Check against your supplier before removing the draft banner."
+ },
+ "bodywork_damage": [
+  {
+   "id": "scuff",
+   "label": "Scuff or scratch",
+   "paint": true
+  },
+  {
+   "id": "dent",
+   "label": "Dent, paint not broken",
+   "dent": true
+  },
+  {
+   "id": "dentp",
+   "label": "Dent and paint damage",
+   "paint": true,
+   "dent": true
+  },
+  {
+   "id": "replace",
+   "label": "Cracked or needs replacing",
+   "paint": true,
+   "part": true
+  }
+ ],
+ "tuning": {
+  "fuels": [
+   {
+    "id": "tp",
+    "label": "Turbo petrol",
+    "s1": [
+     0.18,
+     0.28
+    ],
+    "s2": [
+     0.28,
+     0.42
+    ]
+   },
+   {
+    "id": "td",
+    "label": "Turbo diesel",
+    "s1": [
+     0.2,
+     0.3
+    ],
+    "s2": [
+     0.28,
+     0.4
+    ]
+   },
+   {
+    "id": "na",
+    "label": "Non-turbo petrol",
+    "s1": [
+     0.04,
+     0.08
+    ],
+    "s2": [
+     0.07,
+     0.12
+    ]
+   }
+  ],
+  "stages": [
+   {
+    "id": "s1",
+    "label": "Stage 1",
+    "text": "ECU remap on a standard car. More power and torque with no hardware changes.",
+    "price": [
+     300,
+     450
+    ]
+   },
+   {
+    "id": "s2",
+    "label": "Stage 2",
+    "text": "Remap plus supporting hardware: induction, intake ducting and exhaust flow. The biggest gains.",
+    "price": [
+     750,
+     1400
+    ],
+    "flag": "Our speciality"
+   }
+  ],
+  "addons": [
+   {
+    "id": "springs",
+    "label": "Lowering springs, fitted",
+    "sub": "Lower stance with a sharper ride",
+    "price": [
+     250,
+     450
+    ]
+   },
+   {
+    "id": "coilovers",
+    "label": "Coilovers, fitted",
+    "sub": "Adjustable height and damping",
+    "price": [
+     750,
+     1500
+    ]
+   },
+   {
+    "id": "wheels",
+    "label": "Wheel fitting & balancing",
+    "sub": "Your new wheels fitted, set of 4",
+    "price": [
+     80,
+     120
+    ]
+   },
+   {
+    "id": "bodykit",
+    "label": "Body kit",
+    "sub": "Supplied, fitted and painted",
+    "quote_after": true
+   }
+  ],
+  "_note": "DRAFT tuning prices and power gains, inc VAT. Confirm before removing the draft banner."
+ }
+}
