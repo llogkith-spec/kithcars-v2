@@ -1,6 +1,6 @@
 {
  "_readme": "KITH instant-quote price book. Edit numbers here; the website and the AI estimate both read this file. All customer-facing prices include VAT. Labour follows SOP v8 retail: LOW tier for servicing and brakes, TOP for everything else; multiplier x2 under 2.0 hrs, x1.5 at 2.0 hrs and over; 'x2' jobs are always x2. Hours and parts ranges per vehicle size are STARTING ASSUMPTIONS to be checked by KITH before launch.",
- "version": "2026-09-22",
+ "version": "2026-09-25",
  "rates_inc_vat": {
   "LOW": 60,
   "TOP": 84,
@@ -578,6 +578,60 @@
    }
   },
   {
+   "id": "droplinks-front",
+   "cat": "mechanical",
+   "name": "Front drop links (pair)",
+   "type": "labour",
+   "tier": "TOP",
+   "x2": true,
+   "ai": true,
+   "hours": {
+    "small": [
+     0.4,
+     0.6
+    ],
+    "medium": [
+     0.4,
+     0.7
+    ],
+    "large": [
+     0.5,
+     0.8
+    ],
+    "prestige": [
+     0.5,
+     0.9
+    ],
+    "van": [
+     0.5,
+     0.8
+    ]
+   },
+   "parts": {
+    "small": [
+     30,
+     60
+    ],
+    "medium": [
+     35,
+     70
+    ],
+    "large": [
+     40,
+     85
+    ],
+    "prestige": [
+     50,
+     110
+    ],
+    "van": [
+     40,
+     85
+    ]
+   },
+   "note": "Knocking over bumps is usually a drop link before it is anything dearer."
+  },
+  {
    "id": "springs-front",
    "cat": "mechanical",
    "name": "Front coil springs (pair)",
@@ -961,9 +1015,9 @@
    "cat": "servicing",
    "name": "MOT test",
    "type": "fixed",
-   "price": 54.85,
-   "label": "£54.85 max",
-   "note": "Never more than the DVSA maximum fee."
+   "price": 50,
+   "label": "£50",
+   "note": "MOT is outside VAT, so £50 is the whole price. The DVSA maximum is £54.85."
   },
   {
    "id": "tyres",
@@ -1182,9 +1236,16 @@
     "mult": 1.45
    }
   ],
-  "_note": "DRAFT tyre prices, inc VAT per tyre before fitting. Check against your supplier before removing the draft banner."
+  "_note": "DRAFT tyre prices, inc VAT per tyre before fitting. Check against your supplier before removing the draft banner.",
+  "price_list": {}
  },
  "bodywork_damage": [
+  {
+   "id": "smart",
+   "label": "Small scuff, SMART repair",
+   "flat": 300,
+   "hint": "Localised repair on the panel, no panel removal. Best for a scuff or scrape smaller than a phone."
+  },
   {
    "id": "scuff",
    "label": "Scuff or scratch",
@@ -1251,50 +1312,47 @@
    {
     "id": "s1",
     "label": "Stage 1",
-    "text": "ECU remap on a standard car. More power and torque with no hardware changes.",
+    "text": "ECU remap on a standard car. More power and torque with no hardware changes. Fixed price, inc VAT.",
     "price": [
-     300,
-     450
+     240,
+     240
     ]
    },
    {
     "id": "s2",
     "label": "Stage 2",
-    "text": "Remap plus supporting hardware: induction, intake ducting and exhaust flow. The biggest gains.",
+    "text": "Remap for a car running supporting hardware. Fixed price for the remap, inc VAT; any hardware you need is quoted separately.",
     "price": [
-     750,
-     1400
+     360,
+     360
     ],
     "flag": "Our speciality"
    }
   ],
   "addons": [
    {
+    "id": "s2hw",
+    "label": "Stage 2 hardware",
+    "sub": "Intake, ducting and exhaust work",
+    "quote_after": true
+   },
+   {
     "id": "springs",
     "label": "Lowering springs, fitted",
     "sub": "Lower stance with a sharper ride",
-    "price": [
-     250,
-     450
-    ]
+    "quote_after": true
    },
    {
     "id": "coilovers",
     "label": "Coilovers, fitted",
     "sub": "Adjustable height and damping",
-    "price": [
-     750,
-     1500
-    ]
+    "quote_after": true
    },
    {
     "id": "wheels",
     "label": "Wheel fitting & balancing",
     "sub": "Your new wheels fitted, set of 4",
-    "price": [
-     80,
-     120
-    ]
+    "quote_after": true
    },
    {
     "id": "bodykit",
@@ -1304,5 +1362,6 @@
    }
   ],
   "_note": "DRAFT tuning prices and power gains, inc VAT. Confirm before removing the draft banner."
- }
+ },
+ "mech_headroom": 0.35
 }

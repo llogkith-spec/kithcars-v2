@@ -13,10 +13,30 @@ t('panel door small: 300 ex -> 360 inc, blend both sides +100 each ex', () => {
 t('panel SUV surcharge +40 ex', () => assert.strictEqual(E.priceJob(cat, 'panel-front-bumper', 'large').low, Math.round(360 * 1.2)));
 t('van surcharge +100 ex', () => assert.strictEqual(E.priceJob(cat, 'panel-rear-bumper', 'van').low, Math.round(375 * 1.2)));
 t('tyres £20 each', () => assert.strictEqual(E.priceJob(cat, 'tyres', 'small', { qty: 4 }).low, 80));
-t('mot fixed', () => assert.strictEqual(E.priceJob(cat, 'mot', 'medium').low, 54.85));
-t('labour job rounds outward to £5', () => {
-  const r = E.priceJob(cat, 'brake-pads-front', 'small'); // 0.5x2x60=60+30=90 ; 0.7x2x60=84+55=139 -> 140
-  assert.strictEqual(r.low, 90); assert.strictEqual(r.high, 140); });
+t('mot fixed at £50', () => assert.strictEqual(E.priceJob(cat, 'mot', 'medium').low, 50));
+t('labour job: rate-card anchor, +35% headroom, rounded outward to £5', () => {
+  // small front pads: mid 0.6h x2 x £60 = £72 labour + mid parts £42.50 = £114.50 anchor
+  const r = E.priceJob(cat, 'brake-pads-front', 'small');
+  const anchor = 0.6 * 2 * 60 + (30 + 55) / 2;
+  assert.strictEqual(r.low, Math.floor(anchor / 5) * 5);
+  assert.strictEqual(r.high, Math.ceil(anchor * 1.35 / 5) * 5);
+  assert.ok(r.high > r.low); });
+t('every labour job sits inside its own headroom', () => {
+  cat.jobs.filter(j => j.type === 'labour').forEach(j => Object.keys(cat.bands).forEach(b => {
+    const r = E.priceJob(cat, j.id, b);
+    assert.ok(r.high >= r.low && r.high <= r.low * (1 + cat.mech_headroom) + 12, j.id + ' ' + b); })); });
+t('remaps are a fixed price, hardware is quoted', () => {
+  const r = E.tuneLines(cat, 'tp', 150, 's1', ['s2hw', 'coilovers']);
+  assert.strictEqual(r.lines[0].low, 240); assert.strictEqual(r.lines[0].high, 240);
+  assert.strictEqual(E.tuneLines(cat, 'tp', 150, 's2', []).lines[0].low, 360);
+  r.lines.slice(1).forEach(l => assert.strictEqual(l.kind, 'enquiry')); });
+t('a listed tyre size prices exactly, an unlisted one gives a range', () => {
+  const withList = JSON.parse(JSON.stringify(cat));
+  withList.tyres.price_list = { '205/55R16': { budget: 58, mid: 79, premium: 112 } };
+  const exact = E.tyrePrice(withList, { width: 205, profile: 55, rim: 16 }, 'mid');
+  assert.strictEqual(exact.lo, 79); assert.strictEqual(exact.hi, 79);
+  const modelled = E.tyrePrice(withList, { width: 225, profile: 45, rim: 17 }, 'mid');
+  assert.ok(modelled.hi > modelled.lo); });
 t('labour-only tuning has no parts', () => { const r = E.priceJob(cat, 'coilovers', 'medium'); assert.deepStrictEqual(r.parts, [0, 0]); assert.ok(!r.dealer); });
 t('diagnose jobs have no price', () => assert.strictEqual(E.priceJob(cat, 'dpf', 'medium').low, undefined));
 t('every labour job prices on every band, low<high', () => {

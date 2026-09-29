@@ -282,7 +282,7 @@
       h += '<div class="kq-offer"><div><b>' + money(coupon.amount) + ' off if you book online now</b>' +
         '<span>Book a slot in the next <i id="kq-timer">' + fmtLeft() + '</i> and we&rsquo;ll take ' + money(coupon.amount) + ' off this job. Code ' + esc(coupon.code) + '.</span></div></div>';
     }
-    h += '<p class="kq-small">Includes VAT, parts and labour. It&rsquo;s an estimate: we confirm a fixed written price before any work starts and nothing is done without your OK. If the real price lands outside this range, you decide whether to go ahead, and you owe us nothing for looking. 12-month workmanship warranty.</p></div>' +
+    h += '<p class="kq-small">Includes VAT, parts and labour, and it&rsquo;s worked out with the same pricing rules our estimators use, so <b>your job will land inside this range</b>. Book in and we&rsquo;ll send the exact figure for your reg in writing before any work starts. If anything we find changes it, you decide whether to go ahead, and you owe us nothing for looking. 12-month workmanship warranty.</p></div>' +
       '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="build">Change the job</button>' +
       '<button type="button" class="kq-btn kq-btn-main" data-act="to-details">' + (eligible ? 'Book and save ' + money(coupon.amount) : 'Book this in') + '</button></div>' +
       '<p class="kq-or">or <a href="' + waLink() + '" target="_blank" rel="noopener" data-act="wa">send it to us on WhatsApp</a> · <a href="tel:' + PHONE_TEL + '">call ' + PHONE + '</a></p>';

@@ -107,8 +107,18 @@
     var aiH = ai && pair(ai.hours), aiP = ai && pair(ai.parts);
     var h = aiH || job.hours[band];
     var p = job.labour_only ? [0, 0] : (aiP || job.parts[band]);
-    var lr = labourRange(cat, h, job.tier, !!job.x2);
-    var lo = lr[0] + p[0], hi = lr[1] + p[1];
+    // The range the customer sees: the bottom is the rate-card figure for a typical job on their car,
+    // the top sits mech_headroom above it. That gap is what lets the site say the final price lands
+    // inside the range. Without a headroom set, fall back to the low-to-high book-time spread.
+    var headroom = Number(cat.mech_headroom);
+    var lo, hi;
+    if (isFinite(headroom) && headroom > 0) {
+      var anchor = labourCost(cat, (h[0] + h[1]) / 2, job.tier, !!job.x2) + (p[0] + p[1]) / 2;
+      lo = anchor; hi = anchor * (1 + headroom);
+    } else {
+      var lr = labourRange(cat, h, job.tier, !!job.x2);
+      lo = lr[0] + p[0]; hi = lr[1] + p[1];
+    }
     out.kind = 'range';
     out.low = roundDown5(lo);
     out.high = roundUp5(hi);
@@ -194,7 +204,17 @@
      number): better to say nothing than to quote a made-up figure. Callers handle null, as they do for bodyLine. */
   function tyrePrice(cat, size, tierId) {
     var T = cat.tyres, tier = T.tiers.filter(function (t) { return t.id === tierId; })[0] || T.tiers[1];
-    if (!size || !has(T.mid_by_rim, size.rim)) return null;
+    if (!size) return null;
+    // A real supplier price for this exact size beats the model: exact figure, no give-or-take.
+    var key = size.width + '/' + size.profile + 'R' + size.rim;
+    if (T.price_list && has(T.price_list, key) && T.price_list[key] && has(T.price_list[key], tier.id)) {
+      var listed = Number(T.price_list[key][tier.id]) * (size.runflat ? T.runflat_multiplier : 1);
+      if (isFinite(listed) && listed > 0) {
+        var each = Math.round(listed);
+        return { lo: each, hi: each, fit: T.fit_each, tier: tier, listed: true };
+      }
+    }
+    if (!has(T.mid_by_rim, size.rim)) return null;
     var width = Number(size.width);
     if (!isFinite(width) || width <= 0) return null;
     var base = T.mid_by_rim[String(size.rim)] * (1 + (width - 205) * T.width_factor_per_mm) *
@@ -207,7 +227,8 @@
     if (!p) return null;
     return { id: 'tyres', name: q + ' × ' + size.width + '/' + size.profile + ' R' + size.rim + ' ' + p.tier.label.toLowerCase() + ' tyres, fitted',
              kind: 'range', low: (p.lo + p.fit) * q, high: (p.hi + p.fit) * q, each: { lo: p.lo + p.fit, hi: p.hi + p.fit },
-             note: 'Includes fitting, balancing and a new valve at £' + p.fit + ' a tyre.' };
+             note: 'Includes fitting, balancing and a new valve at £' + p.fit + ' a tyre.' +
+                   (p.listed ? '' : ' The tyre itself follows our supplier’s price on the day, so we confirm the exact tyre and price with you.') };
   }
 
   /* One damaged panel: paint (with blending at the top of the range) and/or dent work. */
@@ -215,6 +236,11 @@
     var d = null, list = cat.bodywork_damage;
     for (var i = 0; i < list.length; i++) if (list[i].id === damageId) d = list[i];
     if (!d || !has(cat.body_panels_ex_vat, panelKey)) return null;
+    // A SMART repair is a flat price: it's localised work, so the panel it's on barely moves the figure.
+    if (isFinite(Number(d.flat)) && Number(d.flat) > 0) {
+      return { id: 'panel-' + panelKey, name: panelLabel + ': ' + d.label.toLowerCase(), kind: 'range',
+               low: Number(d.flat), high: Number(d.flat), part: false, note: d.hint || '' };
+    }
     var add = has(cat.body_band_surcharge_ex_vat, band) ? cat.body_band_surcharge_ex_vat[band] : 0, lo = 0, hi = 0;
     if (d.paint) {
       var base = cat.body_panels_ex_vat[panelKey] + add;
