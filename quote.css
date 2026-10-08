@@ -168,3 +168,9 @@
   #kq .kq-tier span{text-align:left}
   #kq .kq-strip{flex-direction:column;align-items:flex-start}#kq .kq-strip-p{text-align:left}
 }
+
+/* Recovery flow */
+.kq-picks-sm{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.kq-recprice{display:flex;flex-direction:column;gap:.25rem;margin:1.1rem 0 .25rem;padding:1rem 1.15rem;border:1px solid var(--kq-line,#dde1e8);border-left:4px solid var(--kq-gold,#c8a04a);border-radius:.7rem;background:var(--kq-surface,#f8f9fb)}
+.kq-recprice b{font-size:1.5rem;line-height:1.1}
+.kq-recprice span{font-size:13.5px;line-height:1.6;color:var(--kq-muted,#6b7280)}

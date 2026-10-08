@@ -1,6 +1,6 @@
 {
  "_readme": "KITH instant-quote price book. Edit numbers here; the website and the AI estimate both read this file. All customer-facing prices include VAT. Labour follows SOP v8 retail: LOW tier for servicing and brakes, TOP for everything else; multiplier x2 under 2.0 hrs, x1.5 at 2.0 hrs and over; 'x2' jobs are always x2. Hours and parts ranges per vehicle size are STARTING ASSUMPTIONS to be checked by KITH before launch.",
- "version": "2026-09-25",
+ "version": "2026-09-29",
  "rates_inc_vat": {
   "LOW": 60,
   "TOP": 84,
@@ -1363,5 +1363,124 @@
   ],
   "_note": "DRAFT tuning prices and power gains, inc VAT. Confirm before removing the draft banner."
  },
- "mech_headroom": 0.35
+ "mech_headroom": 0.35,
+ "recovery": {
+  "note": "Fixed price by road miles from the workshop. Beyond 10 miles, or taking the car anywhere other than our workshop, is priced on the phone.",
+  "max_miles": 10,
+  "recovery_bands_inc_vat": [
+   {
+    "max": 3,
+    "price": 108
+   },
+   {
+    "max": 5,
+    "price": 132
+   },
+   {
+    "max": 7,
+    "price": 180
+   },
+   {
+    "max": 10,
+    "price": 216
+   }
+  ],
+  "pickup_bands_inc_vat": [
+   {
+    "max": 3,
+    "price": 36
+   },
+   {
+    "max": 5,
+    "price": 54
+   },
+   {
+    "max": 7,
+    "price": 72
+   },
+   {
+    "max": 10,
+    "price": 90
+   }
+  ],
+  "situations": [
+   {
+    "id": "breakdown",
+    "label": "Broken down",
+    "sub": "Will not drive, warning lights, noises",
+    "mode": "recovery"
+   },
+   {
+    "id": "accident",
+    "label": "Accident damage",
+    "sub": "Damaged and cannot be driven",
+    "mode": "recovery"
+   },
+   {
+    "id": "battery",
+    "label": "Will not start",
+    "sub": "Flat battery or needs a jump",
+    "mode": "roadside"
+   },
+   {
+    "id": "tyre",
+    "label": "Flat tyre",
+    "sub": "Puncture or wheel change",
+    "mode": "roadside"
+   },
+   {
+    "id": "move",
+    "label": "It drives, I need it collected",
+    "sub": "One of us drives it to the workshop",
+    "mode": "pickup"
+   }
+  ],
+  "areas": [
+   {
+    "id": "local",
+    "label": "Hackbridge, Wallington or Carshalton",
+    "miles": 2
+   },
+   {
+    "id": "sutton",
+    "label": "Sutton or Cheam",
+    "miles": 3
+   },
+   {
+    "id": "mitcham",
+    "label": "Mitcham or Morden",
+    "miles": 4
+   },
+   {
+    "id": "croydon",
+    "label": "Croydon",
+    "miles": 5
+   },
+   {
+    "id": "merton",
+    "label": "Merton or Wimbledon",
+    "miles": 6
+   },
+   {
+    "id": "purley",
+    "label": "Purley or Coulsdon",
+    "miles": 6.5
+   },
+   {
+    "id": "streatham",
+    "label": "Streatham, Norbury or Thornton Heath",
+    "miles": 7
+   },
+   {
+    "id": "tooting",
+    "label": "Tooting",
+    "miles": 7
+   },
+   {
+    "id": "further",
+    "label": "Somewhere further out",
+    "miles": null
+   }
+  ]
+ }
 }

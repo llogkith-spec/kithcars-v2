@@ -252,6 +252,36 @@
              note: d.part ? 'The panel itself is priced once we have seen it and know the part cost.' : '' };
   }
 
+  /* Recovery: a fixed price by road miles from the workshop, in two sets of bands — the truck for a car
+     that won't move, a driver for one that will. Roadside help (jump start, wheel change) and anything past
+     the last band, or going anywhere other than our workshop, is priced on the phone rather than guessed. */
+  function recoveryLine(cat, situationId, areaId) {
+    var R = cat.recovery;
+    if (!R) return null;
+    var s = R.situations.filter(function (x) { return x.id === situationId; })[0];
+    var a = R.areas.filter(function (x) { return x.id === areaId; })[0];
+    if (!s || !a) return null;
+    var name = s.label + (a.miles === null ? '' : ' — ' + a.label);
+    if (s.mode === 'roadside') {
+      return { id: 'recovery-' + s.id, name: name, kind: 'enquiry',
+               note: 'Roadside help is priced when you ring, because it depends on what the car needs at the kerb.' };
+    }
+    // "somewhere further out" carries no mileage at all, and Number(null) is 0, not NaN: without this an
+    // unknown distance would price as if the car were on our doorstep.
+    var miles = (a.miles === null || a.miles === undefined || a.miles === '') ? NaN : Number(a.miles);
+    if (!isFinite(miles) || miles < 0 || miles > R.max_miles) {
+      return { id: 'recovery-' + s.id, name: name, kind: 'enquiry',
+               note: 'Past ' + R.max_miles + ' miles we price it on the phone, so you get a real figure rather than a guess.' };
+    }
+    var bands = s.mode === 'pickup' ? R.pickup_bands_inc_vat : R.recovery_bands_inc_vat, price = null;
+    for (var i = 0; i < bands.length; i++) if (price === null && miles <= bands[i].max) price = bands[i].price;
+    if (price === null) return { id: 'recovery-' + s.id, name: name, kind: 'enquiry', note: R.note };
+    return { id: 'recovery-' + s.id, name: name, kind: 'fixed', low: price, high: price,
+             label: '£' + price + ' fixed',
+             note: s.mode === 'pickup' ? 'One of us drives it back to the workshop, inc VAT.'
+                                       : 'Fixed price to our workshop, inc VAT, whatever the traffic does.' };
+  }
+
   /* Tuning: stage price and the power it typically adds. Gains are a percentage of standard bhp. */
   function tuneLines(cat, fuelId, bhp, stageId, addonIds) {
     var T = cat.tuning, fuel = T.fuels.filter(function (f) { return f.id === fuelId; })[0] || T.fuels[0];
@@ -299,6 +329,6 @@
 
   return { labourCost: labourCost, labourRange: labourRange, guessBand: guessBand, ulezLikely: ulezLikely,
            priceJob: priceJob, totals: totals, clampAi: clampAi, findJob: findJob, tyrePrice: tyrePrice,
-           tyreLine: tyreLine, bodyLine: bodyLine, tuneLines: tuneLines, couponEligible: couponEligible,
-           bookableDays: bookableDays, safeNote: safeNote };
+           tyreLine: tyreLine, bodyLine: bodyLine, tuneLines: tuneLines, recoveryLine: recoveryLine,
+           couponEligible: couponEligible, bookableDays: bookableDays, safeNote: safeNote };
 });

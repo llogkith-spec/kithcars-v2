@@ -1,0 +1,101 @@
+/* KITH house style — white ground, deepened gold, condensed display type.
+   Loaded last, so it restyles the existing markup rather than replacing it:
+   the 751 pages keep their structure, headings and links, and only look different. */
+
+:root, :root[data-theme] {
+  --ink: #FFFFFF;
+  --surface: #F8F6F1;
+  --surface-2: #F1EEE7;
+  --border: #E4DED2;
+  --line: #E4DED2;
+  --text: #17150F;
+  --text-2: #3C372C;
+  --muted: #6A6356;
+  --gold: #B8862A;
+  --gold-2: #D6A84C;
+  --primary: #B8862A;
+  --accent: #B8862A;
+  --good: #1F9D5B;
+  --hot: #D9481C;
+  --display: "Barlow Condensed", "Arial Narrow", Impact, sans-serif;
+  --body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --shadow: 0 1px 2px rgba(23,21,15,.04), 0 8px 24px rgba(23,21,15,.05);
+  --radius: 12px;
+}
+
+body { background: var(--ink); color: var(--text); font-family: var(--body); font-size: 15px; line-height: 1.6; }
+h1, h2, h3, h4 { font-family: var(--display); font-weight: 700; line-height: 1.04; letter-spacing: .005em; text-wrap: balance; color: var(--text); }
+h2 { text-transform: uppercase; }
+.page-hero h1 { font-family: var(--body); font-weight: 800; font-size: clamp(32px, 5vw, 56px); line-height: 1.08; letter-spacing: -.015em; text-transform: none; }
+.lead { font-size: 17px; line-height: 1.7; color: var(--text-2); }
+.num, .kx-stats b, .kx-big, .kq-total b { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* eyebrow */
+.section-label, .eyebrow, .kh-cat, .kx-crumbs {
+  font: 600 12px/1.4 var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--gold);
+}
+.kx-crumbs { color: var(--muted); letter-spacing: .08em; }
+.kx-crumbs a { color: var(--muted); text-decoration: none; }
+.kx-crumbs a:hover { color: var(--gold); }
+
+/* header */
+.site-header { background: rgba(255,255,255,.92); border-bottom: 1px solid var(--border); backdrop-filter: blur(10px); }
+.site-header a { color: var(--text); }
+.site-header a:hover { color: var(--gold); }
+
+/* buttons: pills, gold fill */
+.btn, .kq-btn, .kh-svc, .kx-faq summary { font-family: var(--body); }
+.btn { border-radius: 999px; padding: .95em 1.6em; font-weight: 700; font-size: 15px; border: 1px solid transparent; transition: transform .12s ease, box-shadow .12s ease, background .12s ease; }
+.btn:active { transform: translateY(1px); }
+.btn-primary, .btn-red, .kq-btn-main { background: var(--gold); color: #16120A; border-color: var(--gold); box-shadow: 0 6px 18px rgba(184,134,42,.25); }
+.btn-primary:hover, .btn-red:hover, .kq-btn-main:hover { background: #A5771F; border-color: #A5771F; }
+.btn-outline, .kq-btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+/* hero: the gold wash from the house style */
+/* no padding override here: the header is sticky and the original top padding clears it */
+.page-hero { position: relative; overflow: hidden; background: var(--ink); }
+.page-hero::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(900px 420px at 88% -10%, rgba(214,168,76,.20), transparent 60%);
+}
+.page-hero > * { position: relative; }
+.page-hero-img img { border-radius: 14px; box-shadow: var(--shadow); }
+
+/* sections and surfaces */
+.section { padding-block: 72px; }
+.section-alt { background: var(--surface); }
+.kx-card, .kx-area, .cta-box, .kh-svc, .kx-steps li, .kx-stats div, .kq-wrap {
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.section-alt .kx-card, .section-alt .kh-svc, .section-alt .kx-steps li, .section-alt .kx-stats div { background: #fff; }
+.kx-tip, .kx-warn, .kx-review { background: var(--surface-2); border-left: 4px solid var(--gold); border-radius: 0 var(--radius) var(--radius) 0; }
+.kx-stats b { color: var(--gold); font-size: 1.15rem; }
+.kx-steps li:before { background: var(--gold); }
+.kx-list li::marker { color: var(--gold); }
+.kh-svc:hover { border-color: var(--gold); box-shadow: 0 10px 28px rgba(23,21,15,.08); }
+.kh-svc-meta { color: var(--gold); font-family: var(--mono); font-size: 11.5px; letter-spacing: .02em; }
+.kh-areas a { background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: .7rem 1rem; }
+.kh-areas a:hover { border-color: var(--gold); }
+.kh-myths .kx-card { background: var(--surface-2); border-style: solid; }
+
+/* FAQ */
+.kx-faq { border-bottom: 1px solid var(--border); }
+.kx-faq summary h3 { font-family: var(--body); font-weight: 600; text-transform: none; font-size: 16px; }
+.kx-faq summary:after { color: var(--gold); }
+
+/* quote widget sits on the same palette */
+.kq-pill.on, .kq-tier.on, .kq-pick.on, .kq-job.on { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+.kq-offer { background: rgba(184,134,42,.10); border: 1px solid rgba(184,134,42,.35); }
+.kq-recprice { border-left-color: var(--gold); background: var(--surface-2); }
+
+/* footer */
+.site-footer { background: #17150F; color: #F3EDE1; }
+.site-footer a { color: #D8D2C4; }
+.site-footer a:hover { color: var(--gold-2); }
+.site-footer h4 { font-family: var(--display); text-transform: uppercase; letter-spacing: .06em; color: #fff; }
+
+@media (max-width: 700px) {
+  .section { padding-block: 52px; }
+}

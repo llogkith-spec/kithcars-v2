@@ -30,6 +30,19 @@ t('remaps are a fixed price, hardware is quoted', () => {
   assert.strictEqual(r.lines[0].low, 240); assert.strictEqual(r.lines[0].high, 240);
   assert.strictEqual(E.tuneLines(cat, 'tp', 150, 's2', []).lines[0].low, 360);
   r.lines.slice(1).forEach(l => assert.strictEqual(l.kind, 'enquiry')); });
+t('recovery is a fixed price by distance, and priced on the phone past the bands', () => {
+  assert.strictEqual(E.recoveryLine(cat, 'breakdown', 'local').low, 108);      // 2 miles, truck
+  assert.strictEqual(E.recoveryLine(cat, 'accident', 'croydon').low, 132);     // 5 miles, truck
+  assert.strictEqual(E.recoveryLine(cat, 'move', 'local').low, 36);            // 2 miles, driver
+  assert.strictEqual(E.recoveryLine(cat, 'move', 'tooting').low, 72);          // 7 miles, driver
+  assert.strictEqual(E.recoveryLine(cat, 'breakdown', 'further').kind, 'enquiry');
+  assert.strictEqual(E.recoveryLine(cat, 'battery', 'local').kind, 'enquiry'); // roadside, priced when you ring
+  assert.strictEqual(E.recoveryLine(cat, 'nonsense', 'local'), null);
+  assert.strictEqual(E.recoveryLine(cat, 'breakdown', 'nonsense'), null); });
+t('every recovery situation and area pair either prices or asks', () => {
+  cat.recovery.situations.forEach(s => cat.recovery.areas.forEach(a => {
+    const l = E.recoveryLine(cat, s.id, a.id);
+    assert.ok(l && (l.kind === 'enquiry' || (l.low > 0 && l.low === l.high)), s.id + ' ' + a.id); })); });
 t('a listed tyre size prices exactly, an unlisted one gives a range', () => {
   const withList = JSON.parse(JSON.stringify(cat));
   withList.tyres.price_list = { '205/55R16': { budget: 58, mid: 79, premium: 112 } };

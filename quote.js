@@ -19,7 +19,8 @@
     mechanical: { label: 'Mechanical', sub: 'Servicing, MOT, brakes, repairs', cal: 'mechanical' },
     tyres:      { label: 'Tyres',      sub: 'Priced by your tyre size',        cal: 'mechanical' },
     bodywork:   { label: 'Bodywork',   sub: 'Bumpers, panels, dents, paint',   cal: 'bodywork' },
-    tuning:     { label: 'Tuning',     sub: 'Remaps, lowering, wheels',        cal: 'mechanical' }
+    tuning:     { label: 'Tuning',     sub: 'Remaps, lowering, wheels',        cal: 'mechanical' },
+    recovery:   { label: 'Recovery',   sub: 'Broken down, or needs collecting', cal: 'mechanical' }
   };
   var STEPS = ['flow', 'car', 'build', 'estimate', 'details', 'calendar', 'done'];
   var STEP_LABEL = { flow: 'Service', car: 'Your car', build: 'The work', estimate: 'Your price', details: 'Details', calendar: 'Your slot', done: 'Booked' };
@@ -44,7 +45,7 @@
   var S = {
     flow: '', step: 'flow', reg: '', vehicle: null, manual: false, model: '', band: 'medium',
     mech: [], tyre: { w: 205, p: 55, r: 16, qty: 4, tier: 'mid', rf: false },
-    body: {}, tune: { fuel: 'tp', bhp: '', stage: 's1', addons: [] },
+    body: {}, tune: { fuel: 'tp', bhp: '', stage: 's1', addons: [] }, rec: { what: '', where: '', when: 'book' },
     ai: {}, lines: [], totals: null, power: null, expires: 0, offerGone: false,
     lead: null, day: null, time: null, sent: false
   };
@@ -75,7 +76,8 @@
 
   /* ---------- progress ---------- */
   function progress() {
-    var shown = STEPS.filter(function (s) { return s !== 'flow' && s !== 'done'; });
+    var urgent = S.flow === 'recovery' && S.rec.when === 'now';
+    var shown = STEPS.filter(function (s) { return s !== 'flow' && s !== 'done' && !(urgent && s === 'calendar'); });
     var i = shown.indexOf(S.step);
     if (S.step === 'done') i = shown.length;
     return '<ol class="kq-steps">' + shown.map(function (s, n) {
@@ -136,10 +138,39 @@
 
   /* ---------- step: build (per flow) ---------- */
   function viewBuild() {
+    if (S.flow === 'recovery') return viewRecovery();
     if (S.flow === 'tyres') return viewTyres();
     if (S.flow === 'bodywork') return viewBody();
     if (S.flow === 'tuning') return viewTune();
     return viewMech();
+  }
+
+  /* Recovery: what happened, where the car is, and whether it needs someone now. Price is a fixed band,
+     so the customer sees the figure before they ring rather than after. */
+  function viewRecovery() {
+    var R = C.recovery, rec = S.rec;
+    var sit = R.situations.filter(function (s) { return s.id === rec.what; })[0];
+    var line = rec.what && rec.where ? E.recoveryLine(C, rec.what, rec.where) : null;
+    var h = '<h2 class="kq-h">What has happened?</h2><p class="kq-help">Fixed prices to our Hackbridge workshop, by distance.</p>' +
+      '<div class="kq-picks kq-picks-sm">' + R.situations.map(function (s) {
+        return '<button type="button" class="kq-pick' + (rec.what === s.id ? ' on' : '') + '" data-act="rwhat" data-v="' + s.id + '"><b>' + esc(s.label) + '</b><small>' + esc(s.sub) + '</small></button>';
+      }).join('') + '</div>';
+    if (rec.what) {
+      h += '<label class="kq-label">Where is the car?</label><div class="kq-pills">' +
+        R.areas.map(function (a) {
+          return '<button type="button" class="kq-pill' + (rec.where === a.id ? ' on' : '') + '" data-act="rwhere" data-v="' + a.id + '">' + esc(a.label) + '</button>';
+        }).join('') + '</div>';
+    }
+    if (line) {
+      h += '<div class="kq-recprice">' + (line.kind === 'fixed'
+        ? '<b>' + money(line.low) + '</b><span>' + esc(line.note) + '</span>'
+        : '<b>We price this one on the phone</b><span>' + esc(line.note) + '</span>') + '</div>' +
+        '<label class="kq-label">When do you need us?</label><div class="kq-pills">' +
+        '<button type="button" class="kq-pill' + (rec.when === 'now' ? ' on' : '') + '" data-act="rwhen" data-v="now">Right now</button>' +
+        '<button type="button" class="kq-pill' + (rec.when === 'book' ? ' on' : '') + '" data-act="rwhen" data-v="book">Book a time</button></div>' +
+        (rec.when === 'now' ? '<p class="kq-note">We will take your details and ring you straight back. Stay with the car if it is safe to, and put your hazards on.</p>' : '');
+    }
+    return h + nav('car', 'to-estimate', line ? 'Continue' : 'Tell us where the car is', !line);
   }
 
   function viewMech() {
@@ -240,6 +271,10 @@
       var p = CAR_PANELS.filter(function (x) { return x.id === id; })[0];
       return E.bodyLine(C, p.key, p.label, S.body[id], S.band);
     }).filter(Boolean);
+    else if (S.flow === 'recovery') {
+      var rl = S.rec.what && S.rec.where ? E.recoveryLine(C, S.rec.what, S.rec.where) : null;
+      lines = rl ? [rl] : [];
+    }
     else if (S.flow === 'tuning') {
       var t = E.tuneLines(C, S.tune.fuel, Number(S.tune.bhp) || 0, S.tune.stage, S.tune.addons);
       lines = t.lines; S.power = t.power;
@@ -282,7 +317,10 @@
       h += '<div class="kq-offer"><div><b>' + money(coupon.amount) + ' off if you book online now</b>' +
         '<span>Book a slot in the next <i id="kq-timer">' + fmtLeft() + '</i> and we&rsquo;ll take ' + money(coupon.amount) + ' off this job. Code ' + esc(coupon.code) + '.</span></div></div>';
     }
-    h += '<p class="kq-small">Includes VAT, parts and labour, and it&rsquo;s worked out with the same pricing rules our estimators use, so <b>your job will land inside this range</b>. Book in and we&rsquo;ll send the exact figure for your reg in writing before any work starts. If anything we find changes it, you decide whether to go ahead, and you owe us nothing for looking. 12-month workmanship warranty.</p></div>' +
+    h += (S.flow === 'recovery'
+        ? '<p class="kq-small">A fixed price, inc VAT, to bring the car to our workshop. Nothing is added for traffic or waiting time. Anything we then do to the car is quoted separately, in writing, before it starts.</p>'
+        : '<p class="kq-small">Includes VAT, parts and labour, and it&rsquo;s worked out with the same pricing rules our estimators use, so <b>your job will land inside this range</b>. Book in and we&rsquo;ll send the exact figure for your reg in writing before any work starts. If anything we find changes it, you decide whether to go ahead, and you owe us nothing for looking. 3-month workmanship warranty.</p>') +
+      '</div>' +
       '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="build">Change the job</button>' +
       '<button type="button" class="kq-btn kq-btn-main" data-act="to-details">' + (eligible ? 'Book and save ' + money(coupon.amount) : 'Book this in') + '</button></div>' +
       '<p class="kq-or">or <a href="' + waLink() + '" target="_blank" rel="noopener" data-act="wa">send it to us on WhatsApp</a> · <a href="tel:' + PHONE_TEL + '">call ' + PHONE + '</a></p>';
@@ -313,7 +351,7 @@
       '<div class="kq-row"><div><label class="kq-label" for="kq-email">Email <span class="kq-opt">(optional)</span></label><input class="kq-input" id="kq-email" name="email" type="email" autocomplete="email" maxlength="80"/></div>' +
       '<div><label class="kq-label" for="kq-reg2">Reg</label><input class="kq-input" id="kq-reg2" name="reg" maxlength="10" value="' + esc((S.vehicle && S.vehicle.registrationNumber) || S.reg) + '"/></div></div>' +
       '<label class="kq-check"><input type="checkbox" name="collect"/> Please collect and return my car</label>' +
-      '<button class="kq-btn kq-btn-main" type="submit">Next: pick my slot</button>' +
+      '<button class="kq-btn kq-btn-main" type="submit">' + (S.flow === 'recovery' && S.rec.when === 'now' ? 'Send this and call me back' : 'Next: pick my slot') + '</button>' +
       '<p class="kq-err" role="alert" hidden></p>' +
       '<p class="kq-small">We only use your details to arrange this job.</p></form>' +
       '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="estimate">Back to the price</button></div>';
@@ -344,6 +382,14 @@
   function viewDone() {
     var booked = S.day && S.time, cal = FLOWS[S.flow].cal;
     var when = booked ? new Date(S.day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) + ' at ' + S.time : null;
+    var urgent = S.flow === 'recovery' && S.rec.when === 'now';
+    if (urgent) {
+      return '<div class="kq-done"><h2 class="kq-h">We&rsquo;ve got it. Sit tight.</h2>' +
+        '<p>Your details are with us now and you are at the top of the queue. We&rsquo;ll ring you straight back on the number you gave us.</p>' +
+        '<p class="kq-small">If you are on a live carriageway, get out of the car and stand behind the barrier. If you feel unsafe, ring 999 first, then us.</p>' +
+        '<div class="kq-nav-wrap"><a class="kq-btn kq-btn-main" href="tel:' + PHONE_TEL + '">Call us now on ' + PHONE + '</a> ' +
+        '<a class="kq-btn kq-btn-wa" href="' + waLink() + '" target="_blank" rel="noopener">Send our location on WhatsApp</a></div></div>';
+    }
     return '<div class="kq-done"><h2 class="kq-h">' + (booked ? 'You&rsquo;re booked in.' : 'Your estimate is on its way.') + '</h2>' +
       (booked ? '<p class="kq-big-when">' + esc(when) + '</p><p>' + (cal === 'bodywork' ? 'Drop the car to us at Unit 1, Soho Mills, Hackbridge SM6 7HN.' : 'Bring it to Unit 1, Soho Mills, Hackbridge SM6 7HN.') + ' We&rsquo;ll call to confirm and send the written price first.</p>'
         : '<p>We&rsquo;ve got your details and will be in touch, usually within 30 minutes during opening hours (Mon–Sat 8am–8pm).</p>') +
@@ -363,7 +409,7 @@
   function leadPayload() {
     var v = S.vehicle || {}, t = S.totals;
     return {
-      priority: S.day && S.time ? 'hot' : 'warm',
+      priority: (S.flow === 'recovery' && S.rec.when === 'now') ? 'urgent' : (S.day && S.time ? 'hot' : 'warm'),
       source: 'Website instant quote',
       stage: 'intake',
       name: S.lead.name, phone: S.lead.phone, email: S.lead.email || '',
@@ -376,14 +422,14 @@
       collection: !!S.lead.collect,
       coupon: (S.day && S.time && !S.offerGone) ? { code: C.coupon.code, amount: C.coupon.amount, minSpend: C.coupon.min_spend } : null,
       priceBookVersion: C.version,
-      log: [{ at: new Date().toISOString(), by: 'Website', text: (S.day && S.time ? 'HOT: accepted the range and booked ' + S.day + ' ' + S.time : 'Estimate sent, no slot picked') }]
+      log: [{ at: new Date().toISOString(), by: 'Website', text: ((S.flow === 'recovery' && S.rec.when === 'now') ? 'URGENT: needs recovery now, call straight back' : S.day && S.time ? 'HOT: accepted the range and booked ' + S.day + ' ' + S.time : 'Estimate sent, no slot picked') }]
     };
   }
   function sendLead() {
     var d = leadPayload(), id = S.lead.id || (S.lead.id = 'web-' + Date.now().toString(36));
     var fd = new FormData();
     fd.append('access_key', WEB3FORMS_KEY);
-    fd.append('subject', (d.priority === 'hot' ? 'BOOKED' : 'Estimate') + ': ' + d.service + ' · ' + vehicleName() + (d.webEstimate ? ' · ' + range(d.webEstimate.lo, d.webEstimate.hi) : ''));
+    fd.append('subject', (d.priority === 'urgent' ? 'URGENT RECOVERY' : d.priority === 'hot' ? 'BOOKED' : 'Estimate') + ': ' + d.service + ' · ' + vehicleName() + (d.webEstimate ? ' · ' + range(d.webEstimate.lo, d.webEstimate.hi) : ''));
     fd.append('from_name', 'KITH website instant quote');
     fd.append('Name', d.name); fd.append('Phone', d.phone);
     if (d.email) { fd.append('email', d.email); fd.append('Email', d.email); }
@@ -460,7 +506,8 @@
       var b = f.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Saving…';
       sendLead().then(function (res) {
         track('generate_lead', { value: S.totals ? S.totals.low : 0, currency: 'GBP', flow: S.flow });
-        if (!res.emailed && res.crm !== 'sent') { b.disabled = false; b.textContent = 'Next: pick my slot'; err.innerHTML = 'That didn’t send. Please <a href="tel:' + PHONE_TEL + '">call ' + PHONE + '</a> or <a href="' + waLink() + '" target="_blank" rel="noopener">WhatsApp us</a>.'; err.hidden = false; return; }
+        if (!res.emailed && res.crm !== 'sent') { b.disabled = false; b.textContent = S.flow === 'recovery' && S.rec.when === 'now' ? 'Send this and call me back' : 'Next: pick my slot'; err.innerHTML = 'That didn’t send. Please <a href="tel:' + PHONE_TEL + '">call ' + PHONE + '</a> or <a href="' + waLink() + '" target="_blank" rel="noopener">WhatsApp us</a>.'; err.hidden = false; return; }
+        if (S.flow === 'recovery' && S.rec.when === 'now') { S.sent = true; track('quote_urgent'); try { sessionStorage.removeItem('kq2'); } catch (x) {} go('done'); return; }
         go('calendar');
       });
     });
@@ -473,6 +520,9 @@
     if (a === 'flow') { S.flow = v; track('quote_flow', { flow: v }); go(S.vehicle && !S.manual ? 'build' : 'car'); }
     else if (a === 'manual') { S.manual = true; S.vehicle = S.vehicle || {}; render(); }
     else if (a === 'back') { if (S.step === 'build') readBuild(); if (S.step === 'car') readCar(); go(v); }
+    else if (a === 'rwhat') { S.rec.what = v; save(); render(); }
+    else if (a === 'rwhere') { S.rec.where = v; save(); render(); }
+    else if (a === 'rwhen') { S.rec.when = v; save(); render(); }
     else if (a === 'add-mot') { if (S.mech.indexOf('mot') === -1) S.mech.push('mot'); track('quote_add_mot'); save(); render(); }
     else if (a === 'to-build') { readCar(); go('build'); }
     else if (a === 'to-estimate') {
