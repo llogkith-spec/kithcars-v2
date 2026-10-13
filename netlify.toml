@@ -1,0 +1,58 @@
+# kithcars.com on Netlify. The site is plain HTML with no build step: the repo root is what gets served.
+# The two API routes are Netlify Functions, and they declare their own paths (/api/vehicle, /api/estimate),
+# so there are no redirects to keep in step with them.
+
+[build]
+  publish = "."
+  command = ""
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  # The estimate function prices from the price book and the engine, so both must travel with it.
+  included_files = ["quote-catalogue.json", "quote-engine.js"]
+
+# Pretty URLs: /brake-repairs serves brake-repairs.html. Netlify does this by default; stated here so it
+# survives anyone turning asset optimisation off.
+[build.processing.html]
+  pretty_urls = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"
+
+# The generated pages change whenever the content does; the images and stylesheets do not.
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/*.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000"
+
+[[headers]]
+  for = "/*.webp"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000"
+
+# The price book is read by the browser on every quote, and it changes when prices change.
+[[headers]]
+  for = "/quote-catalogue.json"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+# The dashboard is private: no indexing, no sharing.
+[[headers]]
+  for = "/kpi"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"

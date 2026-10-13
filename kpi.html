@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>KITH — quote and booking dashboard</title>
+<style>
+:root{--bg:#0c0d10;--card:#15171c;--line:#242832;--text:#f2f3f5;--muted:#9aa1ad;--gold:#c8a04a;--hot:#e0564a;--warm:#4a8fe0;--ok:#4ab87a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 24px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.tile b{display:block;font-size:26px;line-height:1.1;color:var(--gold)}
+.tile span{font-size:12px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:20px}
+.card h2{font-size:15px;margin:0 0 14px;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600}
+.pill.hot{background:rgba(224,86,74,.15);color:var(--hot)}
+.pill.warm{background:rgba(74,143,224,.15);color:var(--warm)}
+input,button{font:inherit}
+input{background:#0c0d10;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;width:100%}
+label{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px}
+button{background:var(--gold);color:#12131a;border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;margin-top:14px}
+button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);font-weight:500;margin-left:8px}
+.bars{display:flex;align-items:flex-end;gap:4px;height:130px}
+.bars div{flex:1;background:linear-gradient(180deg,var(--gold),rgba(200,160,74,.25));border-radius:3px 3px 0 0;min-height:2px;position:relative}
+.bars div span{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--muted);white-space:nowrap}
+.axis{height:24px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.note{font-size:12.5px;color:var(--muted);line-height:1.7}
+.err{color:var(--hot);font-size:13px;margin-top:10px}
+@media(max-width:700px){.split{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Quotes and bookings</h1>
+<p class="sub">Private page, not linked from the site and not indexed. It reads the same records the instant quote writes to your CRM table.</p>
+
+<div id="setup" class="card" hidden>
+  <h2>Connect it once</h2>
+  <p class="note">Paste the two values from your Supabase project (Settings &rarr; API). They are stored in this browser only and never leave it except to call your own database. Anyone using this page needs a read policy on the table.</p>
+  <label for="u">Project URL</label><input id="u" placeholder="https://xxxx.supabase.co" autocomplete="off"/>
+  <label for="k">Anon key</label><input id="k" placeholder="eyJhbGciOi..." autocomplete="off"/>
+  <label for="t">Table</label><input id="t" value="jobs" autocomplete="off"/>
+  <button id="save">Connect</button>
+  <div id="setup-err" class="err"></div>
+</div>
+
+<div id="app" hidden>
+  <div class="row" id="tiles"></div>
+  <div class="card">
+    <h2>Quotes a day, last 30 days</h2>
+    <div class="bars" id="chart"></div><div class="axis"></div>
+  </div>
+  <div class="split">
+    <div class="card"><h2>By service</h2><table id="by-service"></table></div>
+    <div class="card"><h2>Most quoted jobs</h2><table id="by-job"></table></div>
+  </div>
+  <div class="card">
+    <h2>Latest</h2>
+    <table id="recent"></table>
+  </div>
+  <p class="note">Showing the most recent 500 records. <button class="ghost" id="reload">Refresh</button> <button class="ghost" id="forget">Disconnect</button></p>
+</div>
+
+<div id="empty" class="card" hidden>
+  <h2>Nothing to show yet</h2>
+  <p class="note">The connection works, but the table has no records. Every completed instant quote writes one row: it appears here within seconds of a customer finishing.</p>
+  <button class="ghost" id="forget2">Disconnect</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var KEY = 'kith-kpi-cfg';
+  var $ = function (id) { return document.getElementById(id); };
+  var cfg = null;
+  try { cfg = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { cfg = null; }
+
+  function show(which) { ['setup', 'app', 'empty'].forEach(function (id) { $(id).hidden = id !== which; }); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function money(n) { return '£' + Math.round(Number(n) || 0).toLocaleString('en-GB'); }
+  function dayKey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+
+  $('save').addEventListener('click', function () {
+    var u = $('u').value.trim().replace(/\/$/, ''), k = $('k').value.trim(), t = $('t').value.trim() || 'jobs';
+    if (!/^https:\/\/[\w-]+\.supabase\.co$/.test(u)) { $('setup-err').textContent = 'That does not look like a Supabase project URL.'; return; }
+    if (k.length < 20) { $('setup-err').textContent = 'That key looks too short.'; return; }
+    cfg = { u: u, k: k, t: t };
+    try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) {}
+    load();
+  });
+  function forget() { try { localStorage.removeItem(KEY); } catch (e) {} cfg = null; show('setup'); }
+  $('forget').addEventListener('click', forget);
+  $('forget2').addEventListener('click', forget);
+  $('reload').addEventListener('click', function () { load(); });
+
+  function load() {
+    if (!cfg) { show('setup'); return; }
+    var url = cfg.u + '/rest/v1/' + encodeURIComponent(cfg.t) + '?select=id,data,updated_at&order=updated_at.desc&limit=500';
+    fetch(url, { headers: { apikey: cfg.k, Authorization: 'Bearer ' + cfg.k } })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (rows) { if (!rows.length) { show('empty'); return; } render(rows); show('app'); })
+      .catch(function (err) {
+        show('setup');
+        $('setup-err').textContent = 'Could not read the table (' + err.message + '). Check the URL, the key, the table name and that a read policy exists.';
+      });
+  }
+
+  function render(rows) {
+    var leads = rows.map(function (r) {
+      var d = r.data || {};
+      return {
+        when: new Date(r.updated_at || Date.now()),
+        hot: d.priority === 'hot',
+        service: d.service || 'Unknown',
+        name: d.name || '', reg: d.reg || '',
+        vehicle: [d.vehicle && d.vehicle.year, d.vehicle && d.vehicle.make, d.vehicle && d.vehicle.model].filter(Boolean).join(' '),
+        lo: d.webEstimate ? d.webEstimate.lo : null,
+        hi: d.webEstimate ? d.webEstimate.hi : null,
+        slot: d.requestedSlot ? d.requestedSlot.date + ' ' + d.requestedSlot.time : '',
+        jobs: (d.jobs || []).map(function (j) { return j.name; })
+      };
+    });
+    var booked = leads.filter(function (l) { return l.hot; });
+    var valued = leads.filter(function (l) { return typeof l.lo === 'number'; });
+    var pipeline = booked.reduce(function (a, l) { return a + (l.lo || 0); }, 0);
+    var avg = valued.length ? valued.reduce(function (a, l) { return a + (l.lo + l.hi) / 2; }, 0) / valued.length : 0;
+    var since = new Date(Date.now() - 29 * 864e5);
+    var last30 = leads.filter(function (l) { return l.when >= since; });
+
+    $('tiles').innerHTML = [
+      ['Quotes completed', leads.length, 'all time in this table'],
+      ['Slots booked', booked.length, leads.length ? Math.round(booked.length / leads.length * 100) + '% of quotes' : ''],
+      ['Last 30 days', last30.length, 'quotes completed'],
+      ['Booked value', money(pipeline), 'low end of booked ranges'],
+      ['Average quote', money(avg), 'midpoint of the range shown']
+    ].map(function (t) { return '<div class="tile"><b>' + esc(t[1]) + '</b><span>' + esc(t[0]) + '</span><span> · ' + esc(t[2]) + '</span></div>'; }).join('');
+
+    var days = [], counts = {};
+    for (var i = 29; i >= 0; i--) { var d = new Date(Date.now() - i * 864e5); days.push(dayKey(d)); counts[dayKey(d)] = 0; }
+    last30.forEach(function (l) { var k = dayKey(l.when); if (k in counts) counts[k]++; });
+    var max = Math.max.apply(null, days.map(function (k) { return counts[k]; }).concat([1]));
+    $('chart').innerHTML = days.map(function (k, i) {
+      var lbl = (i % 7 === 0) ? '<span>' + k.slice(8) + '/' + k.slice(5, 7) + '</span>' : '';
+      return '<div style="height:' + Math.max(2, counts[k] / max * 100) + '%" title="' + k + ': ' + counts[k] + '">' + lbl + '</div>';
+    }).join('');
+
+    function tally(list, get) {
+      var m = {};
+      list.forEach(function (l) { [].concat(get(l)).forEach(function (v) { if (v) m[v] = (m[v] || 0) + 1; }); });
+      return Object.keys(m).sort(function (a, b) { return m[b] - m[a]; }).map(function (k) { return [k, m[k]]; });
+    }
+    function table(rows, head) {
+      return '<tr><th>' + head[0] + '</th><th>' + head[1] + '</th></tr>' + rows.slice(0, 10).map(function (r) {
+        return '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td></tr>';
+      }).join('');
+    }
+    $('by-service').innerHTML = table(tally(leads, function (l) { return l.service; }), ['Service', 'Quotes']);
+    $('by-job').innerHTML = table(tally(leads, function (l) { return l.jobs; }), ['Job', 'Times quoted']);
+
+    $('recent').innerHTML = '<tr><th>When</th><th>Customer</th><th>Vehicle</th><th>Work</th><th>Range</th><th>Slot</th></tr>' +
+      leads.slice(0, 25).map(function (l) {
+        return '<tr><td>' + esc(l.when.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })) + ' ' +
+          esc(l.when.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })) + '</td>' +
+          '<td>' + esc(l.name) + ' <span class="pill ' + (l.hot ? 'hot">booked' : 'warm">estimate') + '</span></td>' +
+          '<td>' + esc(l.vehicle || l.reg) + '</td>' +
+          '<td>' + esc(l.jobs.slice(0, 3).join(', ')) + '</td>' +
+          '<td>' + (typeof l.lo === 'number' ? esc(money(l.lo) + '–' + money(l.hi)) : '—') + '</td>' +
+          '<td>' + esc(l.slot || '—') + '</td></tr>';
+      }).join('');
+  }
+
+  if (cfg) load(); else show('setup');
+})();
+</script>
+</body>
+</html>
