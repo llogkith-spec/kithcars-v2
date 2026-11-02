@@ -23,7 +23,7 @@
 "address":{"@type":"PostalAddress","streetAddress":"Unit 1, Soho Mills, London Road","addressLocality":"Wallington","addressRegion":"Greater London","postalCode":"SM6 7HN","addressCountry":"GB"},
 "geo":{"@type":"GeoCoordinates","latitude":51.3791586,"longitude":-0.154599},
 "openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],"opens":"08:00","closes":"20:00"}],
-"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.9","reviewCount":"87"},
+"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.9","reviewCount":"193"},
 "areaServed":["Hackbridge","Wallington","Beddington","Carshalton","Sutton","Mitcham","Croydon","Morden","Cheam","Thornton Heath","Norbury","Streatham","Tooting","Wimbledon","Purley","Coulsdon","Worcester Park","Rosehill"],
 "hasOfferCatalog":{"@type":"OfferCatalog","name":"Services","itemListElement":[
 {"@type":"OfferCatalog","name":"Bodywork and accident repair"},{"@type":"OfferCatalog","name":"Mechanical repairs, servicing and MOT"},{"@type":"OfferCatalog","name":"Tyres"},{"@type":"OfferCatalog","name":"Tuning: ECU remaps, lowering and coilovers"}]}},
@@ -32,6 +32,9 @@
 {"@type":"Question","name":"Do you deal with insurance claims for accident repairs?","acceptedAnswer":{"@type":"Answer","text":"Yes. You have the right to choose your repairer. Send us photos, and we can work with your insurer or quote you privately if that works out cheaper."}},
 {"@type":"Question","name":"How much is tyre fitting?","acceptedAnswer":{"@type":"Answer","text":"£20 a tyre, including fitting, balancing and a new valve. Tell us your size and we'll send prices for budget, mid-range and premium tyres."}},
 {"@type":"Question","name":"Do you do ECU remaps?","acceptedAnswer":{"@type":"Answer","text":"Yes, Stage 1 and Stage 2 remaps after a health check. We never remove DPF, EGR or AdBlue systems."}}]}]}</script>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<link rel="stylesheet" href="/callbar.css"/>
+<script src="/callbar.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#quote">Skip to instant quote</a>
@@ -39,7 +42,7 @@
 <div class="offerbar">Get your price online, book your slot, and we&rsquo;ll take <b>£50</b> off the job.</div>
 <header class="hd">
   <div class="wrap hd-in">
-    <a class="hd-logo" href="/" aria-label="KITH Cars Garage &amp; Bodyworks home"><img src="/logokithcars.png" alt="KITH Cars Garage &amp; Bodyworks" width="200" height="120"/></a>
+    <a class="hd-logo" href="/" aria-label="KITH Cars Garage &amp; Bodyworks home"><img fetchpriority="high" src="/logokithcars.png" alt="KITH Cars Garage &amp; Bodyworks" width="200" height="120"/></a>
     <nav class="hd-nav" id="hd-nav" aria-label="Main">
       <a href="/bodywork" class="hot">Bodywork</a>
       <a href="/mechanical">Mechanical</a>
@@ -62,7 +65,7 @@
   <div class="hero-bg" role="img" aria-label="Inside the KITH workshop in Hackbridge"></div>
   <div class="wrap hero-in">
     <div>
-      <span class="eyebrow">Hackbridge · South London · Mon–Sat 8am–8pm</span>
+      <span class="eyebrow">Hackbridge · South London · Mon–Fri 8am–8pm · Sat 8am–5pm</span>
       <h1>Bodywork, mechanical, tyres and tuning. <em>Priced in seconds.</em></h1>
       <p class="sub">Put your reg in for an instant price on bodywork, repairs, servicing, tyres and tuning. You get a fixed written quote before we touch the car.</p>
       <ul class="pillars-mini">
@@ -72,7 +75,7 @@
         <li><a href="#quote" data-quote="tuning">Tuning</a></li>
       </ul>
       <ul class="trust">
-        <li><span class="stars">★★★★★</span> <b>4.9</b> from 87 Google reviews</li>
+        <li><span class="stars">★★★★★</span> <b>4.9</b> from 193 Google reviews</li>
         <li><b>3-month</b> workmanship warranty</li>
         <li><b>Collection</b> &amp; delivery</li>
       </ul>
@@ -254,7 +257,7 @@
   <div class="wrap">
     <div class="svc-head">
       <div><span class="eyebrow">Google reviews</span><h2>What drivers say</h2></div>
-      <div class="rating-big"><b>4.9</b><div><span class="stars">★★★★★</span><br><a href="https://www.google.com/maps/place/KITH+Cars/@51.3791585,-0.1594699,545m/data=!3m2!1e3!4b1!4m6!3m5!1s0x487607eaf5ef8273:0x62f758e7463a651d!8m2!3d51.3791586!4d-0.154599!16s%2Fg%2F11xlrxbz7j" target="_blank" rel="noopener">87 reviews on Google</a></div></div>
+      <div class="rating-big"><b>4.9</b><div><span class="stars">★★★★★</span><br><a href="https://www.google.com/maps/place/KITH+Cars/@51.3791585,-0.1594699,545m/data=!3m2!1e3!4b1!4m6!3m5!1s0x487607eaf5ef8273:0x62f758e7463a651d!8m2!3d51.3791586!4d-0.154599!16s%2Fg%2F11xlrxbz7j" target="_blank" rel="noopener">193 reviews on Google</a></div></div>
     </div>
     <div class="revs">
       <figure class="rev"><span class="stars">★★★★★</span><blockquote>&ldquo;My BMW 1 Series needed a new timing chain and clutch. Expensive fix, however the team gave me a fair price. They were also able to offer me a courtesy car due to the extensive repair time. Highly recommend.&rdquo;</blockquote><figcaption>Aaron Konadu</figcaption></figure>
@@ -278,13 +281,13 @@
 
 <section class="sec sec-alt" id="visit">
   <div class="wrap visit">
-    <picture><source srcset="/img/home-unit.webp" type="image/webp"/><img src="/img/home-unit.jpg" alt="The KITH unit at Soho Mills, Hackbridge" loading="lazy" width="900" height="658"/></picture>
+    <img src="/img/home-unit.jpg" alt="The KITH unit at Soho Mills, Hackbridge" loading="lazy" width="900" height="658"/>
     <div>
       <span class="eyebrow">Visit us</span>
       <h2>Soho Mills, Hackbridge</h2>
       <dl>
         <dt>Address</dt><dd>Unit 1, Soho Mills, London Road, Hackbridge, Wallington SM6 7HN</dd>
-        <dt>Open</dt><dd>Monday to Saturday, 8am to 8pm</dd>
+        <dt>Open</dt><dd>Monday to Friday, 8am to 8pm, and Saturday 8am to 5pm</dd>
         <dt>Call</dt><dd><a href="tel:02046299469">020 4629 9469</a></dd>
         <dt>Email</dt><dd><a href="mailto:kithcarsinfo@gmail.com">kithcarsinfo@gmail.com</a></dd>
       </dl>
@@ -323,7 +326,7 @@
     <div class="ft-grid">
       <div>
         <a class="ft-logo" href="/"><img src="/logokithcars.png" alt="KITH Cars Garage &amp; Bodyworks" loading="lazy" width="200" height="120"/></a>
-        <p><b style="color:#fff">KITH Cars Garage &amp; Bodyworks</b><br>Unit 1, Soho Mills, London Road, Hackbridge, Wallington SM6 7HN<br><a href="tel:02046299469" style="display:inline">020 4629 9469</a> · Mon–Sat 8am–8pm</p>
+        <p><b style="color:#fff">KITH Cars Garage &amp; Bodyworks</b><br>Unit 1, Soho Mills, London Road, Hackbridge, Wallington SM6 7HN<br><a href="tel:02046299469" style="display:inline">020 4629 9469</a> · Mon–Fri 8am–8pm · Sat 8am–5pm</p>
       </div>
       <div><h4>Bodywork</h4><a href="/accident-repairs">Accident repairs</a><a href="/bumper-repair">Bumper repair</a><a href="/dent-removal">Dent removal</a><a href="/scratch-repair">Scratch repair</a><a href="/car-respray">Full respray</a><a href="/alloy-wheel-refurbishment">Alloy wheels</a></div>
       <div><h4>Mechanical</h4><a href="/car-servicing">Servicing</a><a href="/mot-testing">MOT</a><a href="/brake-repairs">Brakes</a><a href="/clutch-replacement">Clutch</a><a href="/timing-chain-replacement">Timing chain</a><a href="/engine-diagnostics">Diagnostics</a></div>

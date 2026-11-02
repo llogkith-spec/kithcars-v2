@@ -29,16 +29,17 @@
   <meta name="twitter:title" content="KITHCARS | Car Repair Price Guide — Hackbridge" />
   <meta name="twitter:description" content="Transparent average prices for MOT, servicing, brakes and more in Hackbridge." />
   <meta name="twitter:image" content="https://www.kithcars.com/logokithcars.png" />
-
-  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<link rel="stylesheet" href="/callbar.css"/>
+<script src="/callbar.js" defer></script>
 </head>
 <body>
 
   <header class="site-header">
     <div class="container header-inner">
       <a class="site-brand" href="index.html" aria-label="KITHCARS Home">
-        <img class="site-logo" src="logokithcars.png" alt="KITHCARS Automotive Workshop" />
+        <picture><source srcset="logokithcars.webp" type="image/webp"/><img fetchpriority="high" class="site-logo" src="logokithcars.png" alt="KITHCARS Automotive Workshop" /></picture>
       </a>
 
       <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
@@ -492,7 +493,7 @@
       <div class="footer-grid">
         <div class="footer-brand">
           <div class="footer-logo">
-            <img src="logokithcars.png" alt="KITHCARS Automotive Workshop" class="footer-logo-img" />
+            <picture><source srcset="logokithcars.webp" type="image/webp"/><img loading="lazy" decoding="async" src="logokithcars.png" alt="KITHCARS Automotive Workshop" class="footer-logo-img" /></picture>
           </div>
           <p>Your trusted local garage for servicing, bodywork, fleet support and recovery in Hackbridge and Wallington. Quality workmanship, honest pricing, every time.</p>
         </div>
@@ -534,7 +535,7 @@
             </div>
             <div class="footer-contact-item">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              Mon–Sat 8am–8pm
+              Mon–Fri 8am–8pm · Sat 8am–5pm
             </div>
           </div>
         </div>

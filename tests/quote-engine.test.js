@@ -8,10 +8,28 @@ t('LOW tier x2 under 2 hrs', () => assert.strictEqual(E.labourCost(cat, 1.0, 'LO
 t('TOP tier x1.5 at exactly 2.0 hrs', () => assert.strictEqual(E.labourCost(cat, 2.0, 'TOP'), 252));
 t('TOP x2 at 1.99', () => assert.ok(Math.abs(E.labourCost(cat, 1.99, 'TOP') - 334.32) < 1e-9));
 t('always-x2 stays x2 over threshold', () => assert.strictEqual(E.labourCost(cat, 2.5, 'TOP', true), 420));
-t('panel door small: 300 ex -> 360 inc, blend both sides +100 each ex', () => {
-  const r = E.priceJob(cat, 'panel-door', 'small'); assert.strictEqual(r.low, 360); assert.strictEqual(r.high, 600); });
-t('panel SUV surcharge +40 ex', () => assert.strictEqual(E.priceJob(cat, 'panel-front-bumper', 'large').low, Math.round(360 * 1.2)));
-t('van surcharge +100 ex', () => assert.strictEqual(E.priceJob(cat, 'panel-rear-bumper', 'van').low, Math.round(375 * 1.2)));
+// Panel prices are the SOP's own figures, hard-coded here on purpose: if the catalogue drifts
+// away from the rate card again these fail, which is the whole point of the test.
+t('panel door: SOP £200 ex -> £240 inc, blend free so no spread', () => {
+  const r = E.priceJob(cat, 'panel-door', 'small');
+  assert.strictEqual(r.low, 240); assert.strictEqual(r.high, 240); });
+t('every panel matches the SOP inc VAT', () => {
+  const sop = { 'front-bumper': 288, 'rear-bumper': 180, bonnet: 180, door: 240, 'front-wing': 180,
+                'rear-quarter': 180, roof: 360, boot: 300 };
+  for (const [panel, inc] of Object.entries(sop)) {
+    const r = E.priceJob(cat, 'panel-' + panel, 'small');
+    assert.strictEqual(r.low, inc, `${panel}: expected £${inc} inc VAT, got £${r.low}`);
+  } });
+t('trim priced off the diagram matches the SOP £120 inc', () => {
+  const r = E.bodyLine(cat, 'trim', 'Trim', 'scuff', 'small');
+  assert.strictEqual(r.low, 120); });
+t('blends are free, per the SOP', () => {
+  assert.strictEqual(cat.body_blend_ex_vat.default, 0);
+  assert.strictEqual(cat.body_blend_ex_vat.door, 0); });
+t('SUV surcharge +40 ex: front bumper 240+40 -> £336 inc', () =>
+  assert.strictEqual(E.priceJob(cat, 'panel-front-bumper', 'large').low, Math.round(280 * 1.2)));
+t('van surcharge +100 ex: rear bumper 150+100 -> £300 inc', () =>
+  assert.strictEqual(E.priceJob(cat, 'panel-rear-bumper', 'van').low, Math.round(250 * 1.2)));
 t('tyres £20 each', () => assert.strictEqual(E.priceJob(cat, 'tyres', 'small', { qty: 4 }).low, 80));
 t('mot fixed at £50', () => assert.strictEqual(E.priceJob(cat, 'mot', 'medium').low, 50));
 t('labour job: rate-card anchor, +35% headroom, rounded outward to £5', () => {
@@ -77,7 +95,28 @@ t('ULEZ rule of thumb', () => {
   assert.strictEqual(E.ulezLikely({ fuelType: 'PETROL', yearOfManufacture: 2008 }), true);
   assert.strictEqual(E.ulezLikely({ fuelType: 'ELECTRICITY' }), true); });
 t('dealer figure only when clearly dearer', () => {
-  const r = E.priceJob(cat, 'clutch', 'medium'); assert.ok(r.dealer > (r.low + r.high) / 2); });
+  // The rule, not a particular job: a dealer figure is only ever shown when it clears our own
+  // mid-price by the configured margin. At the real dealer rate (£120 + VAT) that is true of very
+  // few jobs, and the comparison correctly stays hidden on the rest rather than claiming a saving.
+  const dr = cat.dealer.labour_rate_inc_vat;
+  const rateFor = b => (dr && typeof dr === 'object') ? dr[b] : dr;
+  let shown = 0;
+  for (const j of cat.jobs) {
+    if (j.type !== 'labour' || j.labour_only) continue;
+    for (const band of Object.keys(cat.bands)) {
+      const r = E.priceJob(cat, j.id, band, {});
+      if (typeof r.low !== 'number') continue;
+      if (r.dealer === undefined) continue;
+      shown++;
+      const mid = (r.low + r.high) / 2;
+      assert.ok(r.dealer >= mid * (1 + cat.dealer.show_if_saving_at_least),
+        `${j.id}/${band}: dealer ${r.dealer} does not clear ${mid} by the margin`);
+      const midH = (r.hours[0] + r.hours[1]) / 2, midP = (r.parts[0] + r.parts[1]) / 2;
+      const want = midH * rateFor(band) + midP * cat.dealer.parts_factor;
+      assert.ok(Math.abs(r.dealer - want) <= 5, `${j.id}/${band}: dealer figure not built from the band rate`);
+    }
+  }
+  assert.ok(shown > 0, 'no job anywhere shows a dealer comparison - check the dealer rate'); });
 t('totals', () => { const l = [E.priceJob(cat, 'mot', 'small'), E.priceJob(cat, 'dpf', 'small'), E.priceJob(cat, 'tyres', 'small', { qty: 2 })];
   const s = E.totals(l); assert.strictEqual(s.count, 2); assert.strictEqual(s.unpriced, 1); });
 console.log(n + ' tests passed');
@@ -107,7 +146,8 @@ for (const id of ['service-interim','service-full','brake-discs-front','clutch',
   assert.ok(E.tyrePrice(cat, { width: 225, profile: 45, rim: 17, runflat: true }, 'premium').lo > p.lo, 'run-flats cost more');
   assert.ok(E.tyreLine(cat, { width: 205, profile: 55, rim: 16 }, 'mid', 4).low > E.tyreLine(cat, { width: 205, profile: 55, rim: 16 }, 'budget', 4).low);
   const b = E.bodyLine(cat, 'door', 'Left front door', 'dentp', 'medium');
-  assert.ok(b.low === Math.floor((300 + 50) * 1.2 / 5) * 5, 'door paint + dent low');
+  assert.strictEqual(b.low, 300, 'door paint + small dent = (200 + 50) ex VAT');
+  assert.strictEqual(b.high, 360, 'door paint + big dent = (200 + 100) ex VAT');
   assert.strictEqual(E.bodyLine(cat, 'door', 'x', 'nonsense', 'medium'), null);
   const t = E.tuneLines(cat, 'td', 150, 's1', ['springs', 'bodykit']);
   assert.strictEqual(t.lines.length, 3);

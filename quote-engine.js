@@ -53,6 +53,42 @@
     return 'medium';
   }
 
+  /* Work the size band out of whatever the customer typed ("ford focus 1.0", "VW Transit Custom"), so the
+     fallback never has to ask them whether their own car is an estate. Returns null when we genuinely can't
+     tell, which is the only time the page should ask. Longest key first: TRANSIT CUSTOM beats TRANSIT. */
+  function norm(x) {
+    return ' ' + String(x || '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+  }
+
+  /* Keys are sorted here rather than trusted in file order: JavaScript hoists integer-like keys such as
+     "308" to the front of an object, which would otherwise undo the longest-first ordering. */
+  var bandKeys = null, bandKeysFor = null;
+  function modelKeys(table) {
+    if (bandKeys && bandKeysFor === table) return bandKeys;
+    bandKeys = Object.keys(table).sort(function (a, b) {
+      var at = a.split(' ').length, bt = b.split(' ').length;
+      return bt - at || b.length - a.length || (a < b ? -1 : 1);
+    });
+    bandKeysFor = table;
+    return bandKeys;
+  }
+
+  function bandFromText(cat, text) {
+    var s = norm(text);
+    if (s.length < 4) return null;
+    var table = (cat && cat.model_bands) || {};
+    var keys = modelKeys(table), hit = null;
+    for (var i = 0; i < keys.length; i++) {
+      if (s.indexOf(norm(keys[i])) !== -1) { hit = table[keys[i]]; break; }
+    }
+    // A van is a van whoever made it: a Mercedes Sprinter is not a prestige car.
+    if (hit === 'van') return 'van';
+    for (var j = 0; j < PRESTIGE.length; j++) {
+      if (s.indexOf(norm(PRESTIGE[j])) !== -1) return 'prestige';
+    }
+    return hit;
+  }
+
   /* London ULEZ rule of thumb: petrol Euro 4 (most from 2006), diesel Euro 6 (most from late 2015), electric exempt. */
   function ulezLikely(v) {
     if (!v) return null;
@@ -123,6 +159,12 @@
     out.low = roundDown5(lo);
     out.high = roundUp5(hi);
     out.hours = h; out.parts = p;
+    // What the figure is built from, so the page can show its working rather than asking the
+    // customer to take the number on trust.
+    out.rate = cat.rates_inc_vat[job.tier];
+    out.multiplier = job.x2 ? 2 : ((h[0] + h[1]) / 2 < cat.threshold_hours ? 2 : 1.5);
+    if (job.includes) out.includes = job.includes;
+    if (job.check) out.check = job.check;
     var conf = ai && ['high', 'medium', 'low'].indexOf(ai.confidence) !== -1 ? ai.confidence : null;
     out.confidence = conf || job.confidence || 'medium';
     if (ai && typeof ai.note === 'string' && ai.note) out.note = ai.note;
@@ -131,7 +173,13 @@
     // Typical main dealer figure: book hours at the dealer rate plus dealer parts pricing. Only shown when clearly dearer.
     if (!job.labour_only && cat.dealer) {
       var midH = (h[0] + h[1]) / 2, midP = (p[0] + p[1]) / 2;
-      var dealer = midH * cat.dealer.labour_rate_inc_vat + midP * cat.dealer.parts_factor;
+      // The dealer rate can be one figure for everything, or one per size band: a prestige main
+      // dealer in London charges well above a volume-brand one, and a single average flatters
+      // neither comparison.
+      var dr = cat.dealer.labour_rate_inc_vat;
+      var dRate = (dr && typeof dr === 'object') ? Number(dr[band]) : Number(dr);
+      if (!isFinite(dRate) || dRate <= 0) dRate = 0;
+      var dealer = midH * dRate + midP * cat.dealer.parts_factor;
       var ours = (out.low + out.high) / 2;
       if (dealer >= ours * (1 + cat.dealer.show_if_saving_at_least)) out.dealer = roundUp5(dealer);
     }
@@ -148,6 +196,32 @@
     t.low = Math.round(t.low); t.high = Math.round(t.high); t.dealer = roundUp5(t.dealer);
     t.showDealer = priced.some(function (l) { return l.dealer; });
     return t;
+  }
+
+  /* Bodywork can't be priced to the pound off a diagram: the same scrape is a different job depending on
+     how deep it is and what's behind it. So the bodywork total is shown as a band around the worked-out
+     figure — plus or minus body_range.band_inc_vat — and the estimator confirms the exact price after
+     looking at the car. The bottom is held at a fraction of the figure so a small job doesn't read as
+     nearly free. Returns the total unchanged when no band is configured. */
+  function bodyBand(cat, t, lines) {
+    var cfg = cat && cat.body_range;
+    var band = cfg ? Number(cfg.band_inc_vat) : 0;
+    if (!t || !isFinite(band) || band <= 0 || !isFinite(t.low) || !isFinite(t.high)) return t;
+    // Paint-only work is a rate-card price: the panel costs what the panel costs, so a band would
+    // invent uncertainty that is not there and quote below our own figure. The band is for the jobs
+    // that genuinely cannot be settled until the car is in front of us: a dent, or a panel to replace.
+    if (Array.isArray(lines) && !lines.some(function (l) { return l && l.uncertain; })) return t;
+    // The band only ever goes up. With a dent or a panel that may need replacing, what we don't know
+    // is how much MORE the job is, never how much less: the rate-card figure is the floor either way.
+    // Banding both ways quoted a dented bumper at £165 when a plain respray of it is £240.
+    var cap = cfg && isFinite(Number(cfg.max_fraction)) ? Number(cfg.max_fraction) : 0.5;
+    var use = Math.min(band, t.high * cap);
+    var out = {};
+    for (var k in t) if (Object.prototype.hasOwnProperty.call(t, k)) out[k] = t[k];
+    out.low = roundDown5(t.low);
+    out.high = roundUp5(t.high + use);
+    out.banded = true;
+    return out;
   }
 
   /* A model-written note is shown to a customer as our own advice. Keep it to a plain sentence and drop
@@ -236,7 +310,20 @@
     var d = null, list = cat.bodywork_damage;
     for (var i = 0; i < list.length; i++) if (list[i].id === damageId) d = list[i];
     if (!d || !has(cat.body_panels_ex_vat, panelKey)) return null;
-    // A SMART repair is a flat price: it's localised work, so the panel it's on barely moves the figure.
+    // A localised repair is priced as a share of painting the whole panel, so it is always the cheaper
+    // of the two on every panel. A flat figure could not do that: it undercut a roof and came out dearer
+    // than respraying a bonnet.
+    if (isFinite(Number(d.panel_fraction)) && Number(d.panel_fraction) > 0) {
+      var addP = has(cat.body_band_surcharge_ex_vat, band) ? cat.body_band_surcharge_ex_vat[band] : 0;
+      var smart = (cat.body_panels_ex_vat[panelKey] + addP) * Number(d.panel_fraction);
+      return { id: 'panel-' + panelKey, name: panelLabel + ': ' + d.label.toLowerCase(), kind: 'range',
+               low: roundDown5(smart * 1.2), high: roundDown5(smart * 1.2), part: false, note: d.hint || '' };
+    }
+    // Older forms: an explicit range, or a single flat figure.
+    if (isFinite(Number(d.low)) && isFinite(Number(d.high))) {
+      return { id: 'panel-' + panelKey, name: panelLabel + ': ' + d.label.toLowerCase(), kind: 'range',
+               low: Number(d.low), high: Number(d.high), part: false, note: d.hint || '' };
+    }
     if (isFinite(Number(d.flat)) && Number(d.flat) > 0) {
       return { id: 'panel-' + panelKey, name: panelLabel + ': ' + d.label.toLowerCase(), kind: 'range',
                low: Number(d.flat), high: Number(d.flat), part: false, note: d.hint || '' };
@@ -246,9 +333,24 @@
       var base = cat.body_panels_ex_vat[panelKey] + add;
       lo += base; hi += base + (panelKey === 'door' ? cat.body_blend_ex_vat.door : cat.body_blend_ex_vat['default']);
     }
-    if (d.dent) { lo += cat.jobs.filter(function (j) { return j.id === 'dent'; })[0].low / 1.2; hi += cat.jobs.filter(function (j) { return j.id === 'dent'; })[0].high / 1.2; }
+    // A dent on a panel being painted anyway is an uplift on the panel price, not a standalone dent
+    // job: the SOP puts it at +£50 small, +£100 big. Using the standalone range put the top at +£500.
+    if (d.dent) {
+      var up = cat.body_dent_uplift_ex_vat;
+      if (up && isFinite(Number(up.low)) && isFinite(Number(up.high))) { lo += Number(up.low); hi += Number(up.high); }
+      else {
+        var dentJob = cat.jobs.filter(function (j) { return j.id === 'dent'; })[0];
+        lo += dentJob.low / 1.2; hi += dentJob.high / 1.2;
+      }
+    }
+    // A fixed rate-card price must not be split into a range by rounding: 240 ex VAT is 288 inc, and
+    // rounding the two ends apart showed it as "£285-£290". Round once, upward, when there is no spread.
+    var incLo = lo * 1.2, incHi = hi * 1.2;
+    var outLo = incLo === incHi ? roundUp5(incLo) : roundDown5(incLo);
     return { id: 'panel-' + panelKey, name: panelLabel + ': ' + d.label.toLowerCase(), kind: 'range',
-             low: roundDown5(lo * 1.2), high: roundUp5(hi * 1.2), part: !!d.part,
+             low: outLo, high: roundUp5(incHi), part: !!d.part,
+             // A dent's depth and whether a panel can be saved are only known with the car here.
+             uncertain: !!(d.dent || d.part),
              note: d.part ? 'The panel itself is priced once we have seen it and know the part cost.' : '' };
   }
 
@@ -327,8 +429,9 @@
     return out;
   }
 
-  return { labourCost: labourCost, labourRange: labourRange, guessBand: guessBand, ulezLikely: ulezLikely,
-           priceJob: priceJob, totals: totals, clampAi: clampAi, findJob: findJob, tyrePrice: tyrePrice,
+  return { labourCost: labourCost, labourRange: labourRange, guessBand: guessBand, bandFromText: bandFromText,
+           ulezLikely: ulezLikely,
+           priceJob: priceJob, totals: totals, bodyBand: bodyBand, clampAi: clampAi, findJob: findJob, tyrePrice: tyrePrice,
            tyreLine: tyreLine, bodyLine: bodyLine, tuneLines: tuneLines, recoveryLine: recoveryLine,
            couponEligible: couponEligible, bookableDays: bookableDays, safeNote: safeNote };
 });

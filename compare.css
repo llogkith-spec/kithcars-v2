@@ -1,0 +1,77 @@
+/* Before/after comparison sliders and the gallery that holds them. */
+
+.kc-compare{
+  position:relative;overflow:hidden;border-radius:14px;background:#eceef1;
+  aspect-ratio:4/3;user-select:none;-webkit-user-select:none;touch-action:pan-y;
+  cursor:ew-resize;box-shadow:0 1px 3px rgba(0,0,0,.09),0 8px 24px rgba(0,0,0,.06)
+}
+.kc-compare img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
+  pointer-events:none;-webkit-user-drag:none
+}
+/* The repaired side sits in a box that the handle widens and narrows. The image inside must stay the
+   width of the whole card, not of the box, or the two halves drift apart as the handle moves. --kc-w
+   is set from JS and kept in step on resize; 100% is only the fallback before the script runs. */
+.kc-clip{position:absolute;inset:0;width:50%;overflow:hidden;will-change:width}
+.kc-clip img{width:var(--kc-w,100%);max-width:none}
+.kc-dragging .kc-clip,.kc-dragging .kc-handle{transition:none}
+.kc-clip,.kc-handle{transition:width .12s ease-out,left .12s ease-out}
+
+.kc-handle{
+  position:absolute;top:0;bottom:0;left:50%;width:44px;margin-left:-22px;padding:0;
+  background:none;border:0;cursor:ew-resize;z-index:3
+}
+.kc-handle::before{
+  content:"";position:absolute;top:0;bottom:0;left:50%;width:3px;margin-left:-1.5px;
+  background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.14)
+}
+.kc-grip{
+  position:absolute;top:50%;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px;
+  border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.28);
+  display:flex;align-items:center;justify-content:center
+}
+.kc-grip::before,.kc-grip::after{
+  content:"";position:absolute;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent
+}
+.kc-grip::before{border-right:7px solid #111;left:11px}
+.kc-grip::after{border-left:7px solid #111;right:11px}
+.kc-handle:focus-visible{outline:none}
+.kc-handle:focus-visible .kc-grip{box-shadow:0 0 0 3px #111,0 2px 10px rgba(0,0,0,.28)}
+
+.kc-tag{
+  position:absolute;bottom:12px;z-index:2;padding:5px 11px;border-radius:999px;
+  font:700 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.04em;
+  text-transform:uppercase;background:rgba(17,17,17,.78);color:#fff;
+  backdrop-filter:blur(4px);transition:opacity .15s;pointer-events:none
+}
+.kc-tag-b{left:12px}
+.kc-tag-a{right:12px;background:rgba(184,134,42,.92)}
+
+/* Gallery */
+.kc-gallery{margin:0}
+.kc-filter{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px;padding:0}
+.kc-filter button{
+  font:600 14px/1 inherit;padding:9px 15px;border-radius:999px;cursor:pointer;
+  border:1.5px solid #d9dde2;background:#fff;color:#4a5159
+}
+.kc-filter button.on{background:#111;border-color:#111;color:#fff}
+.kc-filter button:hover:not(.on){border-color:#b1b8c0}
+
+.kc-grid{display:grid;gap:24px;grid-template-columns:repeat(auto-fill,minmax(310px,1fr))}
+.kc-item{margin:0}
+.kc-cap{margin:10px 2px 0}
+.kc-cap strong{display:block;font-size:15px;color:#111}
+.kc-cap span{display:block;font-size:13.5px;color:#6b7280;margin-top:2px;line-height:1.5}
+.kc-price{
+  display:inline-block;margin-top:7px;font-size:13px;font-weight:700;color:#111;
+  background:#f4f1e8;border:1px solid #e4dcc6;border-radius:6px;padding:3px 9px
+}
+.kc-empty{color:#6b7280;font-size:15px;padding:30px 0}
+
+@media (max-width:560px){
+  .kc-grid{grid-template-columns:1fr;gap:20px}
+  .kc-compare{aspect-ratio:3/2}
+}
+@media (prefers-reduced-motion:reduce){
+  .kc-clip,.kc-handle{transition:none}
+}

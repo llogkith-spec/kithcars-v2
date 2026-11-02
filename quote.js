@@ -44,6 +44,7 @@
 
   var S = {
     flow: '', step: 'flow', reg: '', vehicle: null, manual: false, model: '', band: 'medium',
+    bandAuto: false, bandOpen: false,   // bandAuto: we worked the size out; bandOpen: they asked to change it
     mech: [], tyre: { w: 205, p: 55, r: 16, qty: 4, tier: 'mid', rf: false },
     body: {}, tune: { fuel: 'tp', bhp: '', stage: 's1', addons: [] }, rec: { what: '', where: '', when: 'book' },
     ai: {}, lines: [], totals: null, power: null, expires: 0, offerGone: false,
@@ -117,14 +118,52 @@
         '</ul><label class="kq-label" for="kq-model">Model <span class="kq-opt">(optional, sharpens the price)</span></label>' +
         '<input class="kq-input" id="kq-model" maxlength="40" placeholder="e.g. 320d, Focus 1.0 EcoBoost" value="' + esc(S.model) + '"/>';
     } else {
-      h += '<p class="kq-note">' + (S.reg ? 'The lookup is busy, so tell us about the car instead.' : 'Tell us about the car.') + '</p><div class="kq-row">' +
+      h += '<p class="kq-note">' + (S.reg ? 'We couldn’t check that reg just now — tell us about the car and we’ll price it from that.' : 'Tell us about the car.') + '</p><div class="kq-row">' +
         '<div><label class="kq-label" for="kq-make">Make &amp; model</label><input class="kq-input" id="kq-make" maxlength="40" placeholder="e.g. Ford Focus" value="' + esc([v.make, S.model].filter(Boolean).join(' ')) + '"/></div>' +
         '<div><label class="kq-label" for="kq-year">Year</label><input class="kq-input" id="kq-year" inputmode="numeric" maxlength="4" placeholder="2016" value="' + esc(v.yearOfManufacture || '') + '"/></div></div>';
     }
-    h += '<fieldset class="kq-bands"><legend class="kq-label">Which fits best?</legend>' + Object.keys(C.bands).map(function (b) {
-      return '<label class="kq-chip' + (S.band === b ? ' on' : '') + '"><input type="radio" name="band" value="' + b + '"' + (S.band === b ? ' checked' : '') + '/><b>' + esc(C.bands[b].label) + '</b><small>' + esc(C.bands[b].hint) + '</small></label>';
-    }).join('') + '</fieldset>';
+    h += '<div class="kq-size">' + viewSize(found) + '</div>';
     return h + nav('flow', 'to-build', 'Next');
+  }
+  /* The size band decides the labour time, but a customer has no reason to know whether their car counts as
+     an estate. So we work it out — from the DVLA record when we have one, otherwise from the make and model
+     they typed — and only ask when we genuinely can't tell. They can always correct it. */
+  /* What the price is made of, and what the job covers. Folded away by default so the estimate
+     still reads as a price rather than an invoice, but there for anyone who wants to check it. */
+  function breakdown(l) {
+    if (typeof l.low !== 'number' || !l.hours || !l.rate) return '';
+    // Hours as charged, which is the book time times the multiplier - that is what the price is
+    // built from, so this is the figure that reconciles with it.
+    var m = l.multiplier || 1;
+    var round1 = function (x) { return Math.round(x * m * 10) / 10; };
+    var lo = round1(l.hours[0]), hi = round1(l.hours[1]);
+    var hrs = lo === hi ? lo + ' hrs' : lo + '–' + hi + ' hrs';
+    // KITH quote the rate ex VAT, the way the workshop says it: "£50 an hour plus VAT".
+    var vat = isFinite(Number(C.vat_rate)) ? Number(C.vat_rate) : 0.2;
+    var exRate = Math.round((l.rate / (1 + vat)) * 100) / 100;
+    var rows = ['<li><span>Labour</span><em>' + hrs + ' at ' + money(exRate) + ' an hour plus VAT</em></li>'];
+    if (l.parts && (l.parts[0] || l.parts[1])) {
+      rows.push('<li><span>Parts and oil</span><em>' + range(l.parts[0], l.parts[1]) + '</em></li>');
+    }
+    if (l.dealer) rows.push('<li><span>Main dealer, same job</span><em>around ' + money(l.dealer) + '</em></li>');
+    var items = (l.includes || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+    return '<details class="kq-break"><summary>' + (l.includes ? 'What’s included' : 'How this is worked out') + '</summary>' +
+      (items ? '<ul class="kq-inc">' + items + '</ul>' : '') +
+      '<ul class="kq-calc">' + rows.join('') + '</ul></details>';
+  }
+
+  function viewSize(found) {
+    var known = found || S.bandAuto;
+    if (known && !S.bandOpen) {
+      return '<p class="kq-note kq-sized">Priced as a <b>' + esc(C.bands[S.band].label).toLowerCase() + '</b>. ' +
+        '<button type="button" class="kq-link" data-act="band-open">Not right?</button></p>';
+    }
+    return '<fieldset class="kq-bands"><legend class="kq-label">' +
+      (known ? 'Pick the closest' : 'Which is closest? <span class="kq-opt">(so we can price the labour)</span>') + '</legend>' +
+      Object.keys(C.bands).map(function (b) {
+        return '<label class="kq-chip' + (S.band === b ? ' on' : '') + '"><input type="radio" name="band" value="' + b + '"' +
+          (S.band === b ? ' checked' : '') + '/><b>' + esc(C.bands[b].label) + '</b><small>' + esc(C.bands[b].hint) + '</small></label>';
+      }).join('') + '</fieldset>';
   }
   function readCar() {
     var m = $('#kq-model'), mk = $('#kq-make'), yr = $('#kq-year');
@@ -219,8 +258,10 @@
       (picked.length ? picked.map(function (id) {
         var p = CAR_PANELS.filter(function (x) { return x.id === id; })[0];
         return '<div class="kq-dmg"><div class="kq-dmg-h"><b>' + esc(p.label) + '</b><button type="button" class="kq-x" data-act="unpanel" data-v="' + id + '" aria-label="Remove ' + esc(p.label) + '">×</button></div>' +
+          // What the damage looks like, not what we'll do about it — the repair method is our call.
           '<div class="kq-pills">' + C.bodywork_damage.map(function (d) {
-            return '<button type="button" class="kq-pill' + (S.body[id] === d.id ? ' on' : '') + '" data-act="dmg" data-v="' + id + ':' + d.id + '">' + esc(d.label) + '</button>';
+            return '<button type="button" class="kq-pill' + (S.body[id] === d.id ? ' on' : '') + '" data-act="dmg" data-v="' + id + ':' + d.id + '"><b>' + esc(d.label) + '</b>' +
+              (d.size ? '<small>' + esc(d.size) + '</small>' : '') + '</button>';
           }).join('') + '</div></div>';
       }).join('') : '<p class="kq-note">Nothing selected yet. Tap a panel on the car.</p>') +
       '<p class="kq-small">Photos help us price it properly. You can send them on WhatsApp after you book.</p></div></div>';
@@ -279,7 +320,10 @@
       var t = E.tuneLines(C, S.tune.fuel, Number(S.tune.bhp) || 0, S.tune.stage, S.tune.addons);
       lines = t.lines; S.power = t.power;
     }
-    S.lines = lines; S.totals = E.totals(lines);
+    S.lines = lines;
+    // Bodywork carries a confirmed band around the total: the same scrape is a different job once it's
+    // been looked at, so we show the span we stand behind rather than a figure that will move.
+    S.totals = S.flow === 'bodywork' ? E.bodyBand(C, E.totals(lines), lines) : E.totals(lines);
   }
   function fetchAi() {
     if (S.flow !== 'mechanical') return Promise.resolve();
@@ -307,7 +351,7 @@
         if (l.confidence === 'low') tags.push('Wide range, confirmed before any work');
         if (l.part) tags.push('Panel cost confirmed after we see it');
         return '<li class="kq-line"><div><strong>' + esc(l.name) + '</strong>' + (l.note ? '<p>' + esc(l.note) + '</p>' : '') +
-          (tags.length ? '<small>' + tags.join(' · ') + '</small>' : '') + '</div>' + price + '</li>';
+          (tags.length ? '<small>' + tags.join(' · ') + '</small>' : '') + breakdown(l) + '</div>' + price + '</li>';
       }).join('') + '</ul>';
     if (t.count) {
       h += '<div class="kq-total"><span>Your estimate' + (t.unpriced ? ' so far' : '') + '</span><b>' + range(t.low, t.high) + '</b></div>';
@@ -319,6 +363,8 @@
     }
     h += (S.flow === 'recovery'
         ? '<p class="kq-small">A fixed price, inc VAT, to bring the car to our workshop. Nothing is added for traffic or waiting time. Anything we then do to the car is quoted separately, in writing, before it starts.</p>'
+        : S.flow === 'bodywork'
+        ? '<p class="kq-small"><b>This range is confirmed</b> &mdash; parts, labour, paint and VAT included. Our team will come back to you with the full exact price. Bodywork moves with how deep the damage goes and what sits behind the panel, which is why we give you the span we stand behind rather than a figure that changes later. We also decide the repair method, so you don&rsquo;t have to. No deposit, paid on collection. 3-month workmanship warranty.</p>'
         : '<p class="kq-small">Includes VAT, parts and labour, and it&rsquo;s worked out with the same pricing rules our estimators use, so <b>your job will land inside this range</b>. Book in and we&rsquo;ll send the exact figure for your reg in writing before any work starts. If anything we find changes it, you decide whether to go ahead, and you owe us nothing for looking. 3-month workmanship warranty.</p>') +
       '</div>' +
       '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="build">Change the job</button>' +
@@ -473,13 +519,54 @@
       S.reg = reg; track('quote_start', { flow: S.flow });
       var b = f.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Finding your car…';
       post('/api/vehicle', { reg: reg }, 8000).then(function (r) {
-        if (r.vehicle) { S.vehicle = r.vehicle; S.manual = false; S.band = E.guessBand(r.vehicle); track('vehicle_found'); render(); save(); }
+        if (r.vehicle) {
+          S.vehicle = r.vehicle; S.manual = false;
+          // The MOT History API gives the model name, which the DVLA's does not. Use it: it sharpens
+          // the estimate and saves the customer typing it.
+          if (r.vehicle.model && !S.model) S.model = r.vehicle.model;
+          // Band from the engine size when we have it, otherwise from the make and model.
+          S.band = E.bandFromText(C, [r.vehicle.make, r.vehicle.model].filter(Boolean).join(' ')) || E.guessBand(r.vehicle);
+          S.bandAuto = true; S.bandOpen = false;
+          track('vehicle_found'); render(); save();
+        }
         else if (r._status === 404) { b.disabled = false; b.textContent = 'Find my car'; err.innerHTML = 'We couldn’t find that reg. Check it, or <button type="button" class="kq-link" data-act="manual">enter the car yourself</button>.'; err.hidden = false; }
         else { S.vehicle = { registrationNumber: reg }; S.manual = true; render(); save(); }
       });
     });
     $$('input[name=band]').forEach(function (r) {
-      r.addEventListener('change', function () { S.band = r.value; $$('.kq-chip').forEach(function (c) { c.classList.toggle('on', c.querySelector('input').checked); }); save(); });
+      r.addEventListener('change', function () {
+        S.band = r.value; S.bandAuto = false;   // their choice stands; stop guessing over it
+        $$('.kq-chip').forEach(function (c) { c.classList.toggle('on', c.querySelector('input').checked); });
+        save();
+      });
+    });
+    // Work the size out of the make and model as they type, so the question never has to be asked.
+    var mk = $('#kq-make'), box = $('.kq-size');
+    if (mk && box) mk.addEventListener('input', function () {
+      if (S.bandOpen) return;                   // they've opened the picker; leave their choice alone
+      var b = E.bandFromText(C, mk.value);
+      var next = b || '', was = S.bandAuto ? S.band : '';
+      if (next === was) return;
+      if (b) { S.band = b; S.bandAuto = true; } else { S.bandAuto = false; }
+      box.innerHTML = viewSize(false);
+      bindSize();
+      save();
+    });
+    bindSize();
+  }
+  function bindSize() {
+    var open = $('[data-act="band-open"]');
+    if (open) open.addEventListener('click', function () {
+      S.bandOpen = true;
+      var box = $('.kq-size');
+      if (box) { box.innerHTML = viewSize(false); bindSize(); }
+      $$('input[name=band]').forEach(function (r) {
+        r.addEventListener('change', function () {
+          S.band = r.value; S.bandAuto = false;
+          $$('.kq-chip').forEach(function (c) { c.classList.toggle('on', c.querySelector('input').checked); });
+          save();
+        });
+      });
     });
   }
   function bindBuild() {

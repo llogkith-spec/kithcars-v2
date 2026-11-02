@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="alloy kerb after placeholder">
+  <rect width="800" height="600" fill="#eef3ef"/>
+  <g fill="none" stroke="#8fa697" stroke-width="2">
+    <path d="M120 400 q40-130 120-150 h320 q80 20 120 150" />
+    <path d="M120 400 h560" /><circle cx="235" cy="405" r="48"/><circle cx="565" cy="405" r="48"/>
+  </g>
+  <ellipse cx="370" cy="345" rx="96" ry="44" fill="#1f8a4c" opacity=".10"/>
+  <text x="400" y="100" font-family="system-ui,sans-serif" font-size="46" font-weight="700"
+        fill="#2c3a31" text-anchor="middle">AFTER</text>
+  <text x="400" y="545" font-family="system-ui,sans-serif" font-size="21"
+        fill="#2c3a31" opacity=".75" text-anchor="middle">placeholder &#8211; replace with a real photo</text>
+</svg>

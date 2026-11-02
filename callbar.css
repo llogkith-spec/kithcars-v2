@@ -1,0 +1,31 @@
+/* Sticky call / WhatsApp / quote bar, phones only.
+   Someone reading a service page on a phone should never have to scroll back up to contact us. */
+.kc-bar{display:none}
+
+@media (max-width:760px){
+  .kc-bar{
+    display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;
+    position:fixed;left:0;right:0;bottom:0;z-index:60;
+    background:#d9dde2;
+    padding-bottom:env(safe-area-inset-bottom,0);
+    box-shadow:0 -2px 14px rgba(0,0,0,.13);
+    transform:translateY(110%);transition:transform .22s ease-out
+  }
+  .kc-bar.on{transform:none}
+  .kc-bar a{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    min-height:58px;background:#fff;text-decoration:none;color:#111;
+    font:700 12px/1.1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.01em
+  }
+  .kc-bar a svg{width:20px;height:20px;display:block}
+  .kc-bar .kc-bar-quote{background:#c4161c;color:#fff}
+  .kc-bar .kc-bar-wa{color:#128c7e}
+  .kc-bar a:active{filter:brightness(.94)}
+
+  /* Keep the bar off the last of the page and off the WhatsApp bubble. */
+  body{padding-bottom:62px}
+  .wa-float,.whatsapp-float,[class*="whatsapp"]{bottom:76px!important}
+}
+@media (prefers-reduced-motion:reduce){
+  .kc-bar{transition:none}
+}

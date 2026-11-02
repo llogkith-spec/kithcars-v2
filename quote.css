@@ -19,6 +19,21 @@
 #kq .kq-opt{font-weight:500;color:var(--muted)}
 #kq .kq-help,.kq-note{color:var(--text-2);font-size:14.5px;margin:10px 0 0}
 #kq .kq-note{margin:0 0 16px;background:var(--paper-2);border-radius:10px;padding:12px 14px}
+/* The size we worked out, stated rather than asked. Sits where the size picker would have been. */
+#kq .kq-sized{margin:16px 0 0}
+#kq .kq-sized .kq-link{margin-left:6px}
+#kq .kq-sized b{color:var(--text)}
+/* The working behind a line: folded away, so the estimate reads as a price first. */
+#kq .kq-break{margin:8px 0 0}
+#kq .kq-break summary{font-size:13px;font-weight:700;color:var(--text-2);cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:5px}
+#kq .kq-break summary::-webkit-details-marker{display:none}
+#kq .kq-break summary::before{content:"+";font-weight:800;font-size:14px;line-height:1}
+#kq .kq-break[open] summary::before{content:"\2212"}
+#kq .kq-inc{margin:8px 0 0;padding:0 0 0 17px;font-size:13px;color:var(--text-2);line-height:1.65}
+#kq .kq-inc li{margin:0 0 3px}
+#kq .kq-calc{margin:10px 0 0;padding:10px 0 0;border-top:1px solid var(--line);list-style:none;font-size:13px}
+#kq .kq-calc li{display:flex;justify-content:space-between;gap:12px;padding:2px 0;color:var(--muted)}
+#kq .kq-calc em{font-style:normal;font-weight:600;color:var(--text-2);text-align:right}
 #kq .kq-small{color:var(--muted);font-size:12.5px;line-height:1.6;margin:14px 0 0}
 #kq .kq-err{color:var(--red-d);font-weight:600;font-size:14px;margin:10px 0 0}
 #kq .kq-link{background:none;border:0;padding:0;font:inherit;color:var(--text);font-weight:700;text-decoration:underline;cursor:pointer}
@@ -117,9 +132,14 @@
 #kq .kq-pick{text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:18px;cursor:pointer;font:inherit}
 #kq .kq-pick:hover{border-color:var(--red);transform:translateY(-2px);transition:.15s}
 #kq .kq-pick b{display:block;font-size:1.05rem}#kq .kq-pick small{color:var(--muted);font-size:13px}
-#kq .kq-pills{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
-#kq .kq-pill{font:inherit;font-weight:600;font-size:14px;padding:8px 13px;border-radius:999px;border:1.5px solid var(--line);background:#fff;color:var(--text-2);cursor:pointer}
+/* Damage options carry a line of plain description, so they're stacked rather than pill-shaped. */
+#kq .kq-pills{display:grid;gap:8px;margin:0 0 14px}
+#kq .kq-pill{font:inherit;text-align:left;padding:10px 14px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--text-2);cursor:pointer;display:grid;gap:2px}
+#kq .kq-pill b{font-weight:700;font-size:14.5px;color:var(--text)}
+#kq .kq-pill small{font-size:12.5px;color:var(--muted);line-height:1.4}
 #kq .kq-pill.on{background:var(--ink);border-color:var(--ink);color:#fff}
+#kq .kq-pill.on b,#kq .kq-pill.on small{color:#fff}
+#kq .kq-pill.on small{opacity:.8}
 #kq .kq-sidewall{display:flex;align-items:center;justify-content:center;gap:8px;background:#15171c;color:#fff;border-radius:60px/24px;padding:16px;margin:4px 0 18px;font:800 clamp(1.3rem,4vw,1.9rem) 'Arial Black',Arial,sans-serif;letter-spacing:.06em}
 #kq .kq-sidewall i{font-style:normal;opacity:.5}
 #kq .kq-tiers{display:grid;gap:10px;margin-bottom:6px}
