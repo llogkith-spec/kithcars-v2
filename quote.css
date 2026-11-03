@@ -8,7 +8,10 @@
 #kq p{margin-top:0}
 #kq a{color:inherit}
 
-#kq .kq-steps{list-style:none;padding:0;margin:0 0 24px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+/* The step row is laid out by however many steps there are. It was fixed at four columns while
+   the bodywork and mechanical flows have five, so the last step wrapped onto a second line and
+   sat on its own under the others -- which reads as a broken page on a phone. */
+#kq .kq-steps{list-style:none;padding:0;margin:0 0 24px;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
 #kq .kq-steps li{font-size:12.5px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:8px;border-top:3px solid var(--line);padding-top:10px}
 #kq .kq-steps li span{width:22px;height:22px;border-radius:50%;background:var(--paper-2);display:inline-flex;align-items:center;justify-content:center;font-size:12px}
 #kq .kq-steps li.on{color:var(--text);border-color:var(--red)}

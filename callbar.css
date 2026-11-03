@@ -29,3 +29,23 @@
 @media (prefers-reduced-motion:reduce){
   .kc-bar{transition:none}
 }
+
+/* Mobile safety net for inline two-column grids.
+
+   A number of sections set grid-template-columns in a style attribute. An inline style outranks
+   every stylesheet rule, including a media query, so those sections stayed two columns on a phone
+   and the right-hand column was pushed off the screen -- where body{overflow-x:hidden} hid it
+   rather than letting it scroll. On /about-us that silently removed the whole KITH Bodyworks
+   block from a 360px screen. These rules are deliberately !important: nothing weaker can beat an
+   inline style, and this file is loaded by every page on the site. */
+@media (max-width:768px){
+  [style*="grid-template-columns:1fr 1fr"],
+  [style*="grid-template-columns: 1fr 1fr"],
+  [style*="grid-template-columns:3fr 2fr"],
+  [style*="grid-template-columns: 3fr 2fr"],
+  [style*="grid-template-columns:2fr 1fr"],
+  [style*="grid-template-columns: 2fr 1fr"]{
+    grid-template-columns:1fr !important;
+    gap:2rem !important
+  }
+}

@@ -1297,16 +1297,12 @@
     },
     {
       "id": "dent",
-      "label": "Dent, paint not broken",
-      "size": "The paint is still intact",
-      "dent": true
-    },
-    {
-      "id": "dentp",
-      "label": "Dent with the paint broken",
-      "size": "Cracked, flaked or bare metal showing",
-      "paint": true,
-      "dent": true
+      "label": "Dent",
+      "size": "Any dent, paint broken or not",
+      "dent": true,
+      "inspect": true,
+      "hint": "We do not do paintless repair, so a dent is straightened and the panel is then painted. How deep it is and where it sits decide the figure, which is why this is a range until we see the car.",
+      "paint": true
     },
     {
       "id": "replace",
@@ -1816,15 +1812,16 @@
   },
   "_readme_model_bands": "Model name -> size band, used when the DVLA lookup is unavailable so the customer is not asked to classify their own car. Keys are matched against the make and model they type, longest key first, after uppercasing and stripping punctuation. A model mapped to \"van\" beats the prestige-by-make rule (a Mercedes Sprinter is a van, not a prestige car); otherwise a prestige make wins. Add a line to correct a car we get wrong.",
   "body_range": {
-    "band_inc_vat": 200,
+    "band_inc_vat": 100,
     "max_fraction": 0.5,
-    "_note": "The bodywork total is shown as a band of band_inc_vat either side of the middle of the worked-out figure, so a GBP900 job reads GBP700-GBP1,100. On a small job the band is capped at max_fraction of the figure so it never swamps the price or runs negative. Set band_inc_vat to 0 to show the plain worked-out range instead."
+    "_note": "Every bodywork figure is shown as a band, because blending, prep and what is found behind the panel all move the final number. The band runs upward from the rate-card figure, never below it: the card price is the floor, so banding downward would quote under our own cost. Capped at max_fraction of the figure on a small job so it never swamps the price."
   },
   "vat_rate": 0.2,
   "_readme_rates": "Labour rates INC VAT. Ex VAT is inc / (1 + vat_rate): LOW £50, TOP £70, BODY £70. Retail has two tiers - LOW for servicing and brakes, TOP for everything else (SOP v8). The page shows the ex-VAT rate with 'plus VAT' after it, which is how KITH quotes. BODY is carried for reference only; bodywork prices off body_panels_ex_vat.",
   "_readme_bodywork": "Panel prices are SOP v4.8 panel painting, 5-seater base, ex VAT, with one exception: the front bumper is 240 rather than the SOP's 200, set by KITH on 16 Oct so a full respray prices above the localised repair. Light scuff / SMART is 240 inc VAT, also KITH's figure, against the SOP's 160. Blends are free per the SOP. No surcharge for aluminium, metallic, pearl or colour change. No multi-panel discount, though the SOP has a 20% second-panel rule. Size surcharges follow the SOP: +40 SUV, +100 van.",
   "body_dent_uplift_ex_vat": {
-    "low": 50,
-    "high": 100
+    "low": 70,
+    "high": 300,
+    "_note": "Cost of pulling or filling the dent, on top of painting the panel. We do not do paintless repair, so there is no dent price that excludes paint. The spread is wide because severity is: a shallow door ding and a deep crease are not the same job."
   }
 }

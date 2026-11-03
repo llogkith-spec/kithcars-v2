@@ -207,13 +207,17 @@
     var cfg = cat && cat.body_range;
     var band = cfg ? Number(cfg.band_inc_vat) : 0;
     if (!t || !isFinite(band) || band <= 0 || !isFinite(t.low) || !isFinite(t.high)) return t;
-    // Paint-only work is a rate-card price: the panel costs what the panel costs, so a band would
-    // invent uncertainty that is not there and quote below our own figure. The band is for the jobs
-    // that genuinely cannot be settled until the car is in front of us: a dent, or a panel to replace.
-    if (Array.isArray(lines) && !lines.some(function (l) { return l && l.uncertain; })) return t;
-    // The band only ever goes up. With a dent or a panel that may need replacing, what we don't know
-    // is how much MORE the job is, never how much less: the rate-card figure is the floor either way.
-    // Banding both ways quoted a dented bumper at £165 when a plain respray of it is £240.
+    // A job that already comes out as a spread is carrying its own uncertainty -- a dent is £70 to
+    // £300 of straightening on top of the panel, because severity genuinely varies that much. Adding
+    // the band on top of that would stack one allowance on another and quote a range nobody believes.
+    // The band is for the jobs that price to a single figure and still need headroom.
+    if (t.high > t.low) return t;
+    // Otherwise every bodywork job gets it, not only the obviously uncertain ones. Even a straight
+    // panel respray moves with how far the colour has to be blended into the panels either side and
+    // what the prep turns up, so a single hard figure claims a precision the job does not have.
+    // The band only ever goes up. What we don't know is how much MORE the job is, never how much
+    // less: the rate-card figure is the floor. Banding both ways quoted a dented bumper at £165 when
+    // a plain respray of the same bumper is £240.
     var cap = cfg && isFinite(Number(cfg.max_fraction)) ? Number(cfg.max_fraction) : 0.5;
     var use = Math.min(band, t.high * cap);
     var out = {};
@@ -351,7 +355,9 @@
              low: outLo, high: roundUp5(incHi), part: !!d.part,
              // A dent's depth and whether a panel can be saved are only known with the car here.
              uncertain: !!(d.dent || d.part),
-             note: d.part ? 'The panel itself is priced once we have seen it and know the part cost.' : '' };
+             inspect: !!d.inspect,
+             note: d.part ? 'The panel itself is priced once we have seen it and know the part cost.'
+                 : (d.inspect ? (d.hint || '') : '') };
   }
 
   /* Recovery: a fixed price by road miles from the workshop, in two sets of bands — the truck for a car
