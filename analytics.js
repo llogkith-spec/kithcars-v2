@@ -25,7 +25,7 @@
 */
 (function () {
   'use strict';
-  var GA_ID = '';                      // <-- your GA4 Measurement ID goes here
+  var GA_ID = 'G-7NH2HFJWNQ';          // KITH Cars GA4 property "kith cars web"
   var dl = (window.dataLayer = window.dataLayer || []);
 
   if (GA_ID) {

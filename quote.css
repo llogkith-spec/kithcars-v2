@@ -194,3 +194,16 @@
 .kq-recprice{display:flex;flex-direction:column;gap:.25rem;margin:1.1rem 0 .25rem;padding:1rem 1.15rem;border:1px solid var(--kq-line,#dde1e8);border-left:4px solid var(--kq-gold,#c8a04a);border-radius:.7rem;background:var(--kq-surface,#f8f9fb)}
 .kq-recprice b{font-size:1.5rem;line-height:1.1}
 .kq-recprice span{font-size:13.5px;line-height:1.6;color:var(--kq-muted,#6b7280)}
+
+/* The photo prompt on the bodywork damage step. It is a call to action, not a footnote, so it
+   gets a panel of its own rather than sitting in the grey small print. */
+.kq-photo{
+  margin-top:14px;padding:12px 14px;border-radius:10px;
+  background:#f6f3ea;border:1px solid #e6dcc2;color:#4a4536;line-height:1.55
+}
+.kq-photo b{color:#1a1a1a;display:block;margin-bottom:2px}
+.kq-photo a{
+  display:inline-block;margin-top:6px;font-weight:700;color:#0b7a46;text-decoration:none;
+  border-bottom:2px solid #0b7a46
+}
+.kq-photo a:hover{color:#065c34;border-bottom-color:#065c34}

@@ -264,7 +264,14 @@
               (d.size ? '<small>' + esc(d.size) + '</small>' : '') + '</button>';
           }).join('') + '</div></div>';
       }).join('') : '<p class="kq-note">Nothing selected yet. Tap a panel on the car.</p>') +
-      '<p class="kq-small">Photos help us price it properly. You can send them on WhatsApp after you book.</p></div></div>';
+      // A photo settles bodywork faster than any form does, and the customer wants to show us
+      // before they commit, not after. So this is an action here, not a note about later.
+      (picked.length
+        ? '<p class="kq-small kq-photo"><b>Send us a photo and we&rsquo;ll confirm the exact price.</b> ' +
+          'It is the quickest way to be sure of the method and the figure. ' +
+          '<a href="' + waPhotoLink(picked) + '" target="_blank" rel="noopener" data-act="wa-photo">Send a photo on WhatsApp →</a></p>'
+        : '<p class="kq-small">Photos help us price it properly &mdash; you can send one as soon as you have picked a panel.</p>') +
+      '</div></div>';
     return h + nav('car', 'to-estimate', picked.length ? 'Show my price (' + picked.length + ')' : 'Tap a panel first', !picked.length);
   }
 
@@ -359,12 +366,17 @@
     }
     if (eligible) {
       h += '<div class="kq-offer"><div><b>' + money(coupon.amount) + ' off if you book online now</b>' +
-        '<span>Book a slot in the next <i id="kq-timer">' + fmtLeft() + '</i> and we&rsquo;ll take ' + money(coupon.amount) + ' off this job. Code ' + esc(coupon.code) + '.</span></div></div>';
+        '<span>Book a slot in the next <i id="kq-timer">' + fmtLeft() + '</i> and we&rsquo;ll take ' + money(coupon.amount) + ' off this job. Code ' + esc(coupon.code) + '. ' +
+        'The discount applies to bookings made inside that window; after it runs out the price is the one shown above.</span></div></div>';
     }
     h += (S.flow === 'recovery'
         ? '<p class="kq-small">A fixed price, inc VAT, to bring the car to our workshop. Nothing is added for traffic or waiting time. Anything we then do to the car is quoted separately, in writing, before it starts.</p>'
         : S.flow === 'bodywork'
-        ? '<p class="kq-small"><b>This range is confirmed</b> &mdash; parts, labour, paint and VAT included. Our team will come back to you with the full exact price. Bodywork moves with how deep the damage goes and what sits behind the panel, which is why we give you the span we stand behind rather than a figure that changes later. We also decide the repair method, so you don&rsquo;t have to. No deposit, paid on collection. 3-month workmanship warranty.</p>'
+        ? '<p class="kq-small"><b>' + (t.low === t.high ? 'This price is confirmed' : 'This range is confirmed') + '</b> &mdash; parts, labour, paint and VAT included. Our team will come back to you with the full exact price. ' +
+          (t.low === t.high
+            ? 'This is a fixed-method repair, so it is one figure rather than a span.'
+            : 'Bodywork moves with how deep the damage goes and what sits behind the panel, which is why we give you the span we stand behind rather than a figure that changes later.') +
+          ' We also decide the repair method, so you don&rsquo;t have to. No deposit, paid on collection. 3-month workmanship warranty. Courtesy car available at &pound;36 a day while your car is with us.</p>'
         : '<p class="kq-small">Includes VAT, parts and labour, and it&rsquo;s worked out with the same pricing rules our estimators use, so <b>your job will land inside this range</b>. Book in and we&rsquo;ll send the exact figure for your reg in writing before any work starts. If anything we find changes it, you decide whether to go ahead, and you owe us nothing for looking. 3-month workmanship warranty.</p>') +
       '</div>' +
       '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="build">Change the job</button>' +
@@ -444,6 +456,20 @@
       '<div class="kq-nav-wrap"><a class="kq-btn kq-btn-wa" href="' + waLink() + '" target="_blank" rel="noopener">' + (S.flow === 'bodywork' ? 'Send photos on WhatsApp' : 'Message us on WhatsApp') + '</a> ' +
       '<a class="kq-btn kq-btn-ghost" href="tel:' + PHONE_TEL + '">Call ' + PHONE + '</a></div></div>';
   }
+  // Opens WhatsApp with the panels the customer has tapped already written out, so all they have
+  // to add is the photograph. Used before a price exists, which is why it does not touch S.lines.
+  function waPhotoLink(picked) {
+    var names = (picked || []).map(function (id) {
+      var p = CAR_PANELS.filter(function (x) { return x.id === id; })[0];
+      return p ? p.label : id;
+    });
+    var msg = 'Hi KITH, I would like a price for bodywork on my ' + vehicleName() +
+      (S.vehicle && S.vehicle.registrationNumber ? ' (' + S.vehicle.registrationNumber + ')' : '') + '.\n' +
+      (names.length ? 'Damage to: ' + names.join(', ') + '.\n' : '') +
+      'Photo attached.';
+    return 'https://wa.me/' + WA + '?text=' + encodeURIComponent(msg);
+  }
+
   function waLink() {
     var msg = 'Hi KITH, I got an online estimate for ' + vehicleName() + (S.vehicle && S.vehicle.registrationNumber ? ' (' + S.vehicle.registrationNumber + ')' : '') + ':\n' +
       S.lines.map(function (l) { return '• ' + l.name + (typeof l.low === 'number' ? ': ' + range(l.low, l.high) : ''); }).join('\n') +

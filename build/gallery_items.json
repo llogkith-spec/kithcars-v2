@@ -1,0 +1,144 @@
+{
+  "_readme": "The bodywork gallery. This file and gallerygen.py live inside the repo on purpose: the gallery was once rebuilt from scratch because the build data lived outside it. A PAIR entry has 'before' and 'after' and renders as a drag slider; labelBefore/labelAfter say honestly what the two sides are, so do not write 'Before'/'After' unless the left side really is the damage. A SINGLE entry has 'image' and renders as a plain photo. 'type' drives the filter buttons, space separated. 'price' is shown to customers as a real figure, so leave it empty rather than guessing.",
+  "filters": [
+    { "id": "all", "label": "Everything" },
+    { "id": "paint", "label": "Paint and respray" },
+    { "id": "panel", "label": "Panel work" },
+    { "id": "prep", "label": "Prep and masking" },
+    { "id": "mechanical", "label": "Mechanical" }
+  ],
+  "items": [
+    {
+      "slug": "insignia-front",
+      "type": "paint panel",
+      "title": "Vauxhall Insignia, front end resprayed",
+      "car": "Vauxhall Insignia",
+      "note": "Front wing and bumper off, prepared and masked, then refinished in the car's own metallic red. Drag the handle to see it come back together.",
+      "price": "£400",
+      "labelBefore": "In the workshop",
+      "labelAfter": "Finished",
+      "before": "/gallery/insignia-stands.webp",
+      "after": "/gallery/insignia-finished-front.webp"
+    },
+    {
+      "slug": "insignia-masked",
+      "type": "paint",
+      "title": "The same car, masked and finished",
+      "car": "Vauxhall Insignia",
+      "note": "Masked to the panel edges so the new paint meets the old cleanly, and the finish afterwards.",
+      "price": "",
+      "labelBefore": "Masked up",
+      "labelAfter": "Finished",
+      "before": "/gallery/insignia-masked-front.webp",
+      "after": "/gallery/insignia-finished-grille.webp"
+    },
+    {
+      "slug": "insignia-refit",
+      "type": "panel",
+      "title": "Refitting the front bumper",
+      "car": "Vauxhall Insignia",
+      "note": "Back on the car once the paint had hardened, lined up to the wing and bonnet gaps.",
+      "price": "",
+      "image": "/gallery/insignia-refit.webp"
+    },
+    {
+      "slug": "insignia-wing",
+      "type": "paint",
+      "title": "Wing and headlight, finished",
+      "car": "Vauxhall Insignia",
+      "note": "The repaired wing back on the car, gaps set and the paint matched into the door.",
+      "price": "",
+      "image": "/gallery/insignia-finished-wing.webp"
+    },
+    {
+      "slug": "insignia-light",
+      "type": "paint",
+      "title": "Headlight and grille back in",
+      "car": "Vauxhall Insignia",
+      "note": "Everything refitted. Shut lines and gaps are the part people notice afterwards.",
+      "price": "",
+      "image": "/gallery/insignia-finished-light.webp"
+    },
+    {
+      "slug": "insignia-close",
+      "type": "paint",
+      "title": "Metallic red, close up",
+      "car": "Vauxhall Insignia",
+      "note": "The finish where the new paint meets the original on the bonnet shut line.",
+      "price": "",
+      "image": "/gallery/insignia-finished-close.webp"
+    },
+    {
+      "slug": "van-sanding",
+      "type": "prep",
+      "title": "Flatting a van door by hand",
+      "car": "",
+      "note": "Most of a good paint job is what happens before any paint goes on. This is the stage nobody sees.",
+      "price": "",
+      "image": "/gallery/van-sanding.webp"
+    },
+    {
+      "slug": "van-booth",
+      "type": "prep",
+      "title": "Van masked up in the booth",
+      "car": "",
+      "note": "Our own spray booth, so the work is not sent out and the vehicle is not sitting somewhere else for a week.",
+      "price": "",
+      "image": "/gallery/van-booth.webp"
+    },
+    {
+      "slug": "door-masked",
+      "type": "prep",
+      "title": "Masked to the shut lines",
+      "car": "",
+      "note": "Masked to the edges of the panel so the repair blends in rather than stopping at a hard line.",
+      "price": "",
+      "image": "/gallery/door-masked.webp"
+    },
+    {
+      "slug": "painter-spraying",
+      "type": "paint",
+      "title": "Laying down colour",
+      "car": "",
+      "note": "Mixed to the car's own paint code and sprayed in the booth, in full air-fed kit.",
+      "price": "",
+      "image": "/gallery/painter-spraying.webp"
+    },
+    {
+      "slug": "blue-spraying",
+      "type": "paint",
+      "title": "Colour going on",
+      "car": "",
+      "note": "Even coats, wet edge kept, no dry spray at the edges of the panel.",
+      "price": "",
+      "image": "/gallery/blue-spraying.webp"
+    },
+    {
+      "slug": "blue-booth",
+      "type": "prep",
+      "title": "Masked and ready",
+      "car": "",
+      "note": "Wheels, glass and trim covered before anything is sprayed.",
+      "price": "",
+      "image": "/gallery/blue-booth.webp"
+    },
+    {
+      "slug": "blue-door-prep",
+      "type": "prep panel",
+      "title": "Door and wing prepared",
+      "car": "",
+      "note": "Edges taped and the surrounding panels protected before the gun comes out.",
+      "price": "",
+      "image": "/gallery/blue-door-prep.webp"
+    },
+    {
+      "slug": "gearbox-out",
+      "type": "mechanical",
+      "title": "Gearbox out on the ramp",
+      "car": "",
+      "note": "Bodywork is not all we do. Mechanical repairs happen in the same building, so a car needing both does not go to two places.",
+      "price": "",
+      "image": "/gallery/underside-gearbox.webp"
+    }
+  ]
+}

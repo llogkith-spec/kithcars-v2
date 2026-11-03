@@ -222,3 +222,13 @@ h3{font-size:1.2rem;font-weight:700}
 .promise b{display:block;font-size:1.15rem;margin-bottom:4px}
 .promise span{color:var(--text-2)}
 @media (max-width:720px){.compare{grid-template-columns:1fr}}
+
+/* Link out to the bodywork gallery from under the service grid. The cards themselves are whole
+   links, so this cannot live inside one -- it sits under the grid where it still reads as part
+   of the bodywork story. */
+.svc-foot{
+  margin:22px 0 0;text-align:center;font-size:15px;color:#5b626b;line-height:1.6
+}
+.svc-foot a{color:#111;font-weight:700;text-decoration:none;border-bottom:2px solid #c9a227;padding-bottom:1px;white-space:nowrap}
+.svc-foot a:hover{border-bottom-color:#111}
+@media (max-width:560px){.svc-foot{font-size:14px;text-align:left}}
