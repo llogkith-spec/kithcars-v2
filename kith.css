@@ -99,3 +99,48 @@ h2 { text-transform: uppercase; }
 @media (max-width: 700px) {
   .section { padding-block: 52px; }
 }
+
+/* "What is included in each service" -- the three services as columns so they can be compared
+   rather than held in the head. Scrolls sideways inside its own box on a phone rather than
+   pushing the page about, which is the usual way a wide table breaks a small screen. */
+.kc-servicetable{margin:0}
+.kc-servicetable h2{margin:0 0 10px}
+.kc-st-lead{margin:0 0 18px;color:#555;line-height:1.65}
+.kc-st-scroll{
+  overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #e3e6ea;border-radius:12px;
+  /* Without an explicit max-width the box takes the table's min-width and drags the whole
+     page sideways instead of scrolling inside itself, which is the entire point of it. */
+  max-width:100%;width:100%
+}
+.kc-servicetable{max-width:100%;min-width:0}
+table.kc-st{border-collapse:collapse;width:100%;min-width:460px;font-size:14.5px;background:#fff}
+table.kc-st th,table.kc-st td{padding:10px 12px;text-align:left;border-bottom:1px solid #eceef1}
+table.kc-st thead th{
+  background:#14161a;color:#fff;font-weight:700;position:sticky;top:0;
+  font-size:13.5px;letter-spacing:.02em
+}
+table.kc-st thead th:not(:first-child),table.kc-st td{text-align:center;width:88px}
+table.kc-st tbody th{font-weight:500;color:#2b2f35;line-height:1.45}
+table.kc-st tr.kc-st-group th{
+  background:#f4f5f7;font-weight:700;font-size:12.5px;text-transform:uppercase;
+  letter-spacing:.06em;color:#5b626b;text-align:left
+}
+table.kc-st tr.kc-st-meta td{font-size:13px;color:#4a5159;text-align:center}
+table.kc-st tr.kc-st-meta th{font-weight:700;color:#14161a}
+table.kc-st .kc-yes{color:#1a7f42;font-weight:700;font-size:17px}
+table.kc-st .kc-no{color:#c2c7cf;font-size:17px}
+table.kc-st tbody tr:hover td,table.kc-st tbody tr:hover th{background:#fafbfc}
+.kc-st-foot{margin:14px 0 0;font-size:14px;color:#555;line-height:1.6}
+.kc-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:560px){
+  /* On a phone the table fits rather than scrolling. A side-scrolling table hides the columns
+     that matter -- the whole reason for the table is seeing the three together -- and the
+     min-width needed to make it scroll was also dragging the page itself sideways. The labels
+     wrap instead, and the tick columns shrink to just wider than a thumb. */
+  table.kc-st{font-size:13px;min-width:0}
+  table.kc-st th,table.kc-st td{padding:9px 6px}
+  table.kc-st tbody th,table.kc-st thead th:first-child{padding-left:10px;line-height:1.35;hyphens:auto}
+  table.kc-st thead th:not(:first-child),table.kc-st td{width:46px;font-size:12px}
+  table.kc-st tr.kc-st-meta td{font-size:11.5px;line-height:1.3}
+  table.kc-st thead th{position:static}
+}

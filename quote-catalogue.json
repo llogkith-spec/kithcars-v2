@@ -17,7 +17,9 @@
     },
     "parts_factor": 1.35,
     "show_if_saving_at_least": 0.1,
-    "_note": "Main dealer labour inc VAT, per size band. KITH reports local dealers at GBP120 an hour plus VAT = GBP144. A prestige main dealer in London usually charges more than a volume-brand one; raise the prestige figure when KITH confirms it. parts_factor is what a dealer charges for the same part against ours. The comparison is only shown where the dealer figure is at least show_if_saving_at_least higher, so it never claims a saving that is not there."
+    "_note": "Main dealer comparison. With use_multiplier on, the dealer figure is simply our price times multiplier -- KITH reports a franchised dealer at roughly half as much again for the same work. The labour_rate/parts_factor model below is the alternative: it works the dealer figure out from book hours at their rate, which varies honestly by job but on short jobs shows almost no gap. Shown as a typical average, never as a quote for a named garage.",
+    "multiplier": 1.5,
+    "use_multiplier": true
   },
   "bands": {
     "small": {
@@ -848,6 +850,36 @@
       }
     },
     {
+      "id": "diagnostic-code-read",
+      "cat": "mechanical",
+      "name": "Diagnostic code read",
+      "type": "fixed",
+      "price": 36,
+      "label": "£36 fixed",
+      "includes": [
+        "Every stored and pending fault code read, across all modules the car exposes",
+        "What each code means in plain English, written down",
+        "Freeze-frame data saved so the fault can be traced later if it is intermittent",
+        "Deducted from the full diagnostic if the fault needs one"
+      ],
+      "note": "Reads what the car has stored and tells you what triggered the light. It does not test the component: where the codes do not name the fault outright, the full diagnostic below is the next step and this fee comes off it."
+    },
+    {
+      "id": "diagnostic-full",
+      "cat": "mechanical",
+      "name": "Full diagnostic",
+      "type": "fixed",
+      "price": 146,
+      "label": "£146 fixed",
+      "includes": [
+        "Codes read, then the circuit and component actually tested rather than assumed",
+        "Live data recorded and compared against the manufacturer values",
+        "Road test where the fault only shows up driving",
+        "Written findings and a quote for the repair before anything is done"
+      ],
+      "note": "For faults a code read cannot settle on its own. The cost of a code read is deducted if you have already had one."
+    },
+    {
       "id": "warning-light",
       "cat": "mechanical",
       "name": "Warning light / fault finding",
@@ -860,6 +892,66 @@
       "name": "DPF light / loss of power (diesel)",
       "type": "diagnose",
       "note": "We check the soot load and sensors first, then quote the right fix. We never remove DPFs."
+    },
+    {
+      "id": "oil-filter-change",
+      "cat": "servicing",
+      "name": "Oil and filter change",
+      "type": "labour",
+      "tier": "LOW",
+      "ai": true,
+      "hours": {
+        "small": [
+          0.5,
+          0.7
+        ],
+        "medium": [
+          0.55,
+          0.75
+        ],
+        "large": [
+          0.6,
+          0.8
+        ],
+        "prestige": [
+          0.6,
+          0.9
+        ],
+        "van": [
+          0.6,
+          0.9
+        ]
+      },
+      "parts": {
+        "small": [
+          35,
+          60
+        ],
+        "medium": [
+          45,
+          75
+        ],
+        "large": [
+          60,
+          95
+        ],
+        "prestige": [
+          80,
+          140
+        ],
+        "van": [
+          60,
+          100
+        ]
+      },
+      "check": "oil level and leak",
+      "includes": [
+        "Castrol engine oil, drained and replaced with the exact grade your engine’s maker specifies",
+        "New oil filter and sump plug washer",
+        "Oil level set and the car checked for leaks before it goes out",
+        "Service light reset where the car has one"
+      ],
+      "note": "Oil and filter only. If you want the car looked over at the same time, the interim service is this job plus a 25-point inspection."
     },
     {
       "id": "service-interim",
@@ -913,8 +1005,8 @@
         ]
       },
       "includes": [
-        "Engine oil drained and replaced, grade to your car’s specification",
-        "New oil filter",
+        "Castrol engine oil, drained and replaced with the exact grade your engine’s maker specifies",
+        "New oil filter and sump plug washer",
         "Sump plug washer renewed",
         "All fluid levels topped up: coolant, brake fluid, screen wash, power steering",
         "Tyre condition, tread depths and pressures set",
@@ -1297,17 +1389,11 @@
     },
     {
       "id": "dent",
-      "label": "Dent",
-      "size": "Any dent, paint broken or not",
+      "label": "Dent or damaged panel",
+      "size": "Pushed in, creased, cracked or split",
       "dent": true,
       "inspect": true,
-      "hint": "We do not do paintless repair, so a dent is straightened and the panel is then painted. How deep it is and where it sits decide the figure, which is why this is a range until we see the car.",
-      "paint": true
-    },
-    {
-      "id": "replace",
-      "label": "Cracked, split or hanging off",
-      "size": "The panel itself is damaged",
+      "hint": "We do not do paintless repair: the panel is straightened and then painted and blended. How deep the damage goes decides the figure, which is why this is a range until we see the car.",
       "paint": true,
       "part": true
     }
@@ -1413,37 +1499,37 @@
     "recovery_bands_inc_vat": [
       {
         "max": 3,
-        "price": 108
+        "ex_vat": 120,
+        "price": 144
       },
       {
         "max": 5,
-        "price": 132
+        "ex_vat": 160,
+        "price": 192
       },
       {
-        "max": 7,
-        "price": 180
+        "max": 8,
+        "ex_vat": 200,
+        "price": 240
       },
       {
         "max": 10,
-        "price": 216
+        "ex_vat": 220,
+        "price": 264
       }
     ],
     "pickup_bands_inc_vat": [
       {
         "max": 3,
-        "price": 36
+        "price": 60
       },
       {
         "max": 5,
-        "price": 54
-      },
-      {
-        "max": 7,
-        "price": 72
+        "price": 80
       },
       {
         "max": 10,
-        "price": 90
+        "price": 130
       }
     ],
     "situations": [
@@ -1524,7 +1610,15 @@
         "label": "Somewhere further out",
         "miles": null
       }
-    ]
+    ],
+    "_pickup_note": "Same figures as collection_inc_vat — collecting a car that drives is one job with one price, wherever the customer starts from.",
+    "origin": {
+      "postcode": "SM6 7HN",
+      "lat": 51.3791586,
+      "lon": -0.154599
+    },
+    "road_factor": 1.3,
+    "_road_factor_note": "Postcodes give a straight-line distance; roads are longer. 1.3 is the usual multiplier for dense suburban London and keeps the banding honest rather than flattering."
   },
   "model_bands": {
     "GRAND C4 PICASSO": "large",
@@ -1823,5 +1917,265 @@
     "low": 70,
     "high": 300,
     "_note": "Cost of pulling or filling the dent, on top of painting the panel. We do not do paintless repair, so there is no dent price that excludes paint. The spread is wide because severity is: a shallow door ding and a deep crease are not the same job."
+  },
+  "alloy_refurb_ex_vat": {
+    "low": 90,
+    "high": 120,
+    "_note": "Per wheel, ex VAT. £90 for a kerbed rim tidied and refinished, up to £120 where the face is badly gouged or the finish is diamond-cut. Confirmed when we see it."
+  },
+  "service_matrix": {
+    "_note": "Rows for the \"what is included\" table on the servicing pages. i = interim, f = full, m = major. Keep this in step with the includes lists on the three service jobs.",
+    "columns": [
+      {
+        "id": "i",
+        "label": "Interim",
+        "interval": "6 months or 6,000 miles",
+        "checks": "25-point"
+      },
+      {
+        "id": "f",
+        "label": "Full",
+        "interval": "12 months or 12,000 miles",
+        "checks": "40-point"
+      },
+      {
+        "id": "m",
+        "label": "Major",
+        "interval": "24 months or 24,000 miles",
+        "checks": "60-point"
+      }
+    ],
+    "groups": [
+      {
+        "label": "Parts replaced",
+        "rows": [
+          {
+            "label": "Castrol engine oil, to your car’s own specification",
+            "in": [
+              "i",
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Oil filter",
+            "in": [
+              "i",
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Sump plug washer",
+            "in": [
+              "i",
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Air filter",
+            "in": [
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Cabin / pollen filter",
+            "in": [
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Spark plugs (petrol) or fuel filter (diesel)",
+            "in": [
+              "m"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "Fluids",
+        "rows": [
+          {
+            "label": "Coolant topped up",
+            "in": [
+              "i",
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Screen wash topped up",
+            "in": [
+              "i",
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Power steering fluid topped up",
+            "in": [
+              "i",
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Brake fluid topped up",
+            "in": [
+              "i",
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Brake fluid tested for moisture",
+            "in": [
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Brake fluid changed",
+            "in": [
+              "m"
+            ]
+          },
+          {
+            "label": "Coolant strength tested",
+            "in": [
+              "m"
+            ]
+          },
+          {
+            "label": "Gearbox and differential oil levels checked",
+            "in": [
+              "m"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "Checks",
+        "rows": [
+          {
+            "label": "Tyre condition, tread depth and pressures set",
+            "in": [
+              "i",
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Brake pads and discs inspected",
+            "in": [
+              "i",
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Lights, wipers, horn and battery condition",
+            "in": [
+              "i",
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Battery tested under load, charging system checked",
+            "in": [
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Suspension, steering joints and exhaust on the ramp",
+            "in": [
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Drive belt condition and tension",
+            "in": [
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Underbody and engine bay checked for leaks and corrosion",
+            "in": [
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Air conditioning operation",
+            "in": [
+              "m"
+            ]
+          },
+          {
+            "label": "Wheels off for a full brake inspection",
+            "in": [
+              "m"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "Afterwards",
+        "rows": [
+          {
+            "label": "Anything found is written down and priced before it is done",
+            "in": [
+              "i",
+              "f",
+              "m"
+            ]
+          },
+          {
+            "label": "Service book stamped and next service date set",
+            "in": [
+              "i",
+              "f",
+              "m"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "collection_inc_vat": {
+    "_note": "Collect the car and bring it back, charged by distance from the workshop. One figure covering both legs. Beyond 10 miles we price it rather than guess.",
+    "bands": [
+      {
+        "id": "d3",
+        "label": "Up to 3 miles",
+        "hint": "Wallington, Hackbridge, Carshalton, Beddington",
+        "price": 60
+      },
+      {
+        "id": "d5",
+        "label": "3 to 5 miles",
+        "hint": "Sutton, Mitcham, Rosehill, Cheam",
+        "price": 80
+      },
+      {
+        "id": "d10",
+        "label": "5 to 10 miles",
+        "hint": "Croydon, Morden, Streatham, Wimbledon",
+        "price": 130
+      },
+      {
+        "id": "far",
+        "label": "More than 10 miles",
+        "hint": "We will price it for you",
+        "price": null
+      }
+    ]
   }
 }

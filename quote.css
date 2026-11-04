@@ -210,3 +210,120 @@
   border-bottom:2px solid #0b7a46
 }
 .kq-photo a:hover{color:#065c34;border-bottom-color:#065c34}
+
+/* "Where is it, and how big?" -- the panel drawn on its own, large enough to aim at with a
+   thumb, with a ring showing the size the customer picked. The point of asking is that we can
+   then work out the blending ourselves instead of making them judge it. */
+#kq .kq-mark{margin-top:14px;padding:14px;border:1.5px solid var(--line);border-radius:12px;background:#fbfbfc}
+#kq .kq-mark-h{margin:0 0 10px;font-size:13.5px;color:var(--muted);line-height:1.5}
+#kq .kq-mark-h b{display:block;color:var(--text);font-size:14.5px;margin-bottom:2px}
+#kq .kq-mark-svg{
+  display:block;width:100%;max-width:260px;margin:0 auto 12px;height:auto;max-height:220px;
+  background:#fff;border-radius:10px;border:1px solid var(--line);cursor:crosshair;touch-action:manipulation
+}
+#kq .kq-mark-panel{fill:#eef1f6;stroke:#c3cad6;stroke-width:2}
+#kq .kq-mark-ring{fill:rgba(214,40,40,.16);stroke:#d62828;stroke-width:2.5}
+#kq .kq-mark-dot{fill:#d62828}
+#kq .kq-mark-svg:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+
+#kq .kq-mark-sizes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+#kq .kq-sizebtn{
+  font:inherit;text-align:left;padding:9px 11px;border-radius:9px;border:1.5px solid var(--line);
+  background:#fff;cursor:pointer;color:var(--text)
+}
+#kq .kq-sizebtn b{display:block;font-size:13.5px}
+#kq .kq-sizebtn small{display:block;font-size:11.5px;color:var(--muted);margin-top:1px}
+#kq .kq-sizebtn.on{border-color:var(--red);background:#fdf3f3}
+#kq .kq-sizebtn[disabled]{opacity:.45;cursor:default}
+
+#kq .kq-mark-out{margin:12px 0 0;font-size:13px;line-height:1.55;color:#3f6b4f;background:#f1f8f3;border-radius:9px;padding:10px 12px}
+#kq .kq-mark-out.blend{color:#7a5a16;background:#fdf6e7}
+#kq .kq-mark-out.kq-mark-wait{color:var(--muted);background:#f4f5f7}
+@media (min-width:560px){#kq .kq-mark-sizes{grid-template-columns:repeat(4,1fr)}}
+
+/* Alloy wheels on the diagram. Outside the body outline on purpose: a kerbed rim is a different
+   job from a damaged panel, and making them look alike would invite the wrong tap. */
+#kq .kq-wheel{fill:#e7eaf0;stroke:#c3cad6;stroke-width:2;cursor:pointer;transition:fill .12s,stroke .12s}
+#kq .kq-wheel:hover{fill:#d9dee7}
+#kq .kq-wheel.on{fill:#d62828;stroke:#a81f1f}
+#kq .kq-wheel:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+#kq .kq-dmg-wheel{border-left:3px solid #d62828}
+
+/* Collection and return, priced by distance. Only appears once the box is ticked, so a customer
+   driving in never sees it. */
+#kq .kq-collect{margin:12px 0 4px;padding:14px;border:1.5px solid var(--line);border-radius:12px;background:#fbfbfc}
+#kq .kq-collect-h{margin:0 0 10px;font-size:13.5px;color:var(--muted);line-height:1.5}
+#kq .kq-collect-h b{display:block;color:var(--text);font-size:14.5px;margin-bottom:2px}
+#kq .kq-collect-opts{display:grid;gap:8px}
+#kq .kq-collect-opt{
+  font:inherit;text-align:left;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);
+  background:#fff;cursor:pointer;color:var(--text);display:grid;
+  grid-template-columns:1fr auto;align-items:center;gap:2px 12px
+}
+#kq .kq-collect-opt b{font-size:14px}
+#kq .kq-collect-opt small{grid-column:1;font-size:12px;color:var(--muted)}
+#kq .kq-collect-opt em{grid-column:2;grid-row:1/3;font-style:normal;font-weight:800;font-size:15px;white-space:nowrap}
+#kq .kq-collect-opt.on{border-color:var(--red);background:#fdf3f3}
+#kq .kq-collect-out{margin:12px 0 0;font-size:13px;line-height:1.55;color:#3f6b4f;background:#f1f8f3;border-radius:9px;padding:10px 12px}
+#kq .kq-collect-out.kq-collect-wait{color:var(--muted);background:#f4f5f7}
+@media (min-width:560px){#kq .kq-collect-opts{grid-template-columns:1fr 1fr}}
+
+/* Recovery: postcode distance pricing ------------------------------------------------- */
+.kq-pcrow { display: flex; gap: .5rem; margin: .35rem 0 .2rem; flex-wrap: wrap; }
+.kq-pcinput {
+  flex: 1 1 11rem; min-width: 0; padding: .72rem .85rem;
+  border: 1px solid var(--kq-line, #d9d9de); border-radius: 10px;
+  font: 600 1rem/1.2 inherit; text-transform: uppercase; letter-spacing: .04em;
+}
+.kq-pcinput:focus { outline: 2px solid var(--kq-accent, #d8402a); outline-offset: 1px; }
+.kq-pcbtn {
+  flex: 0 0 auto; padding: .72rem 1.1rem; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--kq-accent, #d8402a); color: #fff; font: 600 .92rem/1.2 inherit;
+}
+.kq-pcbtn:hover { filter: brightness(1.06); }
+.kq-pcout { margin: .1rem 0 .5rem; font-size: .88rem; line-height: 1.45; }
+.kq-pcok { color: #1f4620; }
+.kq-pcok b { color: inherit; }
+.kq-pcbad { color: #8c3320; }
+.kq-pcor { margin-top: .9rem; }
+@media (max-width: 420px) {
+  .kq-pcbtn { flex: 1 1 100%; }
+}
+
+/* "Add or change something" under the slot picker ------------------------------------- */
+.kq-nav-amend { margin-top: .5rem; justify-content: center; }
+.kq-btn-link {
+  background: none; border: 0; padding: .4rem .2rem; cursor: pointer;
+  font: 500 .9rem/1.3 inherit; color: var(--kq-muted, #6b6b73); text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.kq-btn-link:hover { color: var(--kq-ink, #15151a); }
+
+/* iOS Safari paints <button> text in system blue unless colour is set explicitly, which is why
+   the flow chooser read blue on a phone and black on a desktop. Set it everywhere the widget
+   draws a button, rather than patching the one that was noticed. */
+#kq button { color: var(--ink, #15151a); }
+#kq .kq-pick,
+#kq .kq-pick b,
+#kq .kq-pill,
+#kq .kq-sizebtn,
+#kq .kq-sizebtn b,
+#kq .kq-tier,
+#kq .kq-collect-opt,
+#kq .kq-job { color: var(--ink, #15151a); }
+#kq .kq-pick small,
+#kq .kq-sizebtn small { color: var(--muted, #6b6b73); }
+#kq .kq-btn-main,
+#kq .kq-lead .kq-btn-main { color: #fff; }
+#kq .kq-btn-wa { color: #fff; }
+#kq .kq-pill.on, #kq .kq-tier.on, #kq .kq-collect-opt.on, #kq .kq-sizebtn.on { color: #fff; }
+#kq .kq-btn-ghost { color: var(--ink, #15151a); }
+#kq .kq-btn-link { color: var(--muted, #6b6b73); }
+
+/* Next free slot — real availability, stated plainly. */
+.kq-next {
+  margin: .1rem 0 .9rem; padding: .62rem .8rem; border-radius: 10px;
+  background: #f3f8f1; border-left: 3px solid #2f7d32; color: #1f4620;
+  font-size: .9rem; line-height: 1.45;
+}
+.kq-next b { color: inherit; }

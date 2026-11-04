@@ -176,11 +176,22 @@
       // The dealer rate can be one figure for everything, or one per size band: a prestige main
       // dealer in London charges well above a volume-brand one, and a single average flatters
       // neither comparison.
-      var dr = cat.dealer.labour_rate_inc_vat;
-      var dRate = (dr && typeof dr === 'object') ? Number(dr[band]) : Number(dr);
-      if (!isFinite(dRate) || dRate <= 0) dRate = 0;
-      var dealer = midH * dRate + midP * cat.dealer.parts_factor;
-      var ours = (out.low + out.high) / 2;
+      var ours = (out.low + out.high) / 2, dealer;
+      if (cat.dealer.use_multiplier && Number(cat.dealer.multiplier) > 1) {
+        // A flat multiple of our own price. Simpler and always shows the gap, which the book-hours
+        // model did not: at a real dealer rate a short job comes out barely dearer, so the
+        // comparison vanished on most of the list. Presented as a typical average, never as a
+        // quote for any particular garage.
+        dealer = ours * Number(cat.dealer.multiplier);
+      } else {
+        // The dealer rate can be one figure for everything, or one per size band: a prestige main
+        // dealer in London charges well above a volume-brand one, and a single average flatters
+        // neither comparison.
+        var dr = cat.dealer.labour_rate_inc_vat;
+        var dRate = (dr && typeof dr === 'object') ? Number(dr[band]) : Number(dr);
+        if (!isFinite(dRate) || dRate <= 0) dRate = 0;
+        dealer = midH * dRate + midP * cat.dealer.parts_factor;
+      }
       if (dealer >= ours * (1 + cat.dealer.show_if_saving_at_least)) out.dealer = roundUp5(dealer);
     }
     return out;
@@ -310,6 +321,24 @@
   }
 
   /* One damaged panel: paint (with blending at the top of the range) and/or dent work. */
+
+  /* A kerbed alloy, priced per wheel. It is not a panel -- there is no paint-the-panel figure
+     behind it and no blending -- so it gets its own line rather than being bent into bodyLine. */
+  function alloyLine(cat, wheels) {
+    var a = cat && cat.alloy_refurb_ex_vat;
+    var n = Math.max(1, Math.min(4, Number(wheels) || 0));
+    if (!a || !isFinite(Number(a.low)) || !isFinite(Number(a.high))) return null;
+    return {
+      id: 'alloy', kind: 'range',
+      name: n === 1 ? 'Alloy wheel refurbished' : n + ' alloy wheels refurbished',
+      low: roundDown5(Number(a.low) * n * 1.2),
+      high: roundUp5(Number(a.high) * n * 1.2),
+      part: false, uncertain: true, inspect: true,
+      note: 'Per wheel, by how far gone the rim is: a kerb scuff tidied and refinished at the ' +
+            'lower end, a badly gouged or diamond-cut face at the top. Confirmed when we see them.'
+    };
+  }
+
   function bodyLine(cat, panelKey, panelLabel, damageId, band) {
     var d = null, list = cat.bodywork_damage;
     for (var i = 0; i < list.length; i++) if (list[i].id === damageId) d = list[i];
@@ -356,18 +385,38 @@
              // A dent's depth and whether a panel can be saved are only known with the car here.
              uncertain: !!(d.dent || d.part),
              inspect: !!d.inspect,
-             note: d.part ? 'The panel itself is priced once we have seen it and know the part cost.'
-                 : (d.inspect ? (d.hint || '') : '') };
+             // A merged "dent or damaged panel" is both: it needs seeing, and it may need a new
+             // panel. Showing only the part sentence lost the explanation of why it is a range.
+             note: [d.inspect ? (d.hint || '') : '',
+                    d.part ? 'If the panel cannot be saved, the cost of the replacement is confirmed once we have seen it.' : '']
+                   .filter(Boolean).join(' ') };
   }
 
   /* Recovery: a fixed price by road miles from the workshop, in two sets of bands — the truck for a car
      that won't move, a driver for one that will. Roadside help (jump start, wheel change) and anything past
      the last band, or going anywhere other than our workshop, is priced on the phone rather than guessed. */
-  function recoveryLine(cat, situationId, areaId) {
+  /* How far a postcode is from the workshop. Straight-line great-circle distance, then a road
+     factor, because nobody tows in a straight line. Returned in miles. */
+  function milesFrom(cat, lat, lon) {
+    var o = cat.recovery && cat.recovery.origin;
+    if (!o || !isFinite(lat) || !isFinite(lon)) return NaN;
+    var R = 3958.8, rad = Math.PI / 180;
+    var dLat = (lat - o.lat) * rad, dLon = (lon - o.lon) * rad;
+    var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(o.lat * rad) * Math.cos(lat * rad) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    var crow = 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+    return crow * (Number(cat.recovery.road_factor) || 1.3);
+  }
+
+  /* `where` is either an area id from the catalogue, or a measured location:
+     { miles: 4.2, label: 'SM4 5DA' } from a postcode lookup. */
+  function recoveryLine(cat, situationId, where) {
     var R = cat.recovery;
     if (!R) return null;
     var s = R.situations.filter(function (x) { return x.id === situationId; })[0];
-    var a = R.areas.filter(function (x) { return x.id === areaId; })[0];
+    var a = (where && typeof where === 'object')
+      ? { miles: isFinite(where.miles) ? where.miles : null, label: where.label || 'your postcode' }
+      : R.areas.filter(function (x) { return x.id === where; })[0];
     if (!s || !a) return null;
     var name = s.label + (a.miles === null ? '' : ' — ' + a.label);
     if (s.mode === 'roadside') {
@@ -381,13 +430,20 @@
       return { id: 'recovery-' + s.id, name: name, kind: 'enquiry',
                note: 'Past ' + R.max_miles + ' miles we price it on the phone, so you get a real figure rather than a guess.' };
     }
-    var bands = s.mode === 'pickup' ? R.pickup_bands_inc_vat : R.recovery_bands_inc_vat, price = null;
-    for (var i = 0; i < bands.length; i++) if (price === null && miles <= bands[i].max) price = bands[i].price;
+    var bands = s.mode === 'pickup' ? R.pickup_bands_inc_vat : R.recovery_bands_inc_vat;
+    var price = null, band = null;
+    for (var i = 0; i < bands.length; i++) {
+      if (price === null && miles <= bands[i].max) { price = bands[i].price; band = bands[i]; }
+    }
     if (price === null) return { id: 'recovery-' + s.id, name: name, kind: 'enquiry', note: R.note };
+    // Show the ex-VAT figure too where the rate card is set that way, so the price on screen can
+    // be matched against what the customer was quoted on the phone.
+    var vat = band && band.ex_vat ? ' (£' + band.ex_vat + ' plus VAT)' : '';
     return { id: 'recovery-' + s.id, name: name, kind: 'fixed', low: price, high: price,
-             label: '£' + price + ' fixed',
-             note: s.mode === 'pickup' ? 'One of us drives it back to the workshop, inc VAT.'
-                                       : 'Fixed price to our workshop, inc VAT, whatever the traffic does.' };
+             miles: miles, label: '£' + price + ' fixed',
+             note: s.mode === 'pickup'
+               ? 'One of us drives it back to the workshop, inc VAT.'
+               : 'Fixed price to our workshop' + vat + ', whatever the traffic does.' };
   }
 
   /* Tuning: stage price and the power it typically adds. Gains are a percentage of standard bhp. */
@@ -438,6 +494,6 @@
   return { labourCost: labourCost, labourRange: labourRange, guessBand: guessBand, bandFromText: bandFromText,
            ulezLikely: ulezLikely,
            priceJob: priceJob, totals: totals, bodyBand: bodyBand, clampAi: clampAi, findJob: findJob, tyrePrice: tyrePrice,
-           tyreLine: tyreLine, bodyLine: bodyLine, tuneLines: tuneLines, recoveryLine: recoveryLine,
+           tyreLine: tyreLine, bodyLine: bodyLine, alloyLine: alloyLine, tuneLines: tuneLines, recoveryLine: recoveryLine, milesFrom: milesFrom,
            couponEligible: couponEligible, bookableDays: bookableDays, safeNote: safeNote };
 });

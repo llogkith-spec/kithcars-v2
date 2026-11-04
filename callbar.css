@@ -49,3 +49,36 @@
     gap:2rem !important
   }
 }
+
+/* WhatsApp in the header, on every page. It goes in this file because every page loads it, and
+   the header markup differs slightly between the homepage and the generated pages. Green, so it
+   reads as WhatsApp at a glance rather than as another grey link. */
+.header-wa{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:8px 14px;border-radius:999px;
+  background:#25D366;color:#073b22;font-weight:700;font-size:14px;
+  text-decoration:none;white-space:nowrap;line-height:1;
+  transition:background .15s,transform .15s
+}
+.header-wa:hover{background:#1fb855;color:#052b18}
+.header-wa:active{transform:translateY(1px)}
+.header-wa svg{flex:none}
+.header-wa:focus-visible{outline:3px solid #0b7a46;outline-offset:2px}
+
+/* Tight headers: keep the icon, drop the word before anything else has to give. */
+@media (max-width:1100px){
+  .header-wa span{display:none}
+  .header-wa{padding:8px 10px}
+}
+/* On a phone the sticky bar at the bottom already carries WhatsApp, so the header one would be
+   the third copy on one screen. */
+@media (max-width:760px){
+  .header-wa{display:none}
+}
+
+/* Same iOS default: the call bar's links must state their own colour, or iOS paints them
+   in its own link blue. */
+.kc-bar a { color: var(--ink, #15151a); }
+.kc-bar .kc-bar-wa { color: #0b7a53; }
+.kc-bar .kc-bar-quote { color: #fff; }
+.header-wa, .header-wa:hover { color: #fff; }

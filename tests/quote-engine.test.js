@@ -49,10 +49,14 @@ t('remaps are a fixed price, hardware is quoted', () => {
   assert.strictEqual(E.tuneLines(cat, 'tp', 150, 's2', []).lines[0].low, 360);
   r.lines.slice(1).forEach(l => assert.strictEqual(l.kind, 'enquiry')); });
 t('recovery is a fixed price by distance, and priced on the phone past the bands', () => {
-  assert.strictEqual(E.recoveryLine(cat, 'breakdown', 'local').low, 108);      // 2 miles, truck
-  assert.strictEqual(E.recoveryLine(cat, 'accident', 'croydon').low, 132);     // 5 miles, truck
-  assert.strictEqual(E.recoveryLine(cat, 'move', 'local').low, 36);            // 2 miles, driver
-  assert.strictEqual(E.recoveryLine(cat, 'move', 'tooting').low, 72);          // 7 miles, driver
+  // Read the expected figures off the rate card rather than freezing them here, so changing a
+  // price in the catalogue doesn't fail a test that was only ever checking the banding.
+  const truck = m => cat.recovery.recovery_bands_inc_vat.find(b => m <= b.max).price;
+  const driver = m => cat.recovery.pickup_bands_inc_vat.find(b => m <= b.max).price;
+  assert.strictEqual(E.recoveryLine(cat, 'breakdown', 'local').low, truck(2));   // 2 miles, truck
+  assert.strictEqual(E.recoveryLine(cat, 'accident', 'croydon').low, truck(5));  // 5 miles, truck
+  assert.strictEqual(E.recoveryLine(cat, 'move', 'local').low, driver(2));       // 2 miles, driver
+  assert.strictEqual(E.recoveryLine(cat, 'move', 'tooting').low, driver(7));     // 7 miles, driver
   assert.strictEqual(E.recoveryLine(cat, 'breakdown', 'further').kind, 'enquiry');
   assert.strictEqual(E.recoveryLine(cat, 'battery', 'local').kind, 'enquiry'); // roadside, priced when you ring
   assert.strictEqual(E.recoveryLine(cat, 'nonsense', 'local'), null);
@@ -111,9 +115,18 @@ t('dealer figure only when clearly dearer', () => {
       const mid = (r.low + r.high) / 2;
       assert.ok(r.dealer >= mid * (1 + cat.dealer.show_if_saving_at_least),
         `${j.id}/${band}: dealer ${r.dealer} does not clear ${mid} by the margin`);
-      const midH = (r.hours[0] + r.hours[1]) / 2, midP = (r.parts[0] + r.parts[1]) / 2;
-      const want = midH * rateFor(band) + midP * cat.dealer.parts_factor;
-      assert.ok(Math.abs(r.dealer - want) <= 5, `${j.id}/${band}: dealer figure not built from the band rate`);
+      // Two ways of arriving at the dealer figure, and the catalogue decides which is in use.
+      // The test follows the configuration rather than hard-coding one of them, so switching
+      // between a flat multiple and the book-hours model does not silently go unchecked.
+      let want;
+      if (cat.dealer.use_multiplier && Number(cat.dealer.multiplier) > 1) {
+        want = mid * Number(cat.dealer.multiplier);
+      } else {
+        const midH = (r.hours[0] + r.hours[1]) / 2, midP = (r.parts[0] + r.parts[1]) / 2;
+        want = midH * rateFor(band) + midP * cat.dealer.parts_factor;
+      }
+      assert.ok(Math.abs(r.dealer - want) <= 5,
+        `${j.id}/${band}: dealer figure ${r.dealer} does not match the configured model (${Math.round(want)})`);
     }
   }
   assert.ok(shown > 0, 'no job anywhere shows a dealer comparison - check the dealer rate'); });
@@ -145,9 +158,17 @@ for (const id of ['service-interim','service-full','brake-discs-front','clutch',
   assert.ok(p.hi > p.lo && p.fit === 20);
   assert.ok(E.tyrePrice(cat, { width: 225, profile: 45, rim: 17, runflat: true }, 'premium').lo > p.lo, 'run-flats cost more');
   assert.ok(E.tyreLine(cat, { width: 205, profile: 55, rim: 16 }, 'mid', 4).low > E.tyreLine(cat, { width: 205, profile: 55, rim: 16 }, 'budget', 4).low);
-  const b = E.bodyLine(cat, 'door', 'Left front door', 'dentp', 'medium');
-  assert.strictEqual(b.low, 300, 'door paint + small dent = (200 + 50) ex VAT');
-  assert.strictEqual(b.high, 360, 'door paint + big dent = (200 + 100) ex VAT');
+  // There is one dent option now: we do not do paintless repair, so a dent is always
+  // straightening plus painting the panel. Expected figures come off the price book.
+  const b = E.bodyLine(cat, 'door', 'Left front door', 'dent', 'medium');
+  const door = cat.body_panels_ex_vat.door, up = cat.body_dent_uplift_ex_vat, vat = 1 + cat.vat_rate;
+  // The engine rounds a low down to the nearest £5 and a high up, so a quoted range never
+  // reads narrower than the real one.
+  const down5 = n => Math.floor(n / 5) * 5, up5 = n => Math.ceil(n / 5) * 5;
+  assert.strictEqual(b.low, down5((door + up.low) * vat), 'door paint + lightest dent, inc VAT');
+  assert.strictEqual(b.high, up5((door + up.high) * vat), 'door paint + worst dent, inc VAT');
+  assert.ok(b.high > b.low, 'a dent is a range, because severity is');
+  assert.strictEqual(E.bodyLine(cat, 'door', 'x', 'dentp', 'medium'), null, 'paintless dent repair is gone');
   assert.strictEqual(E.bodyLine(cat, 'door', 'x', 'nonsense', 'medium'), null);
   const t = E.tuneLines(cat, 'td', 150, 's1', ['springs', 'bodykit']);
   assert.strictEqual(t.lines.length, 3);

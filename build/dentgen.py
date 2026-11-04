@@ -223,7 +223,32 @@ refitted. <a href="/bodywork-gallery">See photos of real jobs from our workshop<
 <a href="/car-respray">Panel and full resprays</a> &middot;
 <a href="/accident-repairs">Accident repair</a></p>
 </div></section>
+
+''' + quote_block(area) + '''
 </main>'''
+
+
+# Rewriting <main> wholesale dropped the quote section these pages used to carry, so every
+# "Get an instant price" button on the 17 area pages pointed at an anchor that no longer
+# existed and there was no widget to reach. Rebuild it as part of the page.
+def quote_block(area=None):
+    collect = (f'<li>Collection from {area} can be arranged</li>' if area
+               else '<li>Collection and delivery across South London</li>')
+    heading = (f'Price your dent repair in {area} now' if area
+               else 'Price your dent repair now')
+    return f'''<section class="section section-alt" id="get-a-quote"><div class="container kx-quote">
+<div class="kx-quote-copy">
+<span class="section-label">Instant quote</span>
+<h2>{heading}</h2>
+<p>Tap the panel the dent is on and mark roughly how big it is. We price straightening it and
+painting the panel from our own rates, including blending into the panels either side, then you
+book it in with a fixed written quote before any work starts.</p>
+<ul class="kx-list"><li>Free, about 30 seconds, no sign-up</li><li>Parts, labour, paint and VAT included</li><li>3-month workmanship warranty</li>{collect}</ul>
+<blockquote class="kx-review">&ldquo;It&rsquo;s rare to find a garage you can truly trust. Fair price, brilliant customer service.&rdquo;<cite>Thinushan K. &middot; &#9733;&#9733;&#9733;&#9733;&#9733; Google</cite></blockquote>
+<p class="kx-small">Prefer to talk? Call <a href="tel:02046299469">020 4629 9469</a> or <a href="https://wa.me/447923688259" target="_blank" rel="noopener">WhatsApp us</a>.</p>
+</div>
+<div id="kq" data-flow="bodywork"><div class="kq-loading"><span class="kq-spin"></span>Loading instant quote&hellip;</div></div>
+</div></section>'''
 
 
 def rewrite(path):

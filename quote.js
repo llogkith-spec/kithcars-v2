@@ -42,8 +42,69 @@
     { id: 'rrq', key: 'rear-quarter', label: 'Right rear quarter', d: 'M238 354 L198 354 L204 452 Q230 460 238 440 Z' }
   ];
 
+
+  /* Where the damage sits on the panel, and what that means for blending.
+
+     A dent near the middle of a panel is painted and that is the end of it. A dent near an edge
+     has to have the new colour carried into the panel next door, or the repair stops at a hard
+     line that catches the light -- so the customer is asked to show us where it is and roughly
+     how big, and we work the rest out rather than asking them to judge it. Everything here is in
+     the car diagram's own units; PANEL_BOX is each panel's bounding box, read off its path. */
+  var PANEL_BOX = {};
+  function panelBox(id) {
+    if (PANEL_BOX[id]) return PANEL_BOX[id];
+    var p = CAR_PANELS.filter(function (x) { return x.id === id; })[0];
+    if (!p) return null;
+    // Pull every coordinate pair out of the path and take the extremes. The paths are simple
+    // enough (lines and one quadratic each) that the control points sit inside the real bounds.
+    var nums = (p.d.match(/-?\d+(?:\.\d+)?/g) || []).map(Number), xs = [], ys = [];
+    for (var i = 0; i + 1 < nums.length; i += 2) { xs.push(nums[i]); ys.push(nums[i + 1]); }
+    var box = { x: Math.min.apply(null, xs), y: Math.min.apply(null, ys),
+                w: Math.max.apply(null, xs) - Math.min.apply(null, xs),
+                h: Math.max.apply(null, ys) - Math.min.apply(null, ys) };
+    PANEL_BOX[id] = box;
+    return box;
+  }
+
+  // Dent sizes the customer can actually picture, with the radius each draws on the panel.
+  var MARK_SIZES = [
+    { id: 's', label: 'Coin', hint: 'up to 5cm', r: 7 },
+    { id: 'm', label: 'Phone', hint: 'up to 15cm', r: 13 },
+    { id: 'l', label: 'Dinner plate', hint: 'up to 30cm', r: 22 },
+    { id: 'xl', label: 'Bigger', hint: 'more than 30cm', r: 34 }
+  ];
+  function markSize(id) {
+    for (var i = 0; i < MARK_SIZES.length; i++) if (MARK_SIZES[i].id === id) return MARK_SIZES[i];
+    return MARK_SIZES[1];
+  }
+
+  /* Does this mark reach close enough to an edge that the repair has to be blended out?
+     Measured as the gap between the edge of the dent and the edge of the panel: inside about a
+     fifth of the panel's smaller dimension, the paint has nowhere to fade out. */
+  function needsBlend(panelId, mark) {
+    var box = panelBox(panelId);
+    if (!box || !mark) return false;
+    var r = markSize(mark.size).r;
+    var gap = Math.min(mark.x - box.x, box.x + box.w - mark.x, mark.y - box.y, box.y + box.h - mark.y) - r;
+    return gap < Math.min(box.w, box.h) * 0.2;
+  }
+
+
+  /* The wheels sit outside the body outline on the diagram, because a kerbed alloy is a
+     different job from a damaged panel and should not look like one. Tapping a wheel counts it;
+     the price is per wheel. */
+  var CAR_WHEELS = [
+    { id: 'wfl', label: 'Front left alloy',  x: 10,  y: 92,  w: 22, h: 54 },
+    { id: 'wfr', label: 'Front right alloy', x: 228, y: 92,  w: 22, h: 54 },
+    { id: 'wrl', label: 'Rear left alloy',   x: 10,  y: 360, w: 22, h: 54 },
+    { id: 'wrr', label: 'Rear right alloy',  x: 228, y: 360, w: 22, h: 54 }
+  ];
+
   var S = {
     flow: '', step: 'flow', reg: '', vehicle: null, manual: false, model: '', band: 'medium',
+    mark: {},   // panelId -> {x, y, size} in car-diagram units: where the dent is and how big
+    wheels: {}, // wheelId -> true for each kerbed alloy the customer taps
+    collectBand: '', // which distance band for collection and return, '' until asked
     bandAuto: false, bandOpen: false,   // bandAuto: we worked the size out; bandOpen: they asked to change it
     mech: [], tyre: { w: 205, p: 55, r: 16, qty: 4, tier: 'mid', rf: false },
     body: {}, tune: { fuel: 'tp', bhp: '', stage: 's1', addons: [] }, rec: { what: '', where: '', when: 'book' },
@@ -61,6 +122,39 @@
   function save() { try { sessionStorage.setItem('kq2', JSON.stringify(S)); } catch (e) {} }
   function load() { try { var s = JSON.parse(sessionStorage.getItem('kq2') || 'null'); if (s && !s.sent) { Object.keys(s).forEach(function (k) { S[k] = s[k]; }); } } catch (e) {} }
   function track(n, p) { try { if (window.gtag) window.gtag('event', n, p || {}); else (window.dataLayer = window.dataLayer || []).push(Object.assign({ event: n }, p || {})); } catch (e) {} }
+
+  /* The make, for the main-dealer comparison. "An Audi main dealer" lands where "a main dealer"
+     does not, because the reader is picturing the garage they would otherwise be ringing. It
+     comes from the reg lookup where there is one, and from what they typed otherwise: the model
+     list in the price book is keyed on make and model, so the first word of a known key is the
+     make. Falls back to no brand at all rather than guessing wrong. */
+  var MAKES = ['AUDI','BMW','MERCEDES-BENZ','MERCEDES','VOLKSWAGEN','VW','FORD','VAUXHALL','TOYOTA',
+    'HONDA','NISSAN','HYUNDAI','KIA','PEUGEOT','CITROEN','RENAULT','SEAT','SKODA','FIAT','MAZDA',
+    'MINI','VOLVO','LAND ROVER','RANGE ROVER','JAGUAR','LEXUS','PORSCHE','SUZUKI','SUBARU','DACIA',
+    'MITSUBISHI','ALFA ROMEO','TESLA','CUPRA','SSANGYONG','ISUZU','JEEP','CHEVROLET','SMART','ABARTH'];
+
+  function vehicleMake() {
+    var v = S.vehicle || {};
+    var raw = String(v.make || S.model || '').toUpperCase();
+    if (!raw) return '';
+    for (var i = 0; i < MAKES.length; i++) {
+      if (raw.indexOf(MAKES[i]) !== -1) {
+        var m = MAKES[i];
+        if (m === 'VW') m = 'VOLKSWAGEN';
+        if (m === 'MERCEDES') m = 'MERCEDES-BENZ';
+        return title(m);
+      }
+    }
+    return '';
+  }
+
+  // "An Audi main dealer" / "A Ford main dealer" / "A main dealer" when we do not know.
+  function dealerLabel() {
+    var mk = vehicleMake();
+    if (!mk) return { a: 'A', text: 'main dealer' };
+    return { a: /^[AEIOU]/i.test(mk) ? 'An' : 'A', text: mk + ' main dealer' };
+  }
+
   function vehicleName() { var v = S.vehicle || {}; return [v.yearOfManufacture, title(v.make), S.model].filter(Boolean).join(' ') || 'your vehicle'; }
   function post(url, body, ms) {
     var ctrl = window.AbortController ? new AbortController() : null, t = setTimeout(function () { if (ctrl) ctrl.abort(); }, ms || 9000);
@@ -145,7 +239,7 @@
     if (l.parts && (l.parts[0] || l.parts[1])) {
       rows.push('<li><span>Parts and oil</span><em>' + range(l.parts[0], l.parts[1]) + '</em></li>');
     }
-    if (l.dealer) rows.push('<li><span>Main dealer, same job</span><em>around ' + money(l.dealer) + '</em></li>');
+    if (l.dealer) { var dl = dealerLabel(); rows.push('<li><span>' + esc(dl.a + ' ' + dl.text) + ', same job</span><em>around ' + money(l.dealer) + '</em></li>'); }
     var items = (l.includes || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
     return '<details class="kq-break"><summary>' + (l.includes ? 'What’s included' : 'How this is worked out') + '</summary>' +
       (items ? '<ul class="kq-inc">' + items + '</ul>' : '') +
@@ -195,9 +289,24 @@
         return '<button type="button" class="kq-pick' + (rec.what === s.id ? ' on' : '') + '" data-act="rwhat" data-v="' + s.id + '"><b>' + esc(s.label) + '</b><small>' + esc(s.sub) + '</small></button>';
       }).join('') + '</div>';
     if (rec.what) {
-      h += '<label class="kq-label">Where is the car?</label><div class="kq-pills">' +
+      // A postcode gives a real distance, which is what the price is actually based on. The area
+      // buttons stay underneath for anyone who doesn't know the postcode they're standing in —
+      // broken down on a slip road, that is most people.
+      var pc = rec.pc || {};
+      h += '<label class="kq-label" for="kq-pc">Where is the car?</label>' +
+        '<div class="kq-pcrow">' +
+        '<input id="kq-pc" class="kq-pcinput" type="text" inputmode="text" autocomplete="postal-code" ' +
+        'placeholder="Postcode, e.g. CR0 2RF" value="' + esc(pc.typed || '') + '"/>' +
+        '<button type="button" class="kq-pcbtn" data-act="rpc">Work out my price</button></div>';
+      if (pc.state === 'busy') h += '<p class="kq-pcout">Measuring the distance…</p>';
+      else if (pc.state === 'bad') h += '<p class="kq-pcout kq-pcbad">We couldn’t find that postcode. Check it, or pick the nearest area below.</p>';
+      else if (pc.state === 'off') h += '<p class="kq-pcout kq-pcbad">The postcode lookup isn’t responding. Pick the nearest area below and we’ll confirm on the call.</p>';
+      else if (pc.state === 'ok') h += '<p class="kq-pcout kq-pcok"><b>' + esc(pc.label) + '</b> — ' +
+        (pc.miles < 1 ? 'under a mile' : 'about ' + pc.miles.toFixed(1) + ' miles') + ' by road from the workshop.</p>';
+      h += '<p class="kq-help kq-pcor">Or pick the nearest area:</p><div class="kq-pills">' +
         R.areas.map(function (a) {
-          return '<button type="button" class="kq-pill' + (rec.where === a.id ? ' on' : '') + '" data-act="rwhere" data-v="' + a.id + '">' + esc(a.label) + '</button>';
+          var on = typeof rec.where === 'string' && rec.where === a.id;
+          return '<button type="button" class="kq-pill' + (on ? ' on' : '') + '" data-act="rwhere" data-v="' + a.id + '">' + esc(a.label) + '</button>';
         }).join('') + '</div>';
     }
     if (line) {
@@ -210,6 +319,42 @@
         (rec.when === 'now' ? '<p class="kq-note">We will take your details and ring you straight back. Stay with the car if it is safe to, and put your hazards on.</p>' : '');
     }
     return h + nav('car', 'to-estimate', line ? 'Continue' : 'Tell us where the car is', !line);
+  }
+
+  /* Postcode -> distance -> price. postcodes.io is the Ordnance Survey's open postcode data, free
+     and keyless, so there is nothing to break when a key expires. If it is unreachable the area
+     buttons still price the job, which is why they stay on the page. */
+  function lookupPostcode() {
+    var box = $('#kq-pc');
+    if (!box) return;
+    var typed = box.value.trim();
+    var pc = typed.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (pc.length < 5 || pc.length > 7) {
+      S.rec.pc = { typed: typed, state: 'bad' }; save(); render(); return;
+    }
+    S.rec.pc = { typed: typed, state: 'busy' }; save(); render();
+
+    var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = setTimeout(function () { ctrl && ctrl.abort(); }, 7000);
+    fetch('https://api.postcodes.io/postcodes/' + encodeURIComponent(pc), { signal: ctrl && ctrl.signal })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        clearTimeout(timer);
+        var res = j && j.result;
+        if (!res || !isFinite(res.latitude) || !isFinite(res.longitude)) {
+          S.rec.pc = { typed: typed, state: 'bad' }; save(); render(); return;
+        }
+        var miles = E.milesFrom(C, res.latitude, res.longitude);
+        S.rec.pc = { typed: typed, state: 'ok', label: res.postcode, miles: miles };
+        // The measured distance becomes the thing the price is worked out from.
+        S.rec.where = { miles: miles, label: res.postcode };
+        track('recovery_postcode', { miles: Math.round(miles * 10) / 10 });
+        save(); render();
+      })
+      .catch(function () {
+        clearTimeout(timer);
+        S.rec.pc = { typed: typed, state: 'off' }; save(); render();
+      });
   }
 
   function viewMech() {
@@ -246,15 +391,73 @@
     return h + nav('car', 'to-estimate', 'Show my price');
   }
 
+
+  /* Show us where it is, and roughly how big.
+
+     Only asked for damage where the answer changes something -- a dent or a damaged panel. The
+     customer taps the panel, drawn on its own and large enough to aim at on a phone, and picks a
+     size they can picture. From that we work out whether the repair reaches an edge and has to be
+     blended into the panel next door, which is a judgement they should not have to make. */
+  function markUI(id, p) {
+    var d = S.body[id];
+    var dmg = C.bodywork_damage.filter(function (x) { return x.id === d; })[0];
+    if (!dmg || !dmg.dent) return '';
+    var box = panelBox(id);
+    if (!box) return '';
+    var pad = Math.max(box.w, box.h) * 0.12;
+    var vb = (box.x - pad) + ' ' + (box.y - pad) + ' ' + (box.w + pad * 2) + ' ' + (box.h + pad * 2);
+    var m = S.mark[id];
+    var r = m ? markSize(m.size).r : 0;
+    var blend = m && needsBlend(id, m);
+
+    return '<div class="kq-mark" data-panel="' + id + '">' +
+      '<p class="kq-mark-h"><b>Where is it, and how big?</b> Tap the panel to drop a marker.</p>' +
+      '<svg class="kq-mark-svg" viewBox="' + vb + '" data-act="mark" data-v="' + id + '" role="button" tabindex="0" ' +
+        'aria-label="Tap to show where the damage is on the ' + esc(p.label).toLowerCase() + '">' +
+        '<path class="kq-mark-panel" d="' + p.d + '"/>' +
+        (m ? '<circle class="kq-mark-ring" cx="' + m.x + '" cy="' + m.y + '" r="' + r + '"/>' +
+             '<circle class="kq-mark-dot" cx="' + m.x + '" cy="' + m.y + '" r="2.5"/>' : '') +
+      '</svg>' +
+      '<div class="kq-mark-sizes">' + MARK_SIZES.map(function (sz) {
+        return '<button type="button" class="kq-sizebtn' + (m && m.size === sz.id ? ' on' : '') +
+          '" data-act="marksize" data-v="' + id + ':' + sz.id + '"' + (m ? '' : ' disabled') + '>' +
+          '<b>' + esc(sz.label) + '</b><small>' + esc(sz.hint) + '</small></button>';
+      }).join('') + '</div>' +
+      (m
+        ? '<p class="kq-mark-out' + (blend ? ' blend' : '') + '">' + (blend
+            ? '<b>Close to the edge.</b> The new colour will be carried into the panel next door so the repair does not stop at a hard line. That blending is included.'
+            : '<b>Well inside the panel.</b> The repair stays on this panel, so there is nothing to blend into the next one.') + '</p>'
+        : '<p class="kq-mark-out kq-mark-wait">Tap the panel above and we will work out whether it needs blending into the next one.</p>') +
+      '</div>';
+  }
+
+
+  function wheelsUI() {
+    var n = Object.keys(S.wheels).length;
+    if (!n) return '';
+    var names = CAR_WHEELS.filter(function (w) { return S.wheels[w.id]; })
+      .map(function (w) { return w.label.replace(' alloy', ''); });
+    return '<div class="kq-dmg kq-dmg-wheel"><div class="kq-dmg-h"><b>' +
+      (n === 1 ? '1 alloy wheel' : n + ' alloy wheels') + '</b>' +
+      '<button type="button" class="kq-x" data-act="unwheels" data-v="all" aria-label="Clear the wheels">×</button></div>' +
+      '<p class="kq-note">' + esc(names.join(', ')) + '. Refinished per wheel &mdash; the price depends on how far gone the rim is, which we confirm when we see them.</p></div>';
+  }
+
   function viewBody() {
     var picked = Object.keys(S.body);
-    var h = '<h2 class="kq-h">Tap where it hurts</h2><p class="kq-help">Tap each damaged panel, then tell us what happened to it.</p>' +
+    var h = '<h2 class="kq-h">Tap where it hurts</h2><p class="kq-help">Tap each damaged panel, then tell us what happened to it. Kerbed an alloy? Tap the wheels down the sides.</p>' +
       '<div class="kq-bodywrap"><svg class="kq-carsvg" viewBox="0 0 260 516" role="group" aria-label="Car diagram: choose the damaged panels">' +
       '<rect x="18" y="8" width="224" height="500" rx="70" fill="#f7f8fa" stroke="#dde1e8" stroke-width="2"/>' +
       '<path class="kq-glass" d="M66 154 L194 154 L188 192 L72 192 Z"/><path class="kq-glass" d="M72 322 L188 322 L194 358 L66 358 Z"/>' +
       CAR_PANELS.map(function (p) {
         return '<path class="kq-panel' + (S.body[p.id] ? ' on' : '') + '" d="' + p.d + '" data-act="panel" data-v="' + p.id + '" tabindex="0" role="button" aria-pressed="' + !!S.body[p.id] + '"><title>' + esc(p.label) + '</title></path>';
+      }).join('') +
+      CAR_WHEELS.map(function (w) {
+        return '<rect class="kq-wheel' + (S.wheels[w.id] ? ' on' : '') + '" x="' + w.x + '" y="' + w.y + '" width="' + w.w +
+          '" height="' + w.h + '" rx="8" data-act="wheel" data-v="' + w.id + '" tabindex="0" role="button" aria-pressed="' +
+          !!S.wheels[w.id] + '"><title>' + esc(w.label) + '</title></rect>';
       }).join('') + '</svg><div class="kq-bodyside">' +
+      wheelsUI() +
       (picked.length ? picked.map(function (id) {
         var p = CAR_PANELS.filter(function (x) { return x.id === id; })[0];
         return '<div class="kq-dmg"><div class="kq-dmg-h"><b>' + esc(p.label) + '</b><button type="button" class="kq-x" data-act="unpanel" data-v="' + id + '" aria-label="Remove ' + esc(p.label) + '">×</button></div>' +
@@ -262,7 +465,7 @@
           '<div class="kq-pills">' + C.bodywork_damage.map(function (d) {
             return '<button type="button" class="kq-pill' + (S.body[id] === d.id ? ' on' : '') + '" data-act="dmg" data-v="' + id + ':' + d.id + '"><b>' + esc(d.label) + '</b>' +
               (d.size ? '<small>' + esc(d.size) + '</small>' : '') + '</button>';
-          }).join('') + '</div></div>';
+          }).join('') + '</div>' + markUI(id, p) + '</div>';
       }).join('') : '<p class="kq-note">Nothing selected yet. Tap a panel on the car.</p>') +
       // A photo settles bodywork faster than any form does, and the customer wants to show us
       // before they commit, not after. So this is an action here, not a note about later.
@@ -272,7 +475,10 @@
           '<a href="' + waPhotoLink(picked) + '" target="_blank" rel="noopener" data-act="wa-photo">Send a photo on WhatsApp →</a></p>'
         : '<p class="kq-small">Photos help us price it properly &mdash; you can send one as soon as you have picked a panel.</p>') +
       '</div></div>';
-    return h + nav('car', 'to-estimate', picked.length ? 'Show my price (' + picked.length + ')' : 'Tap a panel first', !picked.length);
+    // The count has to include the wheels, or a customer who picked two alloys and a door is told
+    // we are pricing one thing.
+    var items = picked.length + Object.keys(S.wheels).length;
+    return h + nav('car', 'to-estimate', items ? 'Show my price (' + items + ')' : 'Tap a panel or a wheel', !items);
   }
 
   function viewTune() {
@@ -317,8 +523,18 @@
     else if (S.flow === 'tyres') lines = [E.tyreLine(C, { width: S.tyre.w, profile: S.tyre.p, rim: S.tyre.r, runflat: S.tyre.rf }, S.tyre.tier, S.tyre.qty)];
     else if (S.flow === 'bodywork') lines = Object.keys(S.body).map(function (id) {
       var p = CAR_PANELS.filter(function (x) { return x.id === id; })[0];
-      return E.bodyLine(C, p.key, p.label, S.body[id], S.band);
-    }).filter(Boolean);
+      var line = E.bodyLine(C, p.key, p.label, S.body[id], S.band);
+      // What the marker told us about this panel travels with the price, so the estimate can
+      // explain the blending rather than leaving the customer to wonder what they paid for.
+      if (line && S.mark[id]) {
+        line.blend = needsBlend(id, S.mark[id]);
+        line.markSize = markSize(S.mark[id].size).label.toLowerCase();
+      }
+      return line;
+    }).filter(Boolean).concat(
+      // Kerbed alloys are priced per wheel, alongside whatever the panels come to.
+      Object.keys(S.wheels).length ? [E.alloyLine(C, Object.keys(S.wheels).length)].filter(Boolean) : []
+    );
     else if (S.flow === 'recovery') {
       var rl = S.rec.what && S.rec.where ? E.recoveryLine(C, S.rec.what, S.rec.where) : null;
       lines = rl ? [rl] : [];
@@ -357,22 +573,32 @@
         if (l.source === 'ai') tags.push('Priced for your car');
         if (l.confidence === 'low') tags.push('Wide range, confirmed before any work');
         if (l.part) tags.push('Panel cost confirmed after we see it');
+        // What the customer told us with the marker, said back to them so the price is explained.
+        if (l.markSize) tags.push('About the size of a ' + l.markSize);
+        if (l.blend === true) tags.push('Near the edge, so blended into the next panel');
+        else if (l.blend === false) tags.push('Well inside the panel, no blending needed');
         return '<li class="kq-line"><div><strong>' + esc(l.name) + '</strong>' + (l.note ? '<p>' + esc(l.note) + '</p>' : '') +
           (tags.length ? '<small>' + tags.join(' · ') + '</small>' : '') + breakdown(l) + '</div>' + price + '</li>';
       }).join('') + '</ul>';
     if (t.count) {
       h += '<div class="kq-total"><span>Your estimate' + (t.unpriced ? ' so far' : '') + '</span><b>' + range(t.low, t.high) + '</b></div>';
-      if (t.showDealer) h += '<div class="kq-dealer"><span>Typical main dealer</span><s>~' + money(t.dealer) + '</s><em>Around ' + money(Math.max(0, Math.round((t.dealer - (t.low + t.high) / 2) / 5) * 5)) + ' less</em></div>';
+      if (t.showDealer) {
+        var dl2 = dealerLabel();
+        h += '<div class="kq-dealer"><span>' + esc(dl2.a + ' ' + dl2.text) + ', typically</span><s>~' + money(t.dealer) + '</s><em>Around ' +
+          money(Math.max(0, Math.round((t.dealer - (t.low + t.high) / 2) / 5) * 5)) + ' less with us</em></div>' +
+          '<p class="kq-dealer-note">A typical franchised dealer figure for the same work, not a quote from any particular garage. ' +
+          'Main dealer labour in London runs around half as much again as ours, and their parts carry a bigger margin.</p>';
+      }
     }
     if (eligible) {
       h += '<div class="kq-offer"><div><b>' + money(coupon.amount) + ' off if you book online now</b>' +
-        '<span>Book a slot in the next <i id="kq-timer">' + fmtLeft() + '</i> and we&rsquo;ll take ' + money(coupon.amount) + ' off this job. Code ' + esc(coupon.code) + '. ' +
-        'The discount applies to bookings made inside that window; after it runs out the price is the one shown above.</span></div></div>';
+        '<span>Book a slot in the next <i id="kq-timer">' + fmtLeft() + '</i> and we take ' + money(coupon.amount) + ' off your <b>final bill</b>, whatever the job turns out to be. Code ' + esc(coupon.code) + '. ' +
+        'The figure above is an estimate, not the final price &mdash; we confirm that in writing once we have seen the car, and the ' + money(coupon.amount) + ' comes off it.</span></div></div>';
     }
     h += (S.flow === 'recovery'
         ? '<p class="kq-small">A fixed price, inc VAT, to bring the car to our workshop. Nothing is added for traffic or waiting time. Anything we then do to the car is quoted separately, in writing, before it starts.</p>'
         : S.flow === 'bodywork'
-        ? '<p class="kq-small"><b>' + (t.low === t.high ? 'This price is confirmed' : 'This range is confirmed') + '</b> &mdash; parts, labour, paint and VAT included. Our team will come back to you with the full exact price. ' +
+        ? '<p class="kq-small"><b>This is an estimate, not the final price</b> &mdash; parts, labour, paint and VAT included, worked out from the same rate card our estimators use. We confirm the exact figure in writing once we have seen the car, and you decide then whether to go ahead. If what we find is more than the photos showed, we tell you before we touch anything &mdash; you owe us nothing for looking. ' +
           (t.low === t.high
             ? 'This is a fixed-method repair, so it is one figure rather than a span.'
             : 'Bodywork moves with how deep the damage goes and what sits behind the panel, which is why we give you the span we stand behind rather than a figure that changes later.') +
@@ -400,15 +626,54 @@
   }
 
   /* ---------- step: details ---------- */
+
+  /* Collection and return, charged by distance.
+
+     Asked for only once the box is ticked, so a customer who is driving in is never shown it.
+     The bands are the customer's own judgement of how far away they are, which is the only thing
+     available without sending their postcode to a mapping service: naming the nearest towns
+     against each band makes that judgement easy to get right. */
+  function collectBands() {
+    return ((C.collection_inc_vat && C.collection_inc_vat.bands) || []);
+  }
+  function collectBand(id) {
+    var b = collectBands().filter(function (x) { return x.id === id; });
+    return b.length ? b[0] : null;
+  }
+  /* S.lead stays null until the customer submits the details form, so everything that reads it
+     before then has to tolerate that. Missing this threw on the first render of the details
+     step, which took the whole booking form down with it. */
+  function lead() { return S.lead || {}; }
+  function collectUI() {
+    if (!lead().collect || !collectBands().length) return '';
+    var chosen = collectBand(S.collectBand);
+    return '<div class="kq-collect">' +
+      '<p class="kq-collect-h"><b>How far are you from the workshop?</b> We collect and bring it back; ' +
+      'the charge covers both journeys.</p>' +
+      '<div class="kq-collect-opts">' + collectBands().map(function (b) {
+        return '<button type="button" class="kq-collect-opt' + (S.collectBand === b.id ? ' on' : '') +
+          '" data-act="collectband" data-v="' + b.id + '"><b>' + esc(b.label) + '</b>' +
+          '<small>' + esc(b.hint) + '</small>' +
+          '<em>' + (b.price ? money(b.price) : 'We\u2019ll price it') + '</em></button>';
+      }).join('') + '</div>' +
+      (chosen
+        ? '<p class="kq-collect-out">' + (chosen.price
+            ? '<b>' + money(chosen.price) + '</b> added for collection and return, there and back.'
+            : '<b>We\u2019ll price this for you.</b> Further than 10 miles is quoted rather than guessed, and we tell you before we set off.') + '</p>'
+        : '<p class="kq-collect-out kq-collect-wait">Pick the one that fits and we will add it to the job.</p>') +
+      '</div>';
+  }
+
   function viewDetails() {
     return '<h2 class="kq-h">Where shall we send it?</h2><p class="kq-help">We&rsquo;ll check the detail for your car and send the full written estimate. Then pick your slot.</p>' +
       summaryStrip() +
       '<form class="kq-lead" novalidate><div class="kq-row">' +
-      '<div><label class="kq-label" for="kq-name">Name</label><input class="kq-input" id="kq-name" name="name" autocomplete="name" required maxlength="60"/></div>' +
-      '<div><label class="kq-label" for="kq-phone">Mobile</label><input class="kq-input" id="kq-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required maxlength="20"/></div></div>' +
-      '<div class="kq-row"><div><label class="kq-label" for="kq-email">Email <span class="kq-opt">(optional)</span></label><input class="kq-input" id="kq-email" name="email" type="email" autocomplete="email" maxlength="80"/></div>' +
+      '<div><label class="kq-label" for="kq-name">Name</label><input class="kq-input" id="kq-name" value="' + esc(lead().name || '') + '" name="name" autocomplete="name" required maxlength="60"/></div>' +
+      '<div><label class="kq-label" for="kq-phone">Mobile</label><input class="kq-input" id="kq-phone" value="' + esc(lead().phone || '') + '" name="phone" type="tel" inputmode="tel" autocomplete="tel" required maxlength="20"/></div></div>' +
+      '<div class="kq-row"><div><label class="kq-label" for="kq-email">Email <span class="kq-opt">(optional)</span></label><input class="kq-input" id="kq-email" value="' + esc(lead().email || '') + '" name="email" type="email" autocomplete="email" maxlength="80"/></div>' +
       '<div><label class="kq-label" for="kq-reg2">Reg</label><input class="kq-input" id="kq-reg2" name="reg" maxlength="10" value="' + esc((S.vehicle && S.vehicle.registrationNumber) || S.reg) + '"/></div></div>' +
-      '<label class="kq-check"><input type="checkbox" name="collect"/> Please collect and return my car</label>' +
+      '<label class="kq-check"><input type="checkbox" name="collect"' + (lead().collect ? ' checked' : '') + ' data-act="collect-toggle"/> Please collect and return my car</label>' +
+      collectUI() +
       '<button class="kq-btn kq-btn-main" type="submit">' + (S.flow === 'recovery' && S.rec.when === 'now' ? 'Send this and call me back' : 'Next: pick my slot') + '</button>' +
       '<p class="kq-err" role="alert" hidden></p>' +
       '<p class="kq-small">We only use your details to arrange this job.</p></form>' +
@@ -424,8 +689,23 @@
   function viewCalendar() {
     var cal = FLOWS[S.flow].cal, days = E.bookableDays(C, cal);
     var day = S.day ? days.filter(function (d) { return d.key === S.day; })[0] : null;
+    // The soonest slot the workshop actually has. This is the honest version of urgency: it is
+    // true, it is checkable, and when the next free slot is two days out it does the same job
+    // that marking slots "full" would — without telling anyone something that isn't so.
+    var first = days[0];
+    var next = '';
+    if (first && first.slots.length) {
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      var when = new Date(first.key + 'T00:00:00');
+      var gap = Math.round((when - today) / 86400000);
+      var label = gap === 1 ? 'tomorrow' : first.long.replace(/,.*$/, '');
+      next = '<p class="kq-next"><b>Next free ' + (cal === 'bodywork' ? 'drop-off' : 'slot') +
+        ':</b> ' + esc(label) + ' at ' + esc(first.slots[0]) +
+        (gap > 2 ? ' &mdash; we are booked up until then' : '') + '</p>';
+    }
     return '<h2 class="kq-h">Pick your ' + (cal === 'bodywork' ? 'drop-off' : 'slot') + '</h2>' +
       '<p class="kq-help">' + (cal === 'bodywork' ? 'Bodywork stays with us, so this is when you drop it off.' : 'Most mechanical jobs are done the same day.') + '</p>' +
+      next +
       summaryStrip() +
       '<div class="kq-days">' + days.map(function (d) {
         return '<button type="button" class="kq-day' + (S.day === d.key ? ' on' : '') + '" data-act="day" data-v="' + d.key + '"><i>' + d.dow + '</i><b>' + d.dom + '</b><span>' + d.mon + '</span></button>';
@@ -433,7 +713,11 @@
       (day ? '<label class="kq-label">' + esc(day.long) + '</label><div class="kq-pills">' +
         day.slots.map(function (s) { return '<button type="button" class="kq-pill' + (S.time === s ? ' on' : '') + '" data-act="time" data-v="' + s + '">' + s + '</button>'; }).join('') + '</div>' : '') +
       '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="skip-slot">I&rsquo;ll sort the time later</button>' +
-      '<button type="button" class="kq-btn kq-btn-main" data-act="confirm"' + (S.day && S.time ? '' : ' disabled') + '>Confirm my booking</button></div>';
+      '<button type="button" class="kq-btn kq-btn-main" data-act="confirm"' + (S.day && S.time ? '' : ' disabled') + '>Confirm my booking</button></div>' +
+      // Last step before booking, and the one where people remember the panel they forgot.
+      // Without this the only way back is the browser button, which drops the whole widget.
+      '<div class="kq-nav kq-nav-amend"><button type="button" class="kq-btn kq-btn-link" data-act="back" data-v="' +
+      (S.flow === 'recovery' ? 'car' : 'build') + '">&larr; Add or change something on the job</button></div>';
   }
 
   /* ---------- step: done ---------- */
@@ -451,7 +735,7 @@
     return '<div class="kq-done"><h2 class="kq-h">' + (booked ? 'You&rsquo;re booked in.' : 'Your estimate is on its way.') + '</h2>' +
       (booked ? '<p class="kq-big-when">' + esc(when) + '</p><p>' + (cal === 'bodywork' ? 'Drop the car to us at Unit 1, Soho Mills, Hackbridge SM6 7HN.' : 'Bring it to Unit 1, Soho Mills, Hackbridge SM6 7HN.') + ' We&rsquo;ll call to confirm and send the written price first.</p>'
         : '<p>We&rsquo;ve got your details and will be in touch, usually within 30 minutes during opening hours (Mon–Sat 8am–8pm).</p>') +
-      (booked && !S.offerGone ? '<p class="kq-saved"><b>' + money(C.coupon.amount) + ' online booking discount applied</b> · code ' + esc(C.coupon.code) + '</p>' : '') +
+      (booked && !S.offerGone ? '<p class="kq-saved"><b>' + money(C.coupon.amount) + ' off your final bill</b> · code ' + esc(C.coupon.code) + ' · applied when we invoice, whatever the job comes to</p>' : '') +
       (S.flow === 'bodywork' ? '<p>Send us photos of the damage and we can have the parts ready:</p>' : '') +
       '<div class="kq-nav-wrap"><a class="kq-btn kq-btn-wa" href="' + waLink() + '" target="_blank" rel="noopener">' + (S.flow === 'bodywork' ? 'Send photos on WhatsApp' : 'Message us on WhatsApp') + '</a> ' +
       '<a class="kq-btn kq-btn-ghost" href="tel:' + PHONE_TEL + '">Call ' + PHONE + '</a></div></div>';
@@ -484,14 +768,14 @@
       priority: (S.flow === 'recovery' && S.rec.when === 'now') ? 'urgent' : (S.day && S.time ? 'hot' : 'warm'),
       source: 'Website instant quote',
       stage: 'intake',
-      name: S.lead.name, phone: S.lead.phone, email: S.lead.email || '',
-      reg: S.lead.reg || v.registrationNumber || '',
+      name: lead().name, phone: lead().phone, email: lead().email || '',
+      reg: lead().reg || v.registrationNumber || '',
       vehicle: { make: v.make || '', model: S.model || '', year: v.yearOfManufacture || '', engine_cc: v.engineCapacity || '', fuel: v.fuelType || '', size: C.bands[S.band].label, motExpiry: v.motExpiryDate || '' },
       service: FLOWS[S.flow].label,
       jobs: S.lines.map(function (l) { return { name: l.name, low: l.low, high: l.high, source: l.source || l.kind, hours: l.hours || null, parts: l.parts || null }; }),
       webEstimate: t && t.count ? { lo: t.low, hi: t.high } : null,
       requestedSlot: S.day && S.time ? { calendar: FLOWS[S.flow].cal, date: S.day, time: S.time } : null,
-      collection: !!S.lead.collect,
+      collection: !!lead().collect,
       coupon: (S.day && S.time && !S.offerGone) ? { code: C.coupon.code, amount: C.coupon.amount, minSpend: C.coupon.min_spend } : null,
       priceBookVersion: C.version,
       log: [{ at: new Date().toISOString(), by: 'Website', text: ((S.flow === 'recovery' && S.rec.when === 'now') ? 'URGENT: needs recovery now, call straight back' : S.day && S.time ? 'HOT: accepted the range and booked ' + S.day + ' ' + S.time : 'Estimate sent, no slot picked') }]
@@ -611,11 +895,23 @@
   function readBuild() { var b = $('#kq-bhp'); if (b) S.tune.bhp = b.value.replace(/\D/g, ''); }
   function bindDetails() {
     var f = $('.kq-lead');
+    var box = f.querySelector('input[name=collect]');
+    if (box) box.addEventListener('change', function () {
+      // Keep whatever has been typed so far: render() rebuilds the form from state, and losing a
+      // half-typed phone number because someone ticked a box is the kind of thing nobody reports,
+      // they just leave.
+      S.lead = {
+        id: S.lead && S.lead.id, name: f.name.value, phone: f.phone.value,
+        email: f.email.value, reg: f.reg.value, collect: box.checked,
+      };
+      if (!box.checked) S.collectBand = '';
+      save(); render();
+    });
     f.addEventListener('submit', function (e) {
       e.preventDefault();
       var err = f.querySelector('.kq-err'), name = f.name.value.trim(), phone = f.phone.value.replace(/[^\d+]/g, '');
       if (!name || phone.length < 10) { err.textContent = 'Please add your name and a mobile number so we can confirm.'; err.hidden = false; return; }
-      S.lead = { id: S.lead && S.lead.id, name: name, phone: phone, email: f.email.value.trim(), reg: f.reg.value.toUpperCase().trim(), collect: f.collect.checked };
+      S.lead = { id: S.lead && S.lead.id, name: name, phone: phone, email: f.email.value.trim(), reg: f.reg.value.toUpperCase().trim(), collect: f.collect.checked, collectBand: S.collectBand };
       var b = f.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Saving…';
       sendLead().then(function (res) {
         track('generate_lead', { value: S.totals ? S.totals.low : 0, currency: 'GBP', flow: S.flow });
@@ -634,7 +930,8 @@
     else if (a === 'manual') { S.manual = true; S.vehicle = S.vehicle || {}; render(); }
     else if (a === 'back') { if (S.step === 'build') readBuild(); if (S.step === 'car') readCar(); go(v); }
     else if (a === 'rwhat') { S.rec.what = v; save(); render(); }
-    else if (a === 'rwhere') { S.rec.where = v; save(); render(); }
+    else if (a === 'rwhere') { S.rec.where = v; S.rec.pc = null; save(); render(); }
+    else if (a === 'rpc') { lookupPostcode(); }
     else if (a === 'rwhen') { S.rec.when = v; save(); render(); }
     else if (a === 'add-mot') { if (S.mech.indexOf('mot') === -1) S.mech.push('mot'); track('quote_add_mot'); save(); render(); }
     else if (a === 'to-build') { readCar(); go('build'); }
@@ -656,8 +953,12 @@
       sendLead().then(function () { S.sent = true; track('quote_booked', { value: S.totals ? S.totals.low : 0, currency: 'GBP' }); try { sessionStorage.removeItem('kq2'); } catch (x) {} go('done'); });
     }
     else if (a === 'panel') { if (S.body[v]) delete S.body[v]; else S.body[v] = C.bodywork_damage[0].id; save(); render(); }
-    else if (a === 'unpanel') { delete S.body[v]; save(); render(); }
+    else if (a === 'unpanel') { delete S.body[v]; delete S.mark[v]; save(); render(); }
     else if (a === 'dmg') { var p = v.split(':'); S.body[p[0]] = p[1]; save(); render(); }
+    else if (a === 'collectband') { S.collectBand = v; save(); render(); }
+    else if (a === 'wheel') { if (S.wheels[v]) delete S.wheels[v]; else S.wheels[v] = true; S.lines = []; save(); render(); }
+    else if (a === 'unwheels') { S.wheels = {}; S.lines = []; save(); render(); }
+    else if (a === 'marksize') { var ms = v.split(':'); if (S.mark[ms[0]]) { S.mark[ms[0]].size = ms[1]; S.lines = []; save(); render(); } }
     else if (a === 'tw') { S.tyre.w = Number(v); save(); render(); }
     else if (a === 'tp') { S.tyre.p = Number(v); save(); render(); }
     else if (a === 'tr') { S.tyre.r = Number(v); save(); render(); }
@@ -668,7 +969,41 @@
     else if (a === 'ts') { S.tune.stage = v; readBuild(); var t2 = E.tuneLines(C, S.tune.fuel, Number(S.tune.bhp) || 0, v, S.tune.addons); S.power = t2.power; save(); render(); }
     else if (a === 'wa') track('quote_whatsapp');
   });
+
+  /* Placing the marker. The click arrives in screen pixels; the panel is drawn in the diagram's
+     units, so it goes back through the SVG's own transform rather than being approximated from
+     the bounding rectangle, which is wrong as soon as the viewBox is not square. */
+  root.addEventListener('click', function (e) {
+    var svg = e.target.closest ? e.target.closest('.kq-mark-svg') : null;
+    if (!svg) return;
+    var id = svg.getAttribute('data-v');
+    var box = panelBox(id);
+    if (!box) return;
+    var pt, x, y;
+    if (svg.createSVGPoint && svg.getScreenCTM) {
+      pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+      var loc = pt.matrixTransform(svg.getScreenCTM().inverse());
+      x = loc.x; y = loc.y;
+    } else {
+      var r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+      x = vb.x + (e.clientX - r.left) / r.width * vb.width;
+      y = vb.y + (e.clientY - r.top) / r.height * vb.height;
+    }
+    // Keep it on the panel: a tap just outside still reads as "about here".
+    x = Math.max(box.x, Math.min(box.x + box.w, x));
+    y = Math.max(box.y, Math.min(box.y + box.h, y));
+    var had = S.mark[id];
+    S.mark[id] = { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, size: had ? had.size : 'm' };
+    S.lines = [];
+    track('quote_mark_placed', { panel: id });
+    save(); render();
+  });
+
   root.addEventListener('keydown', function (e) {
+    // Enter in the postcode box should price the job, not submit whatever form is around it.
+    if (e.target && e.target.id === 'kq-pc' && e.key === 'Enter') {
+      e.preventDefault(); lookupPostcode(); return;
+    }
     var el = e.target.closest ? e.target.closest('.kq-panel') : null;
     if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); el.dispatchEvent(new MouseEvent('click', { bubbles: true })); }
   });
@@ -680,7 +1015,7 @@
     e.preventDefault();
     var f = t.dataset.quote;
     if (!C) { PENDING = { flow: f }; root.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
-    if (S.sent) { S.sent = false; S.lines = []; S.mech = []; S.body = {}; S.expires = 0; S.offerGone = false; S.day = S.time = null; }
+    if (S.sent) { S.sent = false; S.lines = []; S.mech = []; S.body = {}; S.mark = {}; S.wheels = {}; S.expires = 0; S.offerGone = false; S.day = S.time = null; }
     if (FLOWS[f]) { S.flow = f; S.step = (S.vehicle && !S.manual) ? 'build' : 'car'; }
     else if (!S.flow) S.step = 'flow';
     save(); render();
