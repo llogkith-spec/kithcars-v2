@@ -14,12 +14,18 @@ service costs more than a car's, not less.
 Idempotent: safe to re-run.
 """
 import json
+import math
 import pathlib
 import re
 import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+
+def _advertised(raw):
+    """Round an engine price up to the pound for display. Servicing lands on pennies now."""
+    return math.ceil(float(raw))
 
 
 def engine_from(job_id: str, band: str) -> int:
@@ -29,7 +35,7 @@ def engine_from(job_id: str, band: str) -> int:
          "console.log(E.priceJob(C,process.argv[1],process.argv[2]).low);",
          job_id, band],
         cwd=ROOT, capture_output=True, text=True, check=True)
-    return int(out.stdout.strip())
+    return _advertised(out.stdout.strip())
 
 
 CAR = engine_from('service-interim', 'small')

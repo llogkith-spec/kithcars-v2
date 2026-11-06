@@ -9,12 +9,18 @@ itself, and the homepage is the page most of them land on.
 Each entry is tied to a catalogue job id, so the strip can never drift from the price book
 again: re-run this after any price change and it rewrites itself.
 """
+import math
 import pathlib
 import re
 import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+
+def _advertised(raw):
+    """Round an engine price up to the pound for display. Servicing lands on pennies now."""
+    return math.ceil(float(raw))
 
 # Homepage link -> the catalogue job whose cheapest band is the honest "from", and the
 # wording around the figure.
@@ -35,7 +41,7 @@ def from_price(job_id):
          "let m=1e9;for(const b of Object.keys(C.bands)){const r=E.priceJob(C,process.argv[1],b);"
          "if(r.low<m)m=r.low;}console.log(m);", job_id],
         cwd=ROOT, capture_output=True, text=True, check=True)
-    return int(out.stdout.strip())
+    return _advertised(out.stdout.strip())
 
 
 def main():

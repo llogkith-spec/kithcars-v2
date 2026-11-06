@@ -178,3 +178,75 @@ for (const id of ['service-interim','service-full','brake-discs-front','clutch',
   assert.strictEqual(E.couponEligible(cat, { high: 60 }, false), false);
   console.log('flow pricing tests passed');
 })();
+
+/* ---- Servicing rate card ------------------------------------------------------------------
+   These 24 figures come off Logan's own BookMyGarage setup. They are asserted literally and on
+   purpose: if a change to the labour rate, the oil price or a filter cost moves any cell, that
+   is something he needs to have decided, not something that should slip through. */
+{
+  const EXPECT = {
+    'oil-change': [162.48, 162.48, 164.88, 179.28, 185.28, 214.08],
+    'interim':    [181.20, 181.20, 183.60, 198.00, 204.00, 232.80],
+    'full':       [210.00, 212.40, 214.80, 229.20, 236.40, 277.20],
+    'major':      [248.30, 250.70, 253.10, 291.60, 298.80, 332.40],
+  };
+  const bands = cat.servicing.bands.map(b => b.id);
+  for (const level of Object.keys(EXPECT)) {
+    bands.forEach((b, i) => {
+      assert.strictEqual(E.svcPrice(cat, level, b, 'standard'), EXPECT[level][i],
+        `${level} on ${b} should be £${EXPECT[level][i]}`);
+    });
+  }
+
+  // Engine capacity from the DVLA lookup picks the band; boundaries land on the lower one.
+  assert.strictEqual(E.svcBand(cat, 1200).id, 'cc1200');
+  assert.strictEqual(E.svcBand(cat, 1201).id, 'cc1500');
+  assert.strictEqual(E.svcBand(cat, 1968).id, 'cc2000');
+  assert.strictEqual(E.svcBand(cat, 9999).id, 'ccbig', 'anything huge falls in the top band');
+  assert.strictEqual(E.svcBand(cat, 0), null, 'no capacity means no guess');
+
+  // Before the oil is chosen the quote is a range; choosing collapses it to one figure.
+  const open = E.svcLine(cat, 'interim', 'cc2000', {});
+  assert.strictEqual(open.kind, 'range');
+  assert.ok(open.high > open.low, 'specialist oil sits above standard');
+  assert.strictEqual(open.low, E.svcPrice(cat, 'interim', 'cc2000', 'standard'));
+  assert.strictEqual(open.high, E.svcPrice(cat, 'interim', 'cc2000', 'specialist'));
+
+  const std = E.svcLine(cat, 'interim', 'cc2000', { oil: 'standard' });
+  assert.strictEqual(std.kind, 'fixed');
+  assert.strictEqual(std.low, std.high);
+  assert.ok(std.low >= open.low && std.low <= open.high,
+    'whatever they pick must land inside the range they were first shown');
+
+  const spec = E.svcLine(cat, 'interim', 'cc2000', { oil: 'specialist' });
+  assert.ok(spec.low >= open.low && spec.low <= open.high, 'same for the specialist grade');
+
+  // The specialist uplift is only ever the oil, priced per litre.
+  const band = E.svcBandById(cat, 'ccbig');
+  const uplift = (cat.servicing.oil.specialist_ex_vat_per_litre
+                - cat.servicing.oil.standard_ex_vat_per_litre) * band.litres * (1 + cat.vat_rate);
+  assert.ok(Math.abs((spec.low - std.low) - uplift * (5 / band.litres)) < 0.01 ||
+            Math.abs(E.svcPrice(cat, 'interim', 'ccbig', 'specialist')
+                   - E.svcPrice(cat, 'interim', 'ccbig', 'standard') - uplift) < 0.01,
+    'the gap between grades is the oil and nothing else');
+
+  // An MOT is £21 alongside a full or major service, and not otherwise.
+  assert.strictEqual(E.motWithService(cat, ['full']).low, 21);
+  assert.strictEqual(E.motWithService(cat, ['major']).low, 21);
+  assert.strictEqual(E.motWithService(cat, ['interim']), null, 'interim does not earn it');
+  assert.strictEqual(E.motWithService(cat, ['oil-change']), null);
+  assert.strictEqual(E.motWithService(cat, []), null);
+  assert.ok(E.motWithService(cat, ['full']).was > 21, 'and it is cheaper than a standalone MOT');
+
+  // The old job ids are referenced across the site and the build scripts; they must keep
+  // answering, and answer from the new rate card.
+  for (const id of ['service-interim', 'service-full', 'service-major', 'oil-filter-change']) {
+    const legacy = E.priceJob(cat, id, 'small');
+    assert.ok(legacy && legacy.low > 0, `${id} still prices through priceJob`);
+  }
+  assert.strictEqual(E.priceJob(cat, 'service-full', 'cc2400', { oil: 'standard' }).low,
+                     E.svcPrice(cat, 'full', 'cc2400', 'standard'),
+                     'priceJob and the rate card cannot disagree');
+
+  console.log('servicing rate card tests passed');
+}

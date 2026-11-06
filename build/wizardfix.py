@@ -14,6 +14,7 @@ reglookup.js so the wizard's registration fields check the car against DVLA/DVSA
 Idempotent: safe to re-run.
 """
 import json
+import math
 import pathlib
 import re
 import subprocess
@@ -32,7 +33,7 @@ let min=1e9;
 for(const b of Object.keys(C.bands)){const r=E.priceJob(C,process.argv[1],b);if(r.low<min)min=r.low;}
 console.log(min);''', job_id],
         cwd=ROOT, capture_output=True, text=True, check=True)
-    return int(out.stdout.strip())
+    return math.ceil(float(out.stdout.strip()))
 
 
 PRICES = {

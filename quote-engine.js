@@ -112,8 +112,28 @@
 
   /* Price one job for one band. `ai` (optional) = {hours:[lo,hi], parts:[lo,hi], note, confidence} from the estimate API,
      already clamped server-side. Returns {kind, low, high, label, dealer, note, ...}. */
+  /* Servicing moved to its own engine-size rate card, but the four service jobs are referenced
+     by id all over the site and the build scripts. Rather than rewrite every caller, those ids
+     are answered from the new model here. Callers that pass an engine-size band get that band;
+     callers still passing an old size band get the engine size that size usually means. */
+  var LEGACY_BAND_TO_CC = {
+    small: 'cc1200', medium: 'cc2000', large: 'cc2400', prestige: 'cc3500',
+    // Vans price by engine size like everything else now; a working van is typically a 2.0.
+    van: 'cc2000'
+  };
+  var SERVICE_JOB_TO_LEVEL = {
+    'service-interim': 'interim', 'service-full': 'full', 'service-major': 'major',
+    'oil-filter-change': 'oil-change'
+  };
+
   function priceJob(cat, jobId, band, opts) {
     opts = opts || {};
+    if (cat.servicing && SERVICE_JOB_TO_LEVEL[jobId]) {
+      var lvl = SERVICE_JOB_TO_LEVEL[jobId];
+      var ccBand = svcBandById(cat, band) ? band : (LEGACY_BAND_TO_CC[band] || 'cc2000');
+      var line = svcLine(cat, lvl, ccBand, opts);
+      if (line) { line.band = ccBand; return line; }
+    }
     var job = findJob(cat, jobId);
     if (!job) throw new Error('Unknown job ' + jobId);
     band = has(cat.bands, band) ? String(band) : 'medium';
@@ -491,9 +511,103 @@
     return out;
   }
 
+
+  /* ---- Servicing, on Logan's own rate card -------------------------------------------------
+     Banded by engine size, because that is what decides how much oil goes in and which filters
+     fit. Everything is costed rather than looked up, so changing the labour rate or the price of
+     a litre of oil reprices all 24 cells the way it does in his own system. */
+
+  function svcBand(cat, cc) {
+    var bands = cat.servicing.bands;
+    cc = Number(cc);
+    if (!isFinite(cc) || cc <= 0) return null;
+    for (var i = 0; i < bands.length; i++) {
+      if (bands[i].max === null || cc <= bands[i].max) return bands[i];
+    }
+    return bands[bands.length - 1];
+  }
+
+  function svcBandById(cat, id) {
+    var b = cat.servicing.bands.filter(function (x) { return x.id === id; });
+    return b.length ? b[0] : null;
+  }
+
+  function svcLevel(cat, id) {
+    var l = cat.servicing.levels.filter(function (x) { return x.id === id; });
+    return l.length ? l[0] : null;
+  }
+
+  /* One exact figure, for a known band, level and oil grade. */
+  function svcPrice(cat, levelId, bandId, oilGrade, isEv) {
+    var S = cat.servicing, band = svcBandById(cat, bandId), lvl = svcLevel(cat, levelId);
+    if (!band || !lvl) return null;
+    var rate = isEv ? S.ev_rate_ex_vat : S.rate_ex_vat;
+    var parts = 0;
+    for (var i = 0; i < lvl.parts.length; i++) parts += Number(band[lvl.parts[i]]) || 0;
+    var perLitre = oilGrade === 'specialist'
+      ? S.oil.specialist_ex_vat_per_litre : S.oil.standard_ex_vat_per_litre;
+    var ex = rate * lvl.hours[bandId] + parts + band.litres * perLitre;
+    return Math.round(ex * (1 + cat.vat_rate) * 100) / 100;
+  }
+
+  /* What the widget shows. Before the customer picks an oil grade the honest answer is a range:
+     standard oil at the bottom, specialist at the top. Once they choose, low and high are the
+     same number and the range collapses to a price. */
+  function svcLine(cat, levelId, bandId, opts) {
+    opts = opts || {};
+    var lvl = svcLevel(cat, levelId), band = svcBandById(cat, bandId);
+    if (!lvl || !band) return null;
+    var std = svcPrice(cat, levelId, bandId, 'standard', opts.ev);
+    var spec = svcPrice(cat, levelId, bandId, 'specialist', opts.ev);
+    var chosen = opts.oil === 'specialist' ? spec : (opts.oil === 'standard' ? std : null);
+
+    return {
+      id: 'service-' + levelId,
+      name: lvl.label,
+      kind: chosen === null ? 'range' : 'fixed',
+      low: chosen === null ? std : chosen,
+      high: chosen === null ? spec : chosen,
+      oil: opts.oil || null,
+      band: band.id,
+      bandLabel: band.label,
+      litres: band.litres,
+      hours: lvl.hours[bandId],
+      check: lvl.check,
+      parts: lvl.parts.slice(),
+      // The two ends of the range, kept so the widget can explain what moves the price.
+      standard: std,
+      specialist: spec,
+      note: chosen === null
+        ? 'Lower figure is standard oil, upper is ' + cat.servicing.oil.specialist_brand +
+          ' specialist grade. Pick one and this becomes a single price.'
+        : (opts.oil === 'specialist'
+            ? cat.servicing.oil.specialist_brand + ' specialist oil, ' + band.litres + ' litres.'
+            : 'Standard oil, ' + band.litres + ' litres.')
+    };
+  }
+
+  /* An MOT costs less bought alongside a full or major service. */
+  function motWithService(cat, levelIds) {
+    var S = cat.servicing;
+    if (!S || !S.mot_with_service_inc_vat) return null;
+    var qualifies = (levelIds || []).some(function (id) {
+      return S.mot_bundle_levels.indexOf(id) !== -1;
+    });
+    if (!qualifies) return null;
+    var full = priceJob(cat, 'mot', 'small');
+    return {
+      id: 'mot-bundle', name: 'MOT with your service', kind: 'fixed',
+      low: S.mot_with_service_inc_vat, high: S.mot_with_service_inc_vat,
+      label: '£' + S.mot_with_service_inc_vat,
+      was: full ? full.low : null,
+      note: 'Normally £' + (full ? full.low : '') + '. This price is only with a full or major service.'
+    };
+  }
+
   return { labourCost: labourCost, labourRange: labourRange, guessBand: guessBand, bandFromText: bandFromText,
            ulezLikely: ulezLikely,
            priceJob: priceJob, totals: totals, bodyBand: bodyBand, clampAi: clampAi, findJob: findJob, tyrePrice: tyrePrice,
            tyreLine: tyreLine, bodyLine: bodyLine, alloyLine: alloyLine, tuneLines: tuneLines, recoveryLine: recoveryLine, milesFrom: milesFrom,
+           svcLine: svcLine, svcPrice: svcPrice, svcBand: svcBand, svcBandById: svcBandById, svcLevel: svcLevel, motWithService: motWithService,
            couponEligible: couponEligible, bookableDays: bookableDays, safeNote: safeNote };
 });

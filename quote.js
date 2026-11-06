@@ -109,7 +109,8 @@
     mech: [], tyre: { w: 205, p: 55, r: 16, qty: 4, tier: 'mid', rf: false },
     body: {}, tune: { fuel: 'tp', bhp: '', stage: 's1', addons: [] }, rec: { what: '', where: '', when: 'book' },
     ai: {}, lines: [], totals: null, power: null, expires: 0, offerGone: false,
-    lead: null, day: null, time: null, sent: false
+    lead: null, day: null, time: null, sent: false, wantMot: false,
+    cc: null, ccBand: null, oil: null
   };
 
   /* ---------- helpers ---------- */
@@ -200,14 +201,21 @@
         '<p class="kq-err" role="alert" hidden></p></form>';
     }
     if (found) {
-      var ulez = E.ulezLikely(v), mot = v.motExpiryDate ? new Date(v.motExpiryDate) : null;
-      var days = mot ? Math.round((mot - new Date()) / 864e5) : null;
+      var ulez = E.ulezLikely(v), mot = motDate(v);
+      var days = motDays(v);
       h += '<div class="kq-car"><div class="kq-car-plate">' + esc(v.registrationNumber || S.reg) + '</div><div><strong>' +
         esc([v.yearOfManufacture, title(v.make)].filter(Boolean).join(' ')) + '</strong><span>' +
         esc([v.engineCapacity ? v.engineCapacity + 'cc' : '', title(v.fuelType), title(v.colour)].filter(Boolean).join(' · ')) + '</span></div></div>' +
         '<ul class="kq-facts">' +
-        (mot ? '<li class="' + (days < 45 ? 'warn' : '') + '">MOT ' + (days < 0 ? 'expired ' : 'due ') + mot.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + '</li>' : '') +
-        (mot && days < 45 && S.flow === 'mechanical' && S.mech.indexOf('mot') === -1 ? '<li class="kq-add"><button type="button" class="kq-link" data-act="add-mot">+ Add the MOT</button></li>' : '') +
+        (mot ? '<li class="' + (days < 45 ? 'warn' : '') + '">' + motPhrase(v) + '</li>' : '') +
+        // The nudge used to appear only on the mechanical flow, so someone booking bodywork with
+        // three weeks of MOT left was told the date and then nothing. Offer it in every flow:
+        // on mechanical it adds the job, elsewhere it flags it for the call.
+        (mot && days < 45
+          ? (S.flow === 'mechanical'
+              ? (S.mech.indexOf('mot') === -1 ? '<li class="kq-add"><button type="button" class="kq-link" data-act="add-mot">+ Add the MOT (' + money(E.priceJob(C, 'mot', S.band).low) + ')</button></li>' : '')
+              : '<li class="kq-add"><button type="button" class="kq-link" data-act="flag-mot"' + (S.wantMot ? ' disabled' : '') + '>' + (S.wantMot ? '✓ We&rsquo;ll sort the MOT at the same visit' : '+ Do the MOT at the same visit (' + money(E.priceJob(C, 'mot', S.band).low) + ')') + '</button></li>')
+          : '') +
         (ulez === true ? '<li>Likely ULEZ compliant</li>' : ulez === false ? '<li class="warn">Likely not ULEZ compliant · <a href="https://tfl.gov.uk/modes/driving/check-your-vehicle/" target="_blank" rel="noopener">check with TfL</a></li>' : '') +
         '</ul><label class="kq-label" for="kq-model">Model <span class="kq-opt">(optional, sharpens the price)</span></label>' +
         '<input class="kq-input" id="kq-model" maxlength="40" placeholder="e.g. 320d, Focus 1.0 EcoBoost" value="' + esc(S.model) + '"/>';
@@ -357,17 +365,180 @@
       });
   }
 
+  /* MOT expiry comes back with the reg lookup, so the customer never has to remember it. Saying
+     only the date leaves them to do the arithmetic; saying how long is what actually makes
+     someone book both in one visit. */
+  /* £50 off most work, £20 on servicing. A booking that is nothing but servicing takes the
+     smaller one; mix in any other work and the £50 applies, because that work is what carries
+     it. Every place the offer is shown reads this, so they cannot drift apart. */
+  var SERVICE_IDS = ['service-interim', 'service-full', 'service-major', 'oil-filter-change'];
+  function coupon() {
+    var base = C.coupon;
+    if (!base.servicing) return base;
+    var jobs = (S.mech || []);
+    // An MOT taken alongside a service is still a service booking, so it must not tip the
+    // customer into the larger offer. It is kept out of SERVICE_IDS because that list decides
+    // engine-size pricing, and an MOT is a flat fee.
+    var servicingish = SERVICE_IDS.concat(['mot']);
+    var hasOther = S.flow !== 'mechanical' ||
+      jobs.some(function (id) { return servicingish.indexOf(id) === -1; }) ||
+      Object.keys(S.body || {}).length > 0 ||
+      Object.keys(S.wheels || {}).length > 0;
+    var hasRealService = jobs.some(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
+    var onlyServicing = hasRealService && !hasOther;
+    return onlyServicing
+      ? { amount: base.servicing.amount, code: base.servicing.code,
+          min_spend: base.min_spend, hold_minutes: base.hold_minutes }
+      : base;
+  }
+
+  function motDate(v) {
+    var d = (v || {}).motExpiryDate ? new Date(v.motExpiryDate) : null;
+    return d && !isNaN(d) ? d : null;
+  }
+  function motDays(v) {
+    var d = motDate(v);
+    return d ? Math.round((d - new Date()) / 864e5) : null;
+  }
+  function motWhen(v) {
+    var d = motDate(v);
+    return d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  }
+  function motHowLong(days) {
+    if (days < 0) return '';
+    if (days === 0) return 'today';
+    if (days === 1) return 'tomorrow';
+    if (days < 14) return 'in ' + days + ' days';
+    if (days < 60) return 'in ' + Math.round(days / 7) + ' weeks';
+    return 'in ' + Math.round(days / 30) + ' months';
+  }
+  /* One line on the confirmation screen. Nothing is claimed that the DVSA data does not say,
+     and an MOT already booked in this job is not nagged about again. */
+  function motReminder() {
+    var days = motDays(S.vehicle);
+    if (days === null) return '';
+    var booking = S.mech.indexOf('mot') !== -1 || S.wantMot;
+    if (days < 0) {
+      return '<p class="kq-motnote warn"><b>Your MOT ran out on ' + motWhen(S.vehicle) + '.</b> ' +
+        (booking ? 'We are doing it at this visit.'
+                 : 'Until it is retested the car can only be driven to a booked appointment &mdash; tell us and we will test it while it is here.') + '</p>';
+    }
+    if (booking) {
+      return '<p class="kq-motnote"><b>MOT:</b> due ' + motWhen(S.vehicle) + ', and we are doing it at this visit.</p>';
+    }
+    if (days < 90) {
+      return '<p class="kq-motnote"><b>Your MOT is due ' + motWhen(S.vehicle) + ', ' + motHowLong(days) + '.</b> ' +
+        'We can do it on the same visit for ' + money(E.priceJob(C, 'mot', S.band).low) + ' &mdash; just say when we call.</p>';
+    }
+    return '<p class="kq-motnote"><b>MOT:</b> due ' + motWhen(S.vehicle) + ', ' + motHowLong(days) + '. We will remind you nearer the time.</p>';
+  }
+
+  function motPhrase(v) {
+    var days = motDays(v);
+    if (days === null) return '';
+    if (days < 0) {
+      var over = Math.abs(days);
+      return 'MOT expired ' + motWhen(v) + ' &mdash; ' + over + ' day' + (over === 1 ? '' : 's') +
+             ' ago. The car can only be driven to a booked test.';
+    }
+    return 'MOT due ' + motWhen(v) + ' &mdash; ' + motHowLong(days);
+  }
+
+  /* Servicing prices off engine size, not body size. The lookup usually hands us the exact
+     capacity; where it doesn't, the customer picks a band and we say so rather than guessing a
+     price from the model name. */
+  function svcBandId() {
+    if (S.ccBand) return S.ccBand;
+    var b = S.cc ? E.svcBand(C, S.cc) : null;
+    return b ? b.id : null;
+  }
+  function svcBandKnown() { return !!svcBandId(); }
+
+  /* Engine size. Shown as a confirmation when the lookup gave it to us, as a question when it
+     didn't — never silently guessed, because it moves the price by up to £100. */
+  function engineSizeUI() {
+    var id = svcBandId();
+    if (id && S.cc && !S.ccBand) {
+      var b = E.svcBandById(C, id);
+      return '<p class="kq-ccnote">Priced for your <b>' + S.cc + 'cc</b> engine (' + esc(b.label) + '). ' +
+        '<button type="button" class="kq-link" data-act="cc-edit">Not right?</button></p>';
+    }
+    var chosen = S.ccBand;
+    return '<div class="kq-ccpick"><label class="kq-label">How big is the engine?</label>' +
+      '<p class="kq-help">It is on your V5C, or in the handbook &mdash; 1.4 litre is 1400cc. It changes how much oil goes in.</p>' +
+      '<div class="kq-pills">' + C.servicing.bands.map(function (b) {
+        return '<button type="button" class="kq-pill' + (chosen === b.id ? ' on' : '') +
+          '" data-act="ccband" data-v="' + b.id + '">' + esc(b.label) + '</button>';
+      }).join('') + '</div></div>';
+  }
+
+  /* Oil grade. Logan wants the choice offered, and wants anyone picking standard to hear the
+     case for the specialist grade — so the advice appears on that choice, not as a nag before
+     they have chosen anything. */
+  function oilUI() {
+    var picked = S.mech.filter(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
+    if (!picked.length || !svcBandKnown()) return '';
+    var O = C.servicing.oil, band = E.svcBandById(C, svcBandId());
+    var diff = (O.specialist_ex_vat_per_litre - O.standard_ex_vat_per_litre) * band.litres * (1 + C.vat_rate);
+    var h = '<div class="kq-oil"><label class="kq-label">Which oil?</label>' +
+      '<div class="kq-pills">' +
+      '<button type="button" class="kq-pill' + (S.oil === 'standard' ? ' on' : '') + '" data-act="oil" data-v="standard">Standard</button>' +
+      '<button type="button" class="kq-pill' + (S.oil === 'specialist' ? ' on' : '') + '" data-act="oil" data-v="specialist">' +
+      esc(O.specialist_brand) + ' specialist <i>+' + money(Math.round(diff)) + '</i></button></div>';
+    if (S.oil === 'standard') {
+      h += '<p class="kq-oiladvice"><b>We\u2019d point you at the ' + esc(O.specialist_brand) + ' grade.</b> ' +
+        'It holds its protection longer between services, which matters most on turbocharged and ' +
+        'direct-injection engines \u2014 most cars built in the last ten years. It is ' + money(Math.round(diff)) +
+        ' more on a ' + band.litres + '-litre fill and it is what we run in our own vehicles. ' +
+        'Standard oil is a perfectly safe service and meets the manufacturer\u2019s minimum.</p>';
+    } else if (S.oil === 'specialist') {
+      h += '<p class="kq-oilnote">' + esc(O.specialist_brand) + ' specialist grade, ' + band.litres + ' litres. ' +
+        'We confirm the exact specification your engine needs before we fill it.</p>';
+    } else {
+      h += '<p class="kq-help">Pick one and the range above becomes a single price.</p>';
+    }
+    return h + '</div>';
+  }
+
+  /* An MOT is £21 alongside a full or major service. Offer it there and nowhere else. */
+  function motBundleUI() {
+    var levels = S.mech.map(function (id) {
+      return { 'service-full': 'full', 'service-major': 'major' }[id];
+    }).filter(Boolean);
+    var bundle = E.motWithService(C, levels);
+    if (!bundle) return '';
+    var on = S.mech.indexOf('mot') !== -1;
+    return '<div class="kq-motbundle' + (on ? ' on' : '') + '">' +
+      '<button type="button" class="kq-motbtn" data-act="bundle-mot">' +
+      (on ? '\u2713 MOT added \u2014 ' + money(bundle.low) : '+ Add an MOT for ' + money(bundle.low)) +
+      '</button><span>Normally ' + money(bundle.was) + '. This price is only with a full or major service.</span></div>';
+  }
+
   function viewMech() {
     var groups = [{ id: 'servicing', label: 'Servicing & MOT' }, { id: 'mechanical', label: 'Repairs' }];
     var h = '<h2 class="kq-h">Build your job card</h2><p class="kq-help">Tick everything you need. Prices are for ' + esc(vehicleName()) + '.</p>';
     groups.forEach(function (g) {
       var jobs = C.jobs.filter(function (j) { return j.cat === g.id; });
       if (!jobs.length) return;
-      h += '<h3 class="kq-sub">' + esc(g.label) + '</h3><div class="kq-jobs">' + jobs.map(function (j) {
-        var on = S.mech.indexOf(j.id) !== -1, p = E.priceJob(C, j.id, S.band, { ai: S.ai[j.id] });
-        var hint = p.kind === 'fixed' ? p.label : typeof p.low === 'number' ? 'from ' + money(p.low) : p.kind === 'diagnose' ? 'check first' : 'we’ll quote';
+      h += '<h3 class="kq-sub">' + esc(g.label) + '</h3>';
+      if (g.id === 'servicing') h += engineSizeUI();
+      h += '<div class="kq-jobs">' + jobs.map(function (j) {
+        var isSvc = SERVICE_IDS.indexOf(j.id) !== -1;
+        var on = S.mech.indexOf(j.id) !== -1;
+        var band = isSvc ? svcBandId() : S.band;
+        var hint;
+        if (isSvc && !band) {
+          hint = 'tell us your engine size';
+        } else {
+          var p = E.priceJob(C, j.id, band, { ai: S.ai[j.id], oil: isSvc ? S.oil : undefined });
+          hint = p.kind === 'fixed' ? (p.label || money(p.low))
+               : typeof p.low === 'number'
+                 ? (isSvc && !S.oil ? range(p.low, p.high) : 'from ' + money(p.low))
+                 : p.kind === 'diagnose' ? 'check first' : 'we’ll quote';
+        }
         return '<label class="kq-job' + (on ? ' on' : '') + '"><input type="checkbox" value="' + j.id + '"' + (on ? ' checked' : '') + '/><span>' + esc(j.name) + '</span><em>' + esc(hint) + '</em></label>';
       }).join('') + '</div>';
+      if (g.id === 'servicing') h += oilUI() + motBundleUI();
     });
     return h + nav('car', 'to-estimate', S.mech.length ? 'Show my price (' + S.mech.length + ')' : 'Pick at least one', !S.mech.length);
   }
@@ -519,7 +690,25 @@
   /* ---------- build the lines ---------- */
   function compute() {
     var lines = [];
-    if (S.flow === 'mechanical') lines = S.mech.map(function (id) { return E.priceJob(C, id, S.band, { ai: S.ai[id] }); });
+    if (S.flow === 'mechanical') {
+      // Service levels price off engine size and the chosen oil; everything else off body size.
+      // And an MOT costs £21 rather than £50 when it rides along with a full or major service,
+      // so the figure in the total has to match the one the button offered.
+      var svcLevels = S.mech.map(function (id) {
+        return { 'service-full': 'full', 'service-major': 'major' }[id];
+      }).filter(Boolean);
+      var bundle = E.motWithService(C, svcLevels);
+      lines = S.mech.map(function (id) {
+        var isSvc = SERVICE_IDS.indexOf(id) !== -1;
+        if (isSvc && !svcBandKnown()) return null;
+        if (id === 'mot' && bundle) {
+          return { id: 'mot', name: bundle.name, kind: 'fixed', low: bundle.low, high: bundle.low,
+                   label: money(bundle.low), note: bundle.note };
+        }
+        return E.priceJob(C, id, isSvc ? svcBandId() : S.band,
+                          { ai: S.ai[id], oil: isSvc ? S.oil : undefined });
+      }).filter(Boolean);
+    }
     else if (S.flow === 'tyres') lines = [E.tyreLine(C, { width: S.tyre.w, profile: S.tyre.p, rim: S.tyre.r, runflat: S.tyre.rf }, S.tyre.tier, S.tyre.qty)];
     else if (S.flow === 'bodywork') lines = Object.keys(S.body).map(function (id) {
       var p = CAR_PANELS.filter(function (x) { return x.id === id; })[0];
@@ -563,7 +752,7 @@
   /* ---------- step: estimate ---------- */
   function viewEstimate() {
     if (!S.lines.length) return '<div class="kq-loading" role="status"><span class="kq-spin"></span>Working out your price…</div>';
-    var t = S.totals, coupon = C.coupon, eligible = E.couponEligible(C, t, t.unpriced > 0) && !S.offerGone;
+    var t = S.totals, offer = coupon(), eligible = E.couponEligible(C, t, t.unpriced > 0) && !S.offerGone;
     var h = '<div class="kq-result">';
     if (S.power) h += gauge(S.power);
     h += '<p class="kq-for">Your estimate for <strong>' + esc(vehicleName()) + '</strong>' + (S.vehicle && S.vehicle.registrationNumber ? ' <span class="kq-mini-plate">' + esc(S.vehicle.registrationNumber) + '</span>' : '') + '</p>' +
@@ -591,9 +780,9 @@
       }
     }
     if (eligible) {
-      h += '<div class="kq-offer"><div><b>' + money(coupon.amount) + ' off if you book online now</b>' +
-        '<span>Book a slot in the next <i id="kq-timer">' + fmtLeft() + '</i> and we take ' + money(coupon.amount) + ' off your <b>final bill</b>, whatever the job turns out to be. Code ' + esc(coupon.code) + '. ' +
-        'The figure above is an estimate, not the final price &mdash; we confirm that in writing once we have seen the car, and the ' + money(coupon.amount) + ' comes off it.</span></div></div>';
+      h += '<div class="kq-offer"><div><b>' + money(offer.amount) + ' off if you book online now</b>' +
+        '<span>Book a slot in the next <i id="kq-timer">' + fmtLeft() + '</i> and we take ' + money(offer.amount) + ' off your <b>final bill</b>, whatever the job turns out to be. Code ' + esc(offer.code) + '. ' +
+        'The figure above is an estimate, not the final price &mdash; we confirm that in writing once we have seen the car, and the ' + money(offer.amount) + ' comes off it.</span></div></div>';
     }
     h += (S.flow === 'recovery'
         ? '<p class="kq-small">A fixed price, inc VAT, to bring the car to our workshop. Nothing is added for traffic or waiting time. Anything we then do to the car is quoted separately, in writing, before it starts.</p>'
@@ -606,7 +795,7 @@
         : '<p class="kq-small">Includes VAT, parts and labour, and it&rsquo;s worked out with the same pricing rules our estimators use, so <b>your job will land inside this range</b>. Book in and we&rsquo;ll send the exact figure for your reg in writing before any work starts. If anything we find changes it, you decide whether to go ahead, and you owe us nothing for looking. 3-month workmanship warranty.</p>') +
       '</div>' +
       '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="build">Change the job</button>' +
-      '<button type="button" class="kq-btn kq-btn-main" data-act="to-details">' + (eligible ? 'Book and save ' + money(coupon.amount) : 'Book this in') + '</button></div>' +
+      '<button type="button" class="kq-btn kq-btn-main" data-act="to-details">' + (eligible ? 'Book and save ' + money(offer.amount) : 'Book this in') + '</button></div>' +
       '<p class="kq-or">or <a href="' + waLink() + '" target="_blank" rel="noopener" data-act="wa">send it to us on WhatsApp</a> · <a href="tel:' + PHONE_TEL + '">call ' + PHONE + '</a></p>';
     return h;
   }
@@ -616,7 +805,7 @@
   }
   function startTimer() {
     clearInterval(TICK);
-    if (!S.expires) S.expires = Date.now() + (C.coupon.hold_minutes || 15) * 60000;
+    if (!S.expires) S.expires = Date.now() + (coupon().hold_minutes || 15) * 60000;
     TICK = setInterval(function () {
       var el = $('#kq-timer');
       if (!el) return;
@@ -682,7 +871,7 @@
   function summaryStrip() {
     var t = S.totals;
     return '<div class="kq-strip"><div><b>' + esc(FLOWS[S.flow].label) + '</b><span>' + esc(vehicleName()) + '</span></div>' +
-      (t && t.count ? '<div class="kq-strip-p"><b>' + range(t.low, t.high) + '</b>' + (!S.offerGone && E.couponEligible(C, t, t.unpriced > 0) ? '<span>less ' + money(C.coupon.amount) + ' if booked now <i id="kq-timer">' + fmtLeft() + '</i></span>' : '') + '</div>' : '') + '</div>';
+      (t && t.count ? '<div class="kq-strip-p"><b>' + range(t.low, t.high) + '</b>' + (!S.offerGone && E.couponEligible(C, t, t.unpriced > 0) ? '<span>less ' + money(coupon().amount) + ' if booked now <i id="kq-timer">' + fmtLeft() + '</i></span>' : '') + '</div>' : '') + '</div>';
   }
 
   /* ---------- step: calendar ---------- */
@@ -735,7 +924,10 @@
     return '<div class="kq-done"><h2 class="kq-h">' + (booked ? 'You&rsquo;re booked in.' : 'Your estimate is on its way.') + '</h2>' +
       (booked ? '<p class="kq-big-when">' + esc(when) + '</p><p>' + (cal === 'bodywork' ? 'Drop the car to us at Unit 1, Soho Mills, Hackbridge SM6 7HN.' : 'Bring it to Unit 1, Soho Mills, Hackbridge SM6 7HN.') + ' We&rsquo;ll call to confirm and send the written price first.</p>'
         : '<p>We&rsquo;ve got your details and will be in touch, usually within 30 minutes during opening hours (Mon–Sat 8am–8pm).</p>') +
-      (booked && !S.offerGone ? '<p class="kq-saved"><b>' + money(C.coupon.amount) + ' off your final bill</b> · code ' + esc(C.coupon.code) + ' · applied when we invoice, whatever the job comes to</p>' : '') +
+      (booked && !S.offerGone ? '<p class="kq-saved"><b>' + money(coupon().amount) + ' off your final bill</b> · code ' + esc(coupon().code) + ' · applied when we invoice, whatever the job comes to</p>' : '') +
+      // They came for a repair; the MOT date is something we happen to know and they often don't.
+      // Worth one line on the way out, whichever flow they used.
+      motReminder() +
       (S.flow === 'bodywork' ? '<p>Send us photos of the damage and we can have the parts ready:</p>' : '') +
       '<div class="kq-nav-wrap"><a class="kq-btn kq-btn-wa" href="' + waLink() + '" target="_blank" rel="noopener">' + (S.flow === 'bodywork' ? 'Send photos on WhatsApp' : 'Message us on WhatsApp') + '</a> ' +
       '<a class="kq-btn kq-btn-ghost" href="tel:' + PHONE_TEL + '">Call ' + PHONE + '</a></div></div>';
@@ -776,7 +968,8 @@
       webEstimate: t && t.count ? { lo: t.low, hi: t.high } : null,
       requestedSlot: S.day && S.time ? { calendar: FLOWS[S.flow].cal, date: S.day, time: S.time } : null,
       collection: !!lead().collect,
-      coupon: (S.day && S.time && !S.offerGone) ? { code: C.coupon.code, amount: C.coupon.amount, minSpend: C.coupon.min_spend } : null,
+      wantMot: !!S.wantMot,
+      coupon: (S.day && S.time && !S.offerGone) ? { code: coupon().code, amount: coupon().amount, minSpend: coupon().min_spend } : null,
       priceBookVersion: C.version,
       log: [{ at: new Date().toISOString(), by: 'Website', text: ((S.flow === 'recovery' && S.rec.when === 'now') ? 'URGENT: needs recovery now, call straight back' : S.day && S.time ? 'HOT: accepted the range and booked ' + S.day + ' ' + S.time : 'Estimate sent, no slot picked') }]
     };
@@ -795,6 +988,12 @@
     fd.append('Quote', d.jobs.map(function (j) { return '• ' + j.name + (typeof j.low === 'number' ? ': ' + range(j.low, j.high) : ': to confirm'); }).join('\n') + (d.webEstimate ? '\nEstimate: ' + range(d.webEstimate.lo, d.webEstimate.hi) : ''));
     fd.append('Slot', d.requestedSlot ? d.requestedSlot.date + ' ' + d.requestedSlot.time + ' (' + d.requestedSlot.calendar + ')' : 'not picked');
     fd.append('Collection', d.collection ? 'Yes, please collect' : 'No');
+    if (d.vehicle.motExpiry) {
+      var md = motDays(S.vehicle);
+      fd.append('MOT', d.vehicle.motExpiry + (md === null ? '' :
+        md < 0 ? ' — EXPIRED ' + Math.abs(md) + ' days ago' : ' — ' + motHowLong(md)) +
+        (d.wantMot ? ' · CUSTOMER WANTS THE MOT DOING THIS VISIT' : ''));
+    }
     fd.append('Discount', d.coupon ? d.coupon.code + ' · £' + d.coupon.amount : 'none');
     fd.append('Price book', d.priceBookVersion);
     var email = fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd }).then(function (r) { return r.json(); }).then(function (j) { return !!j.success; }).catch(function () { return false; });
@@ -836,6 +1035,7 @@
           if (r.vehicle.model && !S.model) S.model = r.vehicle.model;
           // Band from the engine size when we have it, otherwise from the make and model.
           S.band = E.bandFromText(C, [r.vehicle.make, r.vehicle.model].filter(Boolean).join(' ')) || E.guessBand(r.vehicle);
+          if (r.vehicle.engineCapacity) S.cc = Number(r.vehicle.engineCapacity) || null;
           S.bandAuto = true; S.bandOpen = false;
           track('vehicle_found'); render(); save();
         }
@@ -934,12 +1134,23 @@
     else if (a === 'rpc') { lookupPostcode(); }
     else if (a === 'rwhen') { S.rec.when = v; save(); render(); }
     else if (a === 'add-mot') { if (S.mech.indexOf('mot') === -1) S.mech.push('mot'); track('quote_add_mot'); save(); render(); }
+    // Outside the mechanical flow there is no job card to add it to, so record the intent and
+    // put it on the booking the workshop receives.
+    else if (a === 'ccband') { S.ccBand = v; save(); render(); }
+    else if (a === 'cc-edit') { S.ccBand = null; S.cc = null; save(); render(); }
+    else if (a === 'oil') { S.oil = v; track('quote_oil', { grade: v }); save(); render(); }
+    else if (a === 'bundle-mot') {
+      var i = S.mech.indexOf('mot');
+      if (i === -1) { S.mech.push('mot'); track('quote_mot_bundle'); } else { S.mech.splice(i, 1); }
+      save(); render();
+    }
+    else if (a === 'flag-mot') { S.wantMot = true; track('quote_add_mot', { flow: S.flow }); save(); render(); }
     else if (a === 'to-build') { readCar(); go('build'); }
     else if (a === 'to-estimate') {
       readBuild(); S.lines = []; go('estimate');
       fetchAi().then(function () {
         compute();
-        if (!S.expires) S.expires = Date.now() + (C.coupon.hold_minutes || 15) * 60000;
+        if (!S.expires) S.expires = Date.now() + (coupon().hold_minutes || 15) * 60000;
         track('quote_price', { value: S.totals.low, currency: 'GBP', flow: S.flow });
         save(); render();
       });
