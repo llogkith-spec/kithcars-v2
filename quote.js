@@ -1095,7 +1095,37 @@
         body: JSON.stringify({ id: id, data: d, updated_at: new Date().toISOString() })
       }).then(function (r) { return r.ok ? 'sent' : 'failed ' + r.status; }).catch(function () { return 'failed'; });
     }
-    return Promise.all([email, crm]).then(function (r) { return { emailed: r[0], crm: r[1] }; });
+    // ── Parallel POST to KITH's unified inbox (triage AI picks it up and
+    // fires the rapid-fire SRT-informed range on WhatsApp within seconds).
+    // The page-side range above is still shown instantly from the client
+    // catalogue; the Brain's range lands on the customer's WhatsApp.
+    var jobsBrief = d.jobs.map(function (j) { return '• ' + j.name + (typeof j.low === 'number' ? ': ' + range(j.low, j.high) : ''); }).join('\n');
+    var combinedText = d.service + '\n' + jobsBrief +
+      (d.webEstimate ? '\nWebsite estimate: ' + range(d.webEstimate.lo, d.webEstimate.hi) : '') +
+      (d.requestedSlot ? '\nWants: ' + d.requestedSlot.date + ' ' + d.requestedSlot.time + ' (' + d.requestedSlot.calendar + ')' : '');
+    var inbox = fetch('https://mxyrxyhvjndgjqupgstu.supabase.co/functions/v1/inbox-ingest', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14eXJ4eWh2am5kZ2pxdXBnc3R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMTMyNjgsImV4cCI6MjA5Nzc4OTI2OH0.z7F_sUqx56bIcBLxjWFJSP3rT1jhNPAL9_1SWZ7cUog',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14eXJ4eWh2am5kZ2pxdXBnc3R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMTMyNjgsImV4cCI6MjA5Nzc4OTI2OH0.z7F_sUqx56bIcBLxjWFJSP3rT1jhNPAL9_1SWZ7cUog',
+        'x-caller': 'kithcars_website_form'
+      },
+      body: JSON.stringify({
+        channel: 'website',
+        sender_name: d.name,
+        sender_phone: d.phone,
+        sender_email: d.email || '',
+        reg: d.reg || '',
+        year: d.vehicle.year || null,
+        make: d.vehicle.make || '',
+        model: d.vehicle.model || '',
+        message_text: combinedText,
+        context_hints: 'Customer has already seen a website estimate of ' + (d.webEstimate ? range(d.webEstimate.lo, d.webEstimate.hi) : '(not yet calculated)') + '. Rapid-fire a brain-based range on WhatsApp to confirm.'
+      })
+    }).then(function (r) { return r.ok ? 'sent' : 'failed ' + r.status; }).catch(function () { return 'failed'; });
+
+    return Promise.all([email, crm, inbox]).then(function (r) { return { emailed: r[0], crm: r[1], inbox: r[2] }; });
   }
 
   /* ---------- render + events ---------- */
