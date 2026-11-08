@@ -838,6 +838,49 @@
       });
     });
   }
+  // The KITH pricing Brain — HaynesPro SRTs + SOP v8.0 + AI fallback. Mechanical
+  // flow only (bodywork / recovery / tuning use their own catalogue bands).
+  // We still compute the local estimate first so the customer sees a number
+  // instantly; the Brain's result overwrites S.brainRange + swaps into the
+  // headline figure when it lands (usually 3–10s). If Brain fails or the flow
+  // isn't mechanical, local estimate stays as the authoritative on-page figure.
+  var BRAIN_URL = 'https://mxyrxyhvjndgjqupgstu.supabase.co/functions/v1/brain';
+  var BRAIN_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14eXJ4eWh2am5kZ2pxdXBnc3R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMTMyNjgsImV4cCI6MjA5Nzc4OTI2OH0.z7F_sUqx56bIcBLxjWFJSP3rT1jhNPAL9_1SWZ7cUog';
+  function brainComplaint() {
+    // Build a natural-language complaint from the picked jobs + model, so the
+    // Brain's identify step has what it needs.
+    var bits = S.lines && S.lines.length
+      ? S.lines.map(function (l) { return l.name; }).filter(Boolean)
+      : [];
+    return bits.join(', ') || (FLOWS[S.flow] ? FLOWS[S.flow].label : 'mechanical work');
+  }
+  function fetchBrain() {
+    if (S.flow !== 'mechanical') { S.brainRange = null; return Promise.resolve(); }
+    if (!S.vehicle || !S.vehicle.make) { S.brainRange = null; return Promise.resolve(); }
+    var complaint = brainComplaint();
+    if (!complaint) { S.brainRange = null; return Promise.resolve(); }
+    S.brainLoading = true;
+    var vehicle = [S.vehicle.yearOfManufacture, S.vehicle.make, S.model || '', S.vehicle.fuelType || ''].filter(Boolean).join(' ');
+    return fetch(BRAIN_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': BRAIN_KEY, 'Authorization': 'Bearer ' + BRAIN_KEY,
+        'x-caller': 'website'
+      },
+      body: JSON.stringify({
+        customer_type: 'retail',
+        vehicle: vehicle,
+        reg: (S.vehicle && S.vehicle.registrationNumber) || '',
+        complaint: complaint
+      })
+    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      S.brainLoading = false;
+      if (d && d.total_range && d.total_range.hi > 0) {
+        S.brainRange = { lo: Math.round(d.total_range.lo), hi: Math.round(d.total_range.hi), confidence: d.confidence || 'low', allFirm: !!d.all_firm, usedFallback: !!d.used_ai_fallback };
+      } else { S.brainRange = null; }
+    }).catch(function () { S.brainLoading = false; S.brainRange = null; });
+  }
 
   /* ---------- step: estimate ---------- */
   function viewEstimate() {
@@ -860,7 +903,15 @@
           (tags.length ? '<small>' + tags.join(' · ') + '</small>' : '') + breakdown(l) + '</div>' + price + '</li>';
       }).join('') + '</ul>';
     if (t.count) {
-      h += '<div class="kq-total"><span>Your estimate' + (t.unpriced ? ' so far' : '') + '</span><b>' + range(t.low, t.high) + '</b></div>';
+      // Prefer the Brain's SRT-informed range once it's landed. Fall back to
+      // local estimate while Brain is loading or if it couldn't price.
+      var bRange = S.brainRange && S.brainRange.hi > 0 ? S.brainRange : null;
+      var hLow  = bRange ? bRange.lo  : t.low;
+      var hHigh = bRange ? bRange.hi : t.high;
+      var hLabel = bRange ? 'Your estimate' : ('Your estimate' + (t.unpriced ? ' so far' : ''));
+      var hTag = bRange ? '<small class="kq-brain-tag">Priced using KITH’s live pricing system' + (bRange.allFirm ? ' (all lines firm from our history)' : (bRange.usedFallback ? '' : '')) + '</small>' :
+                 S.brainLoading ? '<small class="kq-brain-tag kq-brain-loading">Refining with our live pricing system…</small>' : '';
+      h += '<div class="kq-total"><span>' + hLabel + '</span><b>' + range(hLow, hHigh) + '</b>' + hTag + '</div>';
       if (t.showDealer) {
         var dl2 = dealerLabel();
         h += '<div class="kq-dealer"><span>' + esc(dl2.a + ' ' + dl2.text) + ', typically</span><s>~' + money(t.dealer) + '</s><em>Around ' +
@@ -1066,27 +1117,10 @@
   }
   function sendLead() {
     var d = leadPayload(), id = S.lead.id || (S.lead.id = 'web-' + Date.now().toString(36));
-    var fd = new FormData();
-    fd.append('access_key', WEB3FORMS_KEY);
-    fd.append('subject', (d.priority === 'urgent' ? 'URGENT RECOVERY' : d.priority === 'hot' ? 'BOOKED' : 'Estimate') + ': ' + d.service + ' · ' + vehicleName() + (d.webEstimate ? ' · ' + range(d.webEstimate.lo, d.webEstimate.hi) : ''));
-    fd.append('from_name', 'KITH website instant quote');
-    fd.append('Name', d.name); fd.append('Phone', d.phone);
-    if (d.email) { fd.append('email', d.email); fd.append('Email', d.email); }
-    fd.append('Registration', d.reg || '-');
-    fd.append('Vehicle', [d.vehicle.year, d.vehicle.make, d.vehicle.model].filter(Boolean).join(' ') + ' · ' + d.vehicle.size);
-    fd.append('Service', d.service);
-    fd.append('Quote', d.jobs.map(function (j) { return '• ' + j.name + (typeof j.low === 'number' ? ': ' + range(j.low, j.high) : ': to confirm'); }).join('\n') + (d.webEstimate ? '\nEstimate: ' + range(d.webEstimate.lo, d.webEstimate.hi) : ''));
-    fd.append('Slot', d.requestedSlot ? d.requestedSlot.date + ' ' + d.requestedSlot.time + ' (' + d.requestedSlot.calendar + ')' : 'not picked');
-    fd.append('Collection', d.collection ? 'Yes, please collect' : 'No');
-    if (d.vehicle.motExpiry) {
-      var md = motDays(S.vehicle);
-      fd.append('MOT', d.vehicle.motExpiry + (md === null ? '' :
-        md < 0 ? ' — EXPIRED ' + Math.abs(md) + ' days ago' : ' — ' + motHowLong(md)) +
-        (d.wantMot ? ' · CUSTOMER WANTS THE MOT DOING THIS VISIT' : ''));
-    }
-    fd.append('Discount', d.coupon ? d.coupon.code + ' · £' + d.coupon.amount : 'none');
-    fd.append('Price book', d.priceBookVersion);
-    var email = fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd }).then(function (r) { return r.json(); }).then(function (j) { return !!j.success; }).catch(function () { return false; });
+    // Email send was removed Nov 2026 — the triage AI's ping (WhatsApp /
+    // push on the service adviser's phone) + the CRM board entry is the
+    // notification path now. No email needed.
+    var email = Promise.resolve('disabled');
     var crm = Promise.resolve('not connected');
     if (C.crm && C.crm.supabase_url && C.crm.anon_key) {
       crm = fetch(C.crm.supabase_url.replace(/\/$/, '') + '/rest/v1/' + (C.crm.table || 'jobs') + '?on_conflict=id', {
@@ -1280,12 +1314,15 @@
     else if (a === 'flag-mot') { S.wantMot = true; track('quote_add_mot', { flow: S.flow }); save(); render(); }
     else if (a === 'to-build') { readCar(); go('build'); }
     else if (a === 'to-estimate') {
-      readBuild(); S.lines = []; go('estimate');
+      readBuild(); S.lines = []; S.brainRange = null; go('estimate');
       fetchAi().then(function () {
         compute();
         if (!S.expires) S.expires = Date.now() + (coupon().hold_minutes || 15) * 60000;
         track('quote_price', { value: S.totals.low, currency: 'GBP', flow: S.flow });
         save(); render();
+        // Fire the Brain in the background. When it returns the headline
+        // figure swaps to the SRT-informed range.
+        fetchBrain().then(function () { save(); render(); });
       });
     }
     else if (a === 'to-details') { track('quote_book_click'); go('details'); }

@@ -379,3 +379,8 @@
 .kq-addon b { display: block; font-size: .95rem; }
 .kq-addon small { display: block; margin-top: .15rem; font-size: .8rem; line-height: 1.45; color: var(--kq-muted, #6b6b73); }
 .kq-addon em { flex: 0 0 auto; font-style: normal; font-weight: 600; font-size: .9rem; }
+
+/* Brain pricing badge — appears under the headline estimate once the live
+   pricing system has refined the local estimate. */
+.kq-brain-tag{display:block;margin-top:6px;font-size:11px;color:#8a7a3a;letter-spacing:.3px;font-weight:500}
+.kq-brain-tag.kq-brain-loading{color:#a09880;font-style:italic}
