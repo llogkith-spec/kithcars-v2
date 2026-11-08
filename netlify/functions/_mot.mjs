@@ -30,6 +30,31 @@ async function fetchWithTimeout(url, opts, ms) {
   }
 }
 
+/* Node reports every network-level failure as the same two words, "fetch failed", and hangs the
+   actual reason off e.cause: ENOTFOUND for a name that does not resolve, ECONNREFUSED for a
+   refusal, UND_ERR_CONNECT_TIMEOUT for a connection that never completes, a CERT_ code for TLS.
+   Reading only e.message cost two rounds of guessing at a problem the error already named. */
+function why(e) {
+  const c = (e && e.cause) || null;
+  const bits = [String((e && e.message) || e)];
+  const code = c && (c.code || c.errno);
+  if (code) bits.push(String(code));
+  if (c && c.message && c.message !== (e && e.message)) bits.push(String(c.message));
+  return bits.join(' / ').slice(0, 160);
+}
+
+/* One retry on a network-level failure. A connect that never completes is the commonest transient
+   fault against this API, and the customer is sitting watching the registration field. A timeout
+   we imposed ourselves is not retried - that way lies running out of Netlify's ten seconds. */
+async function fetchTwice(url, opts, ms) {
+  try {
+    return await fetchWithTimeout(url, opts, ms);
+  } catch (e) {
+    if (e && e.name === 'AbortError') throw e;
+    return await fetchWithTimeout(url, opts, ms);
+  }
+}
+
 /* Tokens last an hour. Cached for 55 minutes so a token is never used in the minute it expires. */
 async function token() {
   const hit = cacheGet('mot:token');
@@ -92,9 +117,9 @@ function toVehicle(v, reg) {
    Throws for anything else, so the caller answers 502 rather than "not found". */
 export async function motLookup(reg) {
   const t = await token();
-  const res = await fetchWithTimeout(`${API()}/${encodeURIComponent(reg)}`, {
+  const res = await fetchTwice(`${API()}/${encodeURIComponent(reg)}`, {
     headers: { authorization: `Bearer ${t}`, 'x-api-key': process.env.MOT_API_KEY, accept: 'application/json' },
-  }, 4000);
+  }, 3500);
   if (res.status === 404) return null;
   if (res.status === 401 || res.status === 403) {
     // Most likely a token that went stale early; drop it so the next call fetches a fresh one.
@@ -127,7 +152,12 @@ export async function motDiagnose(reg) {
     secretHasWhitespace: /\s/.test(process.env.MOT_CLIENT_SECRET || ''),
     tokenUrlHasWhitespace: /\s/.test(process.env.MOT_TOKEN_URL || ''),
     apiKeyLength: (process.env.MOT_API_KEY || '').length,
+    apiKeyHasWhitespace: /\s/.test(process.env.MOT_API_KEY || ''),
     scope: SCOPE(),
+    // Echoed because MOT_API_URL overrides the default: a value set here by mistake, or pasted
+    // with a line break, fails exactly like an unreachable host and looks nothing like its cause.
+    apiUrl: API(),
+    apiUrlFromEnv: !!process.env.MOT_API_URL,
   };
 
   let access;
@@ -160,7 +190,7 @@ export async function motDiagnose(reg) {
   } catch (e) {
     out.tokenDetail = (e && e.name === 'AbortError')
       ? 'the token endpoint did not answer within 4 seconds — check MOT_TOKEN_URL for a stray space or line break'
-      : 'could not reach the token endpoint: ' + String(e.message || e).slice(0, 120);
+      : 'could not reach the token endpoint: ' + why(e);
     out.tokenUrlStart = String(process.env.MOT_TOKEN_URL || '').slice(0, 42);
     return out;
   }
@@ -179,7 +209,8 @@ export async function motDiagnose(reg) {
     out.make = data && data.make;
     out.engineSize = data && (data.engineSize || data.engineCapacity);
   } catch (e) {
-    out.apiDetail = String(e.message || e).slice(0, 120);
+    out.apiDetail = why(e);
+    out.apiErrorName = e && e.name;
   }
   return out;
 }
