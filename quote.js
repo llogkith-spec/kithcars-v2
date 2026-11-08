@@ -902,24 +902,152 @@
       if (l && left <= 0) l.textContent = 'Almost there…';
     }, 250);
   }
-  function stopBrainTicker() { if (BRAIN_TICK) { clearInterval(BRAIN_TICK); BRAIN_TICK = null; } }
+  function stopBrainTicker() { if (BRAIN_TICK) { clearInterval(BRAIN_TICK); BRAIN_TICK = null; } stopSnake(); }
   function brainCountdownView() {
     var elapsed = S.brainStartedAt ? Math.floor((Date.now() - S.brainStartedAt) / 1000) : 0;
     var left = Math.max(0, (S.brainTargetSeconds || 8) - elapsed);
-    var label = left > 0 ? 'seconds' : 'Almost there…';
-    // Kick off the ticker after the DOM is painted
-    setTimeout(startBrainTicker, 50);
+    // Kick off the ticker AND the mini-game after the DOM is painted.
+    setTimeout(function () { startBrainTicker(); startSnake(); }, 50);
     return '<div class="kq-brain-count" role="status">' +
              '<p class="kq-brain-count-lead">Working out your estimate for <strong>' + esc(vehicleName()) + '</strong>' +
                (S.vehicle && S.vehicle.registrationNumber ? ' <span class="kq-mini-plate">' + esc(S.vehicle.registrationNumber) + '</span>' : '') +
              '</p>' +
-             '<div class="kq-brain-count-ring">' +
-               '<div class="kq-spin kq-spin-lg" aria-hidden="true"></div>' +
-               '<div class="kq-brain-count-num"><span id="kq-countdown-n">' + (left > 0 ? left : 1) + '</span></div>' +
+             '<div class="kq-game-wrap">' +
+               '<div class="kq-game-head">' +
+                 '<div class="kq-game-timer"><span id="kq-countdown-n">' + (left > 0 ? left : 1) + '</span><small>sec</small></div>' +
+                 '<div class="kq-game-title"><strong>Pit-stop Snake</strong><span id="kq-game-score">Score 0</span></div>' +
+                 '<div class="kq-game-best"><span>Best</span><strong id="kq-game-best">' + (S.snakeBest || 0) + '</strong></div>' +
+               '</div>' +
+               '<canvas id="kq-snake" width="320" height="320" tabindex="0" aria-label="Snake mini-game — swipe or use arrow keys"></canvas>' +
+               '<div class="kq-game-help" id="kq-countdown-label">Swipe or use ← ↑ ↓ → to collect the bolts while we price your car</div>' +
              '</div>' +
-             '<p class="kq-brain-count-sub"><span id="kq-countdown-label">' + (left > 0 ? label : 'Almost there…') + '</span></p>' +
-             '<p class="kq-brain-count-note">Our pricing system is checking HaynesPro labour times, our live part prices and your SOP against this exact vehicle. The figure you get back is the one we stand behind.</p>' +
            '</div>';
+  }
+
+  // ── PIT-STOP SNAKE (plays during the Brain wait) ────────────────────────
+  // Tiny, no-framework canvas snake. Auto-plays if the customer doesn't
+  // touch anything — a demo snake wandering so the screen doesn't feel dead.
+  // Takes over on first input. Cleans up on view change.
+  var SNAKE = null;
+  function stopSnake() {
+    if (!SNAKE) return;
+    cancelAnimationFrame(SNAKE.raf);
+    if (SNAKE.onkey) document.removeEventListener('keydown', SNAKE.onkey);
+    SNAKE = null;
+  }
+  function startSnake() {
+    stopSnake();
+    var c = document.getElementById('kq-snake'); if (!c) return;
+    var ctx = c.getContext('2d');
+    var GRID = 16, CELLS = 20, W = GRID * CELLS;  // canvas 320x320
+    // Resize for retina
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = W * dpr; c.height = W * dpr; c.style.width = W + 'px'; c.style.height = W + 'px';
+    ctx.scale(dpr, dpr);
+
+    var s = SNAKE = {
+      snake: [{x:10,y:10},{x:9,y:10},{x:8,y:10}],
+      dir: {x:1,y:0}, nextDir: {x:1,y:0},
+      food: spawnFood([{x:10,y:10},{x:9,y:10},{x:8,y:10}]),
+      score: 0, best: S.snakeBest || 0, auto: true, lastStep: 0,
+      stepMs: 140, dead: false, raf: 0
+    };
+    function spawnFood(snake){ var p, tries=0; do { p = {x:(Math.random()*CELLS)|0, y:(Math.random()*CELLS)|0}; tries++; } while (snake.some(seg=>seg.x===p.x&&seg.y===p.y) && tries<200); return p; }
+
+    function turn(dx,dy){ if (dx === -s.dir.x && dy === -s.dir.y) return; s.nextDir = {x:dx,y:dy}; s.auto = false; }
+    s.onkey = function(e){
+      var k = e.key;
+      if (k==='ArrowUp'||k==='w'||k==='W') { turn(0,-1); e.preventDefault(); }
+      else if (k==='ArrowDown'||k==='s'||k==='S') { turn(0,1); e.preventDefault(); }
+      else if (k==='ArrowLeft'||k==='a'||k==='A') { turn(-1,0); e.preventDefault(); }
+      else if (k==='ArrowRight'||k==='d'||k==='D') { turn(1,0); e.preventDefault(); }
+    };
+    document.addEventListener('keydown', s.onkey);
+    c.addEventListener('click', function(){ c.focus(); });
+    // Touch: swipe
+    var tStart = null;
+    c.addEventListener('touchstart', function(e){ var t = e.touches[0]; tStart = {x:t.clientX,y:t.clientY}; }, {passive:true});
+    c.addEventListener('touchend', function(e){
+      if (!tStart) return;
+      var t = e.changedTouches[0], dx = t.clientX - tStart.x, dy = t.clientY - tStart.y;
+      if (Math.abs(dx) > Math.abs(dy)) { if (Math.abs(dx) > 15) turn(dx>0?1:-1, 0); }
+      else { if (Math.abs(dy) > 15) turn(0, dy>0?1:-1); }
+      tStart = null;
+    }, {passive:true});
+
+    function step() {
+      // Auto-pilot: wander toward food so the snake isn't dead on screen
+      if (s.auto) {
+        var head = s.snake[0], best = s.dir, bestD = Infinity;
+        [[1,0],[-1,0],[0,1],[0,-1]].forEach(function(d){
+          if (d[0]===-s.dir.x&&d[1]===-s.dir.y) return;
+          var nx = head.x+d[0], ny = head.y+d[1];
+          if (nx<0||nx>=CELLS||ny<0||ny>=CELLS) return;
+          if (s.snake.some(seg=>seg.x===nx&&seg.y===ny)) return;
+          var dd = Math.abs(nx - s.food.x) + Math.abs(ny - s.food.y);
+          if (dd < bestD) { bestD = dd; best = {x:d[0],y:d[1]}; }
+        });
+        s.nextDir = best;
+      }
+      s.dir = s.nextDir;
+      var head = s.snake[0], nx = head.x + s.dir.x, ny = head.y + s.dir.y;
+      // Wrap on walls (friendlier than game over)
+      if (nx<0) nx = CELLS-1; if (nx>=CELLS) nx = 0;
+      if (ny<0) ny = CELLS-1; if (ny>=CELLS) ny = 0;
+      // Self-hit → reset with current score as best
+      if (s.snake.some(function(seg){ return seg.x===nx && seg.y===ny; })) {
+        if (s.score > s.best) { s.best = s.score; S.snakeBest = s.best; try { localStorage.setItem('kq_snake_best', String(s.best)); } catch(e){} }
+        s.snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}]; s.dir = {x:1,y:0}; s.nextDir = {x:1,y:0};
+        s.food = spawnFood(s.snake); s.score = 0; s.auto = true; return;
+      }
+      s.snake.unshift({x:nx,y:ny});
+      if (nx === s.food.x && ny === s.food.y) {
+        s.score++;
+        s.food = spawnFood(s.snake);
+        s.stepMs = Math.max(70, s.stepMs - 2);
+      } else {
+        s.snake.pop();
+      }
+      // HUD
+      var sc = document.getElementById('kq-game-score'); if (sc) sc.textContent = 'Score ' + s.score;
+      var bs = document.getElementById('kq-game-best'); if (bs) bs.textContent = s.best;
+    }
+
+    function draw() {
+      ctx.fillStyle = '#1B1E24'; ctx.fillRect(0,0,W,W);
+      // Grid dots
+      ctx.fillStyle = 'rgba(216,163,43,0.08)';
+      for (var i=0;i<CELLS;i++) for (var j=0;j<CELLS;j++) ctx.fillRect(i*GRID+GRID/2-1, j*GRID+GRID/2-1, 2, 2);
+      // Food — gold bolt
+      ctx.fillStyle = '#D8A32B';
+      ctx.beginPath();
+      ctx.arc(s.food.x*GRID + GRID/2, s.food.y*GRID + GRID/2, GRID/2 - 3, 0, Math.PI*2);
+      ctx.fill();
+      // Snake — darker gold body, brighter head
+      s.snake.forEach(function(seg, i) {
+        ctx.fillStyle = i === 0 ? '#F0C04A' : 'rgba(216,163,43,' + (0.95 - Math.min(0.55, i*0.015)) + ')';
+        var pad = i === 0 ? 1 : 2;
+        var r = 3;
+        var x = seg.x*GRID + pad, y = seg.y*GRID + pad, w = GRID - pad*2, h = GRID - pad*2;
+        ctx.beginPath();
+        ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+        ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+        ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+        ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y); ctx.closePath(); ctx.fill();
+      });
+    }
+
+    function loop(t) {
+      if (!SNAKE) return;
+      if (!s.lastStep) s.lastStep = t;
+      if (t - s.lastStep >= s.stepMs) { step(); s.lastStep = t; }
+      draw();
+      s.raf = requestAnimationFrame(loop);
+    }
+    // Restore best from localStorage
+    try { var b = parseInt(localStorage.getItem('kq_snake_best') || '0', 10); if (b > s.best) s.best = b; } catch(e){}
+    S.snakeBest = s.best;
+    s.raf = requestAnimationFrame(loop);
   }
 
   /* ---------- step: estimate ---------- */

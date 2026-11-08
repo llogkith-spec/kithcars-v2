@@ -394,3 +394,16 @@
 .kq-brain-count-sub{font-size:13px;color:#EDEFF2;margin:18px 0 6px;font-weight:600;letter-spacing:.3px}
 .kq-brain-count-note{font-size:12px;color:#8a8470;line-height:1.5;margin:14px 0 0;max-width:360px;margin-left:auto;margin-right:auto}
 @keyframes kq-spin{to{transform:rotate(360deg)}}
+
+/* ── Pit-stop Snake mini-game shown during the Brain wait ────────────── */
+.kq-game-wrap{max-width:360px;margin:12px auto 0;background:#0F1217;border:1px solid #2A2F37;border-radius:10px;padding:14px;color:#EDEFF2;font-family:system-ui,-apple-system,sans-serif}
+.kq-game-head{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;margin-bottom:10px;padding:0 4px}
+.kq-game-timer{font-family:Georgia,serif;font-weight:500;color:#D8A32B;font-size:30px;line-height:1;display:flex;align-items:baseline;gap:4px}
+.kq-game-timer small{font-size:10px;color:#8a8470;letter-spacing:1px;text-transform:uppercase;font-family:system-ui,sans-serif}
+.kq-game-title{text-align:center}
+.kq-game-title strong{display:block;font-size:12px;color:#EDEFF2;letter-spacing:1px;text-transform:uppercase;font-weight:700}
+.kq-game-title span{display:block;font-size:11px;color:#A8B1BD;margin-top:2px}
+.kq-game-best{text-align:right;font-size:10px;color:#8a8470;letter-spacing:1px;text-transform:uppercase}
+.kq-game-best strong{display:block;color:#D8A32B;font-size:16px;font-family:Georgia,serif;font-weight:500;margin-top:2px}
+#kq-snake{display:block;margin:0 auto;border-radius:6px;background:#1B1E24;outline:none;max-width:100%;touch-action:none;cursor:crosshair}
+.kq-game-help{font-size:11px;color:#8a8470;text-align:center;margin-top:10px;line-height:1.5}
