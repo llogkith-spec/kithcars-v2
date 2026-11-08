@@ -855,11 +855,14 @@
     return bits.join(', ') || (FLOWS[S.flow] ? FLOWS[S.flow].label : 'mechanical work');
   }
   function fetchBrain() {
-    if (S.flow !== 'mechanical') { S.brainRange = null; return Promise.resolve(); }
-    if (!S.vehicle || !S.vehicle.make) { S.brainRange = null; return Promise.resolve(); }
+    if (S.flow !== 'mechanical') { S.brainRange = null; S.brainTried = true; return Promise.resolve(); }
+    if (!S.vehicle || !S.vehicle.make) { S.brainRange = null; S.brainTried = true; return Promise.resolve(); }
     var complaint = brainComplaint();
-    if (!complaint) { S.brainRange = null; return Promise.resolve(); }
+    if (!complaint) { S.brainRange = null; S.brainTried = true; return Promise.resolve(); }
     S.brainLoading = true;
+    S.brainTried = true;
+    S.brainStartedAt = Date.now();
+    S.brainTargetSeconds = 8;
     var vehicle = [S.vehicle.yearOfManufacture, S.vehicle.make, S.model || '', S.vehicle.fuelType || ''].filter(Boolean).join(' ');
     return fetch(BRAIN_URL, {
       method: 'POST',
@@ -882,9 +885,52 @@
     }).catch(function () { S.brainLoading = false; S.brainRange = null; });
   }
 
+  // Countdown view shown while the Brain works out the price (mechanical only).
+  // Starts at 8 seconds. If the Brain takes longer, the number holds at 1 and
+  // the copy switches to "almost there". If Brain finally returns, viewEstimate
+  // re-renders normally; if it fails, we fall back to the local estimate.
+  var BRAIN_TICK = null;
+  function startBrainTicker() {
+    if (BRAIN_TICK) return;
+    BRAIN_TICK = setInterval(function () {
+      if (!S.brainLoading) { stopBrainTicker(); render(); return; }
+      var elapsed = Math.floor((Date.now() - (S.brainStartedAt || Date.now())) / 1000);
+      var left = Math.max(0, (S.brainTargetSeconds || 8) - elapsed);
+      var n = document.getElementById('kq-countdown-n');
+      var l = document.getElementById('kq-countdown-label');
+      if (n) n.textContent = left > 0 ? left : 1;
+      if (l && left <= 0) l.textContent = 'Almost there…';
+    }, 250);
+  }
+  function stopBrainTicker() { if (BRAIN_TICK) { clearInterval(BRAIN_TICK); BRAIN_TICK = null; } }
+  function brainCountdownView() {
+    var elapsed = S.brainStartedAt ? Math.floor((Date.now() - S.brainStartedAt) / 1000) : 0;
+    var left = Math.max(0, (S.brainTargetSeconds || 8) - elapsed);
+    var label = left > 0 ? 'seconds' : 'Almost there…';
+    // Kick off the ticker after the DOM is painted
+    setTimeout(startBrainTicker, 50);
+    return '<div class="kq-brain-count" role="status">' +
+             '<p class="kq-brain-count-lead">Working out your estimate for <strong>' + esc(vehicleName()) + '</strong>' +
+               (S.vehicle && S.vehicle.registrationNumber ? ' <span class="kq-mini-plate">' + esc(S.vehicle.registrationNumber) + '</span>' : '') +
+             '</p>' +
+             '<div class="kq-brain-count-ring">' +
+               '<div class="kq-spin kq-spin-lg" aria-hidden="true"></div>' +
+               '<div class="kq-brain-count-num"><span id="kq-countdown-n">' + (left > 0 ? left : 1) + '</span></div>' +
+             '</div>' +
+             '<p class="kq-brain-count-sub"><span id="kq-countdown-label">' + (left > 0 ? label : 'Almost there…') + '</span></p>' +
+             '<p class="kq-brain-count-note">Our pricing system is checking HaynesPro labour times, our live part prices and your SOP against this exact vehicle. The figure you get back is the one we stand behind.</p>' +
+           '</div>';
+  }
+
   /* ---------- step: estimate ---------- */
   function viewEstimate() {
     if (!S.lines.length) return '<div class="kq-loading" role="status"><span class="kq-spin"></span>Working out your price…</div>';
+    // For mechanical, the Brain is the only source of the headline figure.
+    // While it's thinking, show a countdown rather than the local estimate —
+    // one number the customer sees, no flash.
+    if (S.flow === 'mechanical' && !S.brainRange && (S.brainLoading || !S.brainTried)) {
+      return brainCountdownView();
+    }
     var t = S.totals, offer = coupon(), eligible = E.couponEligible(C, t, t.unpriced > 0) && !S.offerGone;
     var h = '<div class="kq-result">';
     if (S.power) h += gauge(S.power);
@@ -903,14 +949,12 @@
           (tags.length ? '<small>' + tags.join(' · ') + '</small>' : '') + breakdown(l) + '</div>' + price + '</li>';
       }).join('') + '</ul>';
     if (t.count) {
-      // Prefer the Brain's SRT-informed range once it's landed. Fall back to
-      // local estimate while Brain is loading or if it couldn't price.
+      // Brain's range wins for mechanical. Local range for bodywork/recovery/tuning.
       var bRange = S.brainRange && S.brainRange.hi > 0 ? S.brainRange : null;
       var hLow  = bRange ? bRange.lo  : t.low;
       var hHigh = bRange ? bRange.hi : t.high;
-      var hLabel = bRange ? 'Your estimate' : ('Your estimate' + (t.unpriced ? ' so far' : ''));
-      var hTag = bRange ? '<small class="kq-brain-tag">Priced using KITH’s live pricing system' + (bRange.allFirm ? ' (all lines firm from our history)' : (bRange.usedFallback ? '' : '')) + '</small>' :
-                 S.brainLoading ? '<small class="kq-brain-tag kq-brain-loading">Refining with our live pricing system…</small>' : '';
+      var hLabel = 'Your estimate' + (!bRange && t.unpriced ? ' so far' : '');
+      var hTag = bRange ? '<small class="kq-brain-tag">Priced using KITH’s live pricing system' + (bRange.allFirm ? ' (all lines firm from our history)' : '') + '</small>' : '';
       h += '<div class="kq-total"><span>' + hLabel + '</span><b>' + range(hLow, hHigh) + '</b>' + hTag + '</div>';
       if (t.showDealer) {
         var dl2 = dealerLabel();
@@ -1314,7 +1358,7 @@
     else if (a === 'flag-mot') { S.wantMot = true; track('quote_add_mot', { flow: S.flow }); save(); render(); }
     else if (a === 'to-build') { readCar(); go('build'); }
     else if (a === 'to-estimate') {
-      readBuild(); S.lines = []; S.brainRange = null; go('estimate');
+      readBuild(); S.lines = []; S.brainRange = null; S.brainTried = false; go('estimate');
       fetchAi().then(function () {
         compute();
         if (!S.expires) S.expires = Date.now() + (coupon().hold_minutes || 15) * 60000;
