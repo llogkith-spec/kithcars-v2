@@ -110,7 +110,7 @@
     body: {}, tune: { fuel: 'tp', bhp: '', stage: 's1', addons: [] }, rec: { what: '', where: '', when: 'book' },
     ai: {}, lines: [], totals: null, power: null, expires: 0, offerGone: false,
     lead: null, day: null, time: null, sent: false, wantMot: false,
-    cc: null, ccBand: null, oil: null
+    cc: null, ccBand: null, oil: null, parts: null, addons: []
   };
 
   /* ---------- helpers ---------- */
@@ -472,6 +472,59 @@
       }).join('') + '</div></div>';
   }
 
+  /* Service add-ons. Only shown once a service is chosen, because they only make sense
+     alongside one, and never offering what that service already contains. */
+  function addonUI() {
+    var picked = S.mech.filter(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
+    if (!picked.length || !svcBandKnown()) return '';
+    var levels = picked.map(function (id) {
+      return { 'service-interim': 'interim', 'service-full': 'full',
+               'service-major': 'major', 'oil-filter-change': 'oil-change' }[id];
+    }).filter(Boolean);
+    var fuel = (S.vehicle || {}).fuelType || '';
+    var ids = E.addonsFor(C, levels, fuel);
+    if (!ids.length) return '';
+
+    var h = '<div class="kq-addons"><label class="kq-label">Anything else while it is in?</label>';
+    h += '<div class="kq-addonlist">' + ids.map(function (id) {
+      var l = E.addonLine(C, id, svcBandId(), { parts: S.parts, levels: levels });
+      if (!l) return '';
+      var on = (S.addons || []).indexOf(id) !== -1;
+      var price = l.kind === 'enquiry' ? 'we price it' : l.label;
+      return '<label class="kq-addon' + (on ? ' on' : '') + '">' +
+        '<input type="checkbox" class="kq-svcaddon" data-svcaddon="' + id + '"' + (on ? ' checked' : '') + '/>' +
+        '<span><b>' + esc(l.name) + '</b><small>' + esc(l.note || '') + '</small></span>' +
+        '<em>' + esc(price) + '</em></label>';
+    }).join('') + '</div></div>';
+    return h;
+  }
+
+  /* Parts grade. OEM costs 40% more on parts and runs a dearer oil with it; aftermarket is what
+     the headline figures assume. Both choices have to be made before a single price exists, so
+     the range stays on screen until they are. */
+  function partsUI() {
+    var picked = S.mech.filter(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
+    if (!picked.length || !svcBandKnown()) return '';
+    var grades = C.servicing.parts_grade.grades;
+    var band = E.svcBandById(C, svcBandId());
+    var lvl = { 'service-interim': 'interim', 'service-full': 'full',
+                'service-major': 'major', 'oil-filter-change': 'oil-change' }[picked[0]];
+    var base = E.svcPrice(C, lvl, band.id, S.oil || 'standard', false, 'aftermarket');
+    var oem = E.svcPrice(C, lvl, band.id, S.oil || 'standard', false, 'oem');
+    var diff = Math.round(oem - base);
+    var h = '<div class="kq-parts"><label class="kq-label">Which parts?</label>' +
+      '<div class="kq-pills">' + grades.map(function (g) {
+        var extra = g.id === 'oem' && diff > 0 ? ' <i>+' + money(diff) + '</i>' : '';
+        return '<button type="button" class="kq-pill' + (S.parts === g.id ? ' on' : '') +
+          '" data-act="parts" data-v="' + g.id + '">' + esc(g.label) + extra + '</button>';
+      }).join('') + '</div>';
+    var chosen = S.parts ? E.partsGrade(C, S.parts) : null;
+    h += chosen
+      ? '<p class="kq-partsnote">' + esc(chosen.note) + '</p>'
+      : '<p class="kq-help">Aftermarket is what most people take and what the lower figure shows.</p>';
+    return h + '</div>';
+  }
+
   /* Oil grade. Logan wants the choice offered, and wants anyone picking standard to hear the
      case for the specialist grade — so the advice appears on that choice, not as a nag before
      they have chosen anything. */
@@ -479,7 +532,11 @@
     var picked = S.mech.filter(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
     if (!picked.length || !svcBandKnown()) return '';
     var O = C.servicing.oil, band = E.svcBandById(C, svcBandId());
-    var diff = (O.specialist_ex_vat_per_litre - O.standard_ex_vat_per_litre) * band.litres * (1 + C.vat_rate);
+    var lvlId = { 'service-interim': 'interim', 'service-full': 'full',
+                  'service-major': 'major', 'oil-filter-change': 'oil-change' }[picked[0]];
+    var pg = S.parts || 'aftermarket';
+    var diff = Math.round(E.svcPrice(C, lvlId, band.id, 'specialist', false, pg) -
+                          E.svcPrice(C, lvlId, band.id, 'standard', false, pg));
     var h = '<div class="kq-oil"><label class="kq-label">Which oil?</label>' +
       '<div class="kq-pills">' +
       '<button type="button" class="kq-pill' + (S.oil === 'standard' ? ' on' : '') + '" data-act="oil" data-v="standard">Standard</button>' +
@@ -510,8 +567,11 @@
     var on = S.mech.indexOf('mot') !== -1;
     return '<div class="kq-motbundle' + (on ? ' on' : '') + '">' +
       '<button type="button" class="kq-motbtn" data-act="bundle-mot">' +
-      (on ? '\u2713 MOT added \u2014 ' + money(bundle.low) : '+ Add an MOT for ' + money(bundle.low)) +
-      '</button><span>Normally ' + money(bundle.was) + '. This price is only with a full or major service.</span></div>';
+      (on ? '\u2713 MOT added at ' + money(bundle.low) + ' with this service'
+          : '+ Add an MOT for ' + money(bundle.low) + ' with this service') +
+      '</button><span>' + money(bundle.low) + ' is the price <b>alongside a full or major service</b>. ' +
+      'On its own an MOT is ' + money(bundle.was) + ', so if you drop the service the MOT goes back to ' +
+      money(bundle.was) + '.</span></div>';
   }
 
   function viewMech() {
@@ -530,7 +590,7 @@
         if (isSvc && !band) {
           hint = 'tell us your engine size';
         } else {
-          var p = E.priceJob(C, j.id, band, { ai: S.ai[j.id], oil: isSvc ? S.oil : undefined });
+          var p = E.priceJob(C, j.id, band, { ai: S.ai[j.id], oil: isSvc ? S.oil : undefined, parts: isSvc ? S.parts : undefined });
           hint = p.kind === 'fixed' ? (p.label || money(p.low))
                : typeof p.low === 'number'
                  ? (isSvc && !S.oil ? range(p.low, p.high) : 'from ' + money(p.low))
@@ -538,9 +598,14 @@
         }
         return '<label class="kq-job' + (on ? ' on' : '') + '"><input type="checkbox" value="' + j.id + '"' + (on ? ' checked' : '') + '/><span>' + esc(j.name) + '</span><em>' + esc(hint) + '</em></label>';
       }).join('') + '</div>';
-      if (g.id === 'servicing') h += oilUI() + motBundleUI();
+      if (g.id === 'servicing') h += partsUI() + oilUI() + addonUI() + motBundleUI();
     });
-    return h + nav('car', 'to-estimate', S.mech.length ? 'Show my price (' + S.mech.length + ')' : 'Pick at least one', !S.mech.length);
+    var svcPicked = S.mech.some(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
+    var blocked = !S.mech.length || (svcPicked && !svcBandKnown());
+    var label = !S.mech.length ? 'Pick at least one'
+              : (svcPicked && !svcBandKnown()) ? 'Tell us the engine size first'
+              : 'Show my price (' + S.mech.length + ')';
+    return h + nav('car', 'to-estimate', label, blocked);
   }
 
   function viewTyres() {
@@ -694,20 +759,45 @@
       // Service levels price off engine size and the chosen oil; everything else off body size.
       // And an MOT costs £21 rather than £50 when it rides along with a full or major service,
       // so the figure in the total has to match the one the button offered.
-      var svcLevels = S.mech.map(function (id) {
-        return { 'service-full': 'full', 'service-major': 'major' }[id];
-      }).filter(Boolean);
-      var bundle = E.motWithService(C, svcLevels);
-      lines = S.mech.map(function (id) {
+      // Two passes, deliberately. A service line is dropped when we don't know the engine
+      // size, and the first version of this worked the MOT discount out from what was TICKED
+      // rather than from what actually priced. A customer whose lookup returned no engine
+      // capacity therefore lost the service from their quote and kept the £21 MOT — and booked
+      // a £21 MOT on its own. The discount is now derived from the lines that survived.
+      var priced = S.mech.map(function (id) {
+        if (id === 'mot') return null;                       // second pass
         var isSvc = SERVICE_IDS.indexOf(id) !== -1;
         if (isSvc && !svcBandKnown()) return null;
-        if (id === 'mot' && bundle) {
-          return { id: 'mot', name: bundle.name, kind: 'fixed', low: bundle.low, high: bundle.low,
-                   label: money(bundle.low), note: bundle.note };
-        }
         return E.priceJob(C, id, isSvc ? svcBandId() : S.band,
-                          { ai: S.ai[id], oil: isSvc ? S.oil : undefined });
+                          { ai: S.ai[id], oil: isSvc ? S.oil : undefined, parts: isSvc ? S.parts : undefined });
       }).filter(Boolean);
+
+      var svcLevels = priced.map(function (l) {
+        return { 'service-service-full': 'full', 'service-service-major': 'major',
+                 'service-full': 'full', 'service-major': 'major' }[l.id];
+      }).filter(Boolean);
+      var bundle = E.motWithService(C, svcLevels);
+
+      // Chosen add-ons become lines of their own, priced off the same band data.
+      var svcLevelsAll = S.mech.map(function (id) {
+        return { 'service-interim': 'interim', 'service-full': 'full',
+                 'service-major': 'major', 'oil-filter-change': 'oil-change' }[id];
+      }).filter(Boolean);
+      var addonLines = (S.addons || []).map(function (id) {
+        return E.addonLine(C, id, svcBandId(), { parts: S.parts, levels: svcLevelsAll });
+      }).filter(function (l) { return l && l.kind !== 'included'; });
+
+      lines = S.mech.map(function (id) {
+        if (id !== 'mot') {
+          return priced.filter(function (l) { return l.id === id || l.id === 'service-' + id; })[0] || null;
+        }
+        if (bundle) {
+          return { id: 'mot', name: bundle.name, kind: 'fixed', low: bundle.low, high: bundle.low,
+                   label: money(bundle.low), note: bundle.note, conditional: true,
+                   standalone: bundle.was };
+        }
+        return E.priceJob(C, 'mot', S.band, { ai: S.ai.mot });
+      }).filter(Boolean).concat(addonLines);
     }
     else if (S.flow === 'tyres') lines = [E.tyreLine(C, { width: S.tyre.w, profile: S.tyre.p, rim: S.tyre.r, runflat: S.tyre.rf }, S.tyre.tier, S.tyre.qty)];
     else if (S.flow === 'bodywork') lines = Object.keys(S.body).map(function (id) {
@@ -1080,6 +1170,18 @@
     });
   }
   function bindBuild() {
+    // Service add-ons are their own checkboxes with their own list; data-addon is the tuning
+    // flow's and is read differently, so they are deliberately kept apart.
+    $$('.kq-addon input[data-svcaddon]').forEach(function (c) {
+      c.addEventListener('change', function () {
+        var id = c.getAttribute('data-svcaddon');
+        S.addons = S.addons || [];
+        var i = S.addons.indexOf(id);
+        if (c.checked && i === -1) { S.addons.push(id); track('quote_addon', { id: id }); }
+        if (!c.checked && i !== -1) S.addons.splice(i, 1);
+        save(); render();
+      });
+    });
     $$('.kq-job input[type=checkbox]').forEach(function (c) {
       c.addEventListener('change', function () {
         readBuild();
@@ -1139,6 +1241,7 @@
     else if (a === 'ccband') { S.ccBand = v; save(); render(); }
     else if (a === 'cc-edit') { S.ccBand = null; S.cc = null; save(); render(); }
     else if (a === 'oil') { S.oil = v; track('quote_oil', { grade: v }); save(); render(); }
+    else if (a === 'parts') { S.parts = v; track('quote_parts', { grade: v }); save(); render(); }
     else if (a === 'bundle-mot') {
       var i = S.mech.indexOf('mot');
       if (i === -1) { S.mech.push('mot'); track('quote_mot_bundle'); } else { S.mech.splice(i, 1); }

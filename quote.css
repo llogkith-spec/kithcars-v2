@@ -360,3 +360,22 @@
 }
 .kq-motbundle.on .kq-motbtn { text-decoration: none; }
 .kq-motbundle span { display: block; margin-top: .2rem; font-size: .83rem; color: #3c6b3f; }
+
+/* Parts grade picker */
+.kq-parts { margin: .9rem 0 .2rem; }
+.kq-parts .kq-pill i { font-style: normal; opacity: .75; margin-left: .3rem; }
+.kq-partsnote { margin: .6rem 0 0; font-size: .86rem; line-height: 1.5; color: var(--kq-muted, #6b6b73); }
+
+/* Service add-ons */
+.kq-addons { margin: .9rem 0 .2rem; }
+.kq-addonlist { display: grid; gap: .5rem; margin-top: .4rem; }
+.kq-addon {
+  display: flex; align-items: flex-start; gap: .6rem; cursor: pointer;
+  padding: .65rem .8rem; border: 1px solid var(--kq-line, #d9d9de); border-radius: 10px;
+}
+.kq-addon.on { border-color: var(--kq-accent, #d8402a); background: #fdf6f4; }
+.kq-addon input { margin-top: .2rem; flex: 0 0 auto; }
+.kq-addon span { flex: 1 1 auto; min-width: 0; }
+.kq-addon b { display: block; font-size: .95rem; }
+.kq-addon small { display: block; margin-top: .15rem; font-size: .8rem; line-height: 1.45; color: var(--kq-muted, #6b6b73); }
+.kq-addon em { flex: 0 0 auto; font-style: normal; font-weight: 600; font-size: .9rem; }

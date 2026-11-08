@@ -205,30 +205,55 @@ for (const id of ['service-interim','service-full','brake-discs-front','clutch',
   assert.strictEqual(E.svcBand(cat, 9999).id, 'ccbig', 'anything huge falls in the top band');
   assert.strictEqual(E.svcBand(cat, 0), null, 'no capacity means no guess');
 
-  // Before the oil is chosen the quote is a range; choosing collapses it to one figure.
+  // Two choices move the price — parts grade and oil — so the quote stays a range until both
+  // are made, and the range has to span every combination they could still pick. This is the
+  // promise the widget makes: whatever you end up paying was inside the figure you first saw.
   const open = E.svcLine(cat, 'interim', 'cc2000', {});
   assert.strictEqual(open.kind, 'range');
-  assert.ok(open.high > open.low, 'specialist oil sits above standard');
-  assert.strictEqual(open.low, E.svcPrice(cat, 'interim', 'cc2000', 'standard'));
-  assert.strictEqual(open.high, E.svcPrice(cat, 'interim', 'cc2000', 'specialist'));
+  assert.ok(open.high > open.low);
+  assert.strictEqual(open.low, E.svcPrice(cat, 'interim', 'cc2000', 'standard', false, 'aftermarket'),
+    'the bottom is the cheapest thing we sell: aftermarket parts, standard oil');
+  assert.strictEqual(open.high, E.svcPrice(cat, 'interim', 'cc2000', 'specialist', false, 'oem'),
+    'the top is the dearest: OEM parts, specialist oil');
 
-  const std = E.svcLine(cat, 'interim', 'cc2000', { oil: 'standard' });
-  assert.strictEqual(std.kind, 'fixed');
-  assert.strictEqual(std.low, std.high);
-  assert.ok(std.low >= open.low && std.low <= open.high,
-    'whatever they pick must land inside the range they were first shown');
+  for (const parts of ['aftermarket', 'oem']) {
+    for (const oil of ['standard', 'specialist']) {
+      const line = E.svcLine(cat, 'interim', 'cc2000', { oil, parts });
+      assert.strictEqual(line.kind, 'fixed', `${parts}/${oil} settles to one price`);
+      assert.strictEqual(line.low, line.high);
+      assert.ok(line.low >= open.low && line.low <= open.high,
+        `${parts}/${oil} (£${line.low}) must sit inside the quoted £${open.low}–£${open.high}`);
+    }
+  }
 
-  const spec = E.svcLine(cat, 'interim', 'cc2000', { oil: 'specialist' });
-  assert.ok(spec.low >= open.low && spec.low <= open.high, 'same for the specialist grade');
+  // One choice alone is not enough to settle a price.
+  assert.strictEqual(E.svcLine(cat, 'interim', 'cc2000', { oil: 'standard' }).kind, 'range');
+  assert.strictEqual(E.svcLine(cat, 'interim', 'cc2000', { parts: 'oem' }).kind, 'range');
 
-  // The specialist uplift is only ever the oil, priced per litre.
+  // Each lever moves only what it should: oil by the per-litre difference, parts by 40%.
   const band = E.svcBandById(cat, 'ccbig');
-  const uplift = (cat.servicing.oil.specialist_ex_vat_per_litre
+  const oilGap = (cat.servicing.oil.specialist_ex_vat_per_litre
                 - cat.servicing.oil.standard_ex_vat_per_litre) * band.litres * (1 + cat.vat_rate);
-  assert.ok(Math.abs((spec.low - std.low) - uplift * (5 / band.litres)) < 0.01 ||
-            Math.abs(E.svcPrice(cat, 'interim', 'ccbig', 'specialist')
-                   - E.svcPrice(cat, 'interim', 'ccbig', 'standard') - uplift) < 0.01,
-    'the gap between grades is the oil and nothing else');
+  assert.ok(Math.abs(E.svcPrice(cat, 'interim', 'ccbig', 'specialist', false, 'aftermarket')
+                   - E.svcPrice(cat, 'interim', 'ccbig', 'standard', false, 'aftermarket')
+                   - oilGap) < 0.01, 'the oil upgrade is the oil and nothing else');
+
+  const lvl = cat.servicing.levels.filter(l => l.id === 'major')[0];
+  const partsCost = lvl.parts.reduce((n, k) => n + band[k], 0);
+  const oem = E.partsGrade(cat, 'oem');
+  // OEM moves the parts by its multiplier and the oil to its own grade; both, not one.
+  const expected = (cat.servicing.rate_ex_vat * lvl.hours.ccbig
+                  + partsCost * oem.parts_multiplier
+                  + band.litres * oem.oil_ex_vat_per_litre) * (1 + cat.vat_rate);
+  assert.ok(Math.abs(E.svcPrice(cat, 'major', 'ccbig', 'standard', false, 'oem')
+                   - Math.round(expected * 100) / 100) < 0.01,
+    'OEM is 40% on parts plus the dearer oil');
+
+  // Asking for Castrol lifts the oil above whichever floor the parts grade set, rather than
+  // one choice silently cancelling the other.
+  assert.ok(E.svcPrice(cat, 'major', 'ccbig', 'specialist', false, 'oem')
+          > E.svcPrice(cat, 'major', 'ccbig', 'standard', false, 'oem'),
+    'specialist oil still costs more on top of OEM');
 
   // An MOT is £21 alongside a full or major service, and not otherwise.
   assert.strictEqual(E.motWithService(cat, ['full']).low, 21);
@@ -249,4 +274,31 @@ for (const id of ['service-interim','service-full','brake-discs-front','clutch',
                      'priceJob and the rate card cannot disagree');
 
   console.log('servicing rate card tests passed');
+}
+
+/* ---- The £21 MOT must never stand alone ----------------------------------------------------
+   A customer booked an MOT at £21 with no service on the booking at all. The cause: a service
+   line is dropped when the engine size is unknown, and the discount was worked out from what
+   the customer had TICKED rather than from what actually priced. The service vanished from the
+   quote and the £21 survived. These lock the rule at the engine level. */
+{
+  assert.strictEqual(E.motWithService(cat, []), null,
+    'nothing selected cannot earn the bundled price');
+  assert.strictEqual(E.motWithService(cat, [undefined, null].filter(Boolean)), null,
+    'a list that filters down to empty cannot either');
+  assert.strictEqual(E.motWithService(cat, ['interim']), null);
+  assert.strictEqual(E.motWithService(cat, ['oil-change']), null);
+  assert.ok(E.motWithService(cat, ['full']).low < E.priceJob(cat, 'mot', 'small').low,
+    'and where it does apply it is cheaper than a standalone MOT');
+
+  // The condition has to be inside the line's own name, because that name is what gets printed
+  // on the confirmation and emailed to the workshop. "MOT: £21" on its own is what got booked.
+  const bundled = E.motWithService(cat, ['major']);
+  assert.ok(/full or major service/i.test(bundled.name),
+    'the name must carry the condition, not just the note');
+  assert.ok(/£\s?21/.test(bundled.name), 'and the price it applies to');
+  assert.ok(String(bundled.note).indexOf(String(bundled.was)) !== -1,
+    'the note states what it reverts to');
+
+  console.log('MOT bundle guard tests passed');
 }

@@ -95,3 +95,76 @@ export async function motLookup(reg) {
   if (!v || typeof v !== 'object') throw new Error('mot_shape');
   return toVehicle(v, reg);
 }
+
+/* Why a lookup failed, in enough detail to fix it without another round trip.
+
+   The ordinary path deliberately swallows errors so a customer never sees a stack trace — but
+   that left "it doesn't work" as the only signal, and the health check only proves the four
+   variables EXIST, not that DVSA accepts them. A wrong secret and a wrong scope look identical
+   from outside.
+
+   This reports the HTTP status of each step and the provider's own error code. Azure's
+   AADSTS codes name the problem exactly (7000215 is a bad secret, 700016 a bad client id,
+   500011 a scope the tenant doesn't know). No secret or token is ever included — only the
+   length of the secret, which catches the commonest fault of all: a value pasted with the
+   trailing character missing or a line break in the middle. */
+export async function motDiagnose(reg) {
+  const out = {
+    step: 'start',
+    secretLength: (process.env.MOT_CLIENT_SECRET || '').length,
+    secretHasWhitespace: /\s/.test(process.env.MOT_CLIENT_SECRET || ''),
+    tokenUrlHasWhitespace: /\s/.test(process.env.MOT_TOKEN_URL || ''),
+    apiKeyLength: (process.env.MOT_API_KEY || '').length,
+    scope: SCOPE(),
+  };
+
+  let access;
+  try {
+    out.step = 'token';
+    const res = await fetch(process.env.MOT_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: process.env.MOT_CLIENT_ID,
+        client_secret: process.env.MOT_CLIENT_SECRET,
+        scope: SCOPE(),
+      }).toString(),
+    });
+    out.tokenStatus = res.status;
+    const body = await res.text();
+    if (!res.ok) {
+      try {
+        const j = JSON.parse(body);
+        out.tokenError = j.error;
+        // Trim to the AADSTS code and its sentence; the rest is trace ids.
+        out.tokenDetail = String(j.error_description || '').split('\r')[0].slice(0, 200);
+      } catch { out.tokenDetail = body.slice(0, 200); }
+      return out;
+    }
+    access = JSON.parse(body).access_token;
+    out.tokenOk = !!access;
+    if (!access) { out.tokenDetail = 'response had no access_token'; return out; }
+  } catch (e) {
+    out.tokenDetail = 'could not reach the token endpoint: ' + String(e.message || e).slice(0, 120);
+    return out;
+  }
+
+  try {
+    out.step = 'api';
+    const res = await fetch(`${API()}/${encodeURIComponent(reg)}`, {
+      headers: { authorization: `Bearer ${access}`, 'x-api-key': process.env.MOT_API_KEY,
+                 accept: 'application/json' },
+    });
+    out.apiStatus = res.status;
+    if (!res.ok) { out.apiDetail = (await res.text()).slice(0, 200); return out; }
+    const data = await res.json();
+    out.step = 'done';
+    out.found = !!data;
+    out.make = data && data.make;
+    out.engineSize = data && (data.engineSize || data.engineCapacity);
+  } catch (e) {
+    out.apiDetail = String(e.message || e).slice(0, 120);
+  }
+  return out;
+}

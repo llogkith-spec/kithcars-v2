@@ -537,15 +537,28 @@
     return l.length ? l[0] : null;
   }
 
-  /* One exact figure, for a known band, level and oil grade. */
-  function svcPrice(cat, levelId, bandId, oilGrade, isEv) {
+  function partsGrade(cat, id) {
+    var g = (cat.servicing.parts_grade.grades || []).filter(function (x) { return x.id === id; });
+    return g.length ? g[0] : cat.servicing.parts_grade.grades[0];
+  }
+
+  /* One exact figure, for a known band, level, parts grade and oil grade.
+
+     The parts grade sets both the parts multiplier and the oil the service runs on — an OEM
+     service uses a dearer oil as well as dearer filters. Asking for the Castrol specialist grade
+     lifts the oil above whichever floor the parts grade set, so the two choices compose rather
+     than one quietly overriding the other. */
+  function svcPrice(cat, levelId, bandId, oilGrade, isEv, partsGradeId) {
     var S = cat.servicing, band = svcBandById(cat, bandId), lvl = svcLevel(cat, levelId);
     if (!band || !lvl) return null;
+    var grade = partsGrade(cat, partsGradeId || S.parts_grade.default);
     var rate = isEv ? S.ev_rate_ex_vat : S.rate_ex_vat;
     var parts = 0;
     for (var i = 0; i < lvl.parts.length; i++) parts += Number(band[lvl.parts[i]]) || 0;
+    parts = parts * (Number(grade.parts_multiplier) || 1);
     var perLitre = oilGrade === 'specialist'
-      ? S.oil.specialist_ex_vat_per_litre : S.oil.standard_ex_vat_per_litre;
+      ? S.oil.specialist_ex_vat_per_litre
+      : (Number(grade.oil_ex_vat_per_litre) || S.oil.standard_ex_vat_per_litre);
     var ex = rate * lvl.hours[bandId] + parts + band.litres * perLitre;
     return Math.round(ex * (1 + cat.vat_rate) * 100) / 100;
   }
@@ -557,9 +570,13 @@
     opts = opts || {};
     var lvl = svcLevel(cat, levelId), band = svcBandById(cat, bandId);
     if (!lvl || !band) return null;
-    var std = svcPrice(cat, levelId, bandId, 'standard', opts.ev);
-    var spec = svcPrice(cat, levelId, bandId, 'specialist', opts.ev);
-    var chosen = opts.oil === 'specialist' ? spec : (opts.oil === 'standard' ? std : null);
+    var grades = cat.servicing.parts_grade.grades;
+    var cheapest = grades[0].id, dearest = grades[grades.length - 1].id;
+    var std = svcPrice(cat, levelId, bandId, 'standard', opts.ev, cheapest);
+    var spec = svcPrice(cat, levelId, bandId, 'specialist', opts.ev, dearest);
+    // A price is settled only once BOTH choices are made.
+    var chosen = (opts.oil && opts.parts)
+      ? svcPrice(cat, levelId, bandId, opts.oil, opts.ev, opts.parts) : null;
 
     return {
       id: 'service-' + levelId,
@@ -568,6 +585,7 @@
       low: chosen === null ? std : chosen,
       high: chosen === null ? spec : chosen,
       oil: opts.oil || null,
+      partsGrade: opts.parts || null,
       band: band.id,
       bandLabel: band.label,
       litres: band.litres,
@@ -578,12 +596,62 @@
       standard: std,
       specialist: spec,
       note: chosen === null
-        ? 'Lower figure is standard oil, upper is ' + cat.servicing.oil.specialist_brand +
-          ' specialist grade. Pick one and this becomes a single price.'
-        : (opts.oil === 'specialist'
-            ? cat.servicing.oil.specialist_brand + ' specialist oil, ' + band.litres + ' litres.'
-            : 'Standard oil, ' + band.litres + ' litres.')
+        ? 'Lower figure is aftermarket parts and standard oil; upper is OEM parts with ' +
+          cat.servicing.oil.specialist_brand + ' specialist grade. Choose both and this becomes ' +
+          'a single price.'
+        : (partsGrade(cat, opts.parts).label + ' parts, ' +
+           (opts.oil === 'specialist' ? cat.servicing.oil.specialist_brand + ' specialist' : 'standard') +
+           ' oil, ' + band.litres + ' litres.')
     };
+  }
+
+
+  /* Service add-ons.
+
+     The cabin filter is inside the major and sold alongside the cheaper services; spark plugs
+     and the fuel filter were promised by the major and costed by nothing, so they are chosen
+     and quoted rather than assumed. Anything with a part in the band data prices from the same
+     numbers as the services themselves, so it tracks the rate card. Anything that varies too
+     much per engine says so rather than inventing a figure. */
+  function svcAddon(cat, addonId) {
+    var a = (cat.servicing.addons || []).filter(function (x) { return x.id === addonId; });
+    return a.length ? a[0] : null;
+  }
+
+  function addonLine(cat, addonId, bandId, opts) {
+    opts = opts || {};
+    var a = svcAddon(cat, addonId), band = svcBandById(cat, bandId);
+    if (!a || !band) return null;
+
+    // Already covered by the service they've chosen — offer it as included, not as a charge.
+    if (a.included_in && opts.levels &&
+        opts.levels.some(function (l) { return a.included_in.indexOf(l) !== -1; })) {
+      return { id: a.id, name: a.label, kind: 'included', low: 0, high: 0,
+               label: 'included', note: 'Part of the ' + opts.levels[0] + ' service already.' };
+    }
+
+    if (a.quote) {
+      return { id: a.id, name: a.label, kind: 'enquiry', note: a.note };
+    }
+
+    var grade = partsGrade(cat, opts.parts || cat.servicing.parts_grade.default);
+    var part = (Number(band[a.part]) || 0) * (Number(grade.parts_multiplier) || 1);
+    var ex = part + cat.servicing.rate_ex_vat * (Number(a.hours) || 0);
+    var price = Math.round(ex * (1 + cat.vat_rate) * 100) / 100;
+    return { id: a.id, name: a.label, kind: 'fixed', low: price, high: price,
+             label: '£' + price.toFixed(2), note: a.note };
+  }
+
+  /* Which add-ons to put in front of someone, given what they have chosen and what fuel the car
+     runs on. A petrol car is never offered a diesel fuel filter. */
+  function addonsFor(cat, levels, fuel) {
+    var f = String(fuel || '').toLowerCase();
+    return (cat.servicing.addons || []).filter(function (a) {
+      if (a.fuel && f && f.indexOf(a.fuel) === -1) return false;
+      // Don't offer what the chosen service already contains.
+      if (a.included_in && (levels || []).some(function (l) { return a.included_in.indexOf(l) !== -1; })) return false;
+      return true;
+    }).map(function (a) { return a.id; });
   }
 
   /* An MOT costs less bought alongside a full or major service. */
@@ -595,12 +663,19 @@
     });
     if (!qualifies) return null;
     var full = priceJob(cat, 'mot', 'small');
+    var standalone = full ? full.low : null;
     return {
-      id: 'mot-bundle', name: 'MOT with your service', kind: 'fixed',
+      id: 'mot-bundle',
+      // The condition is part of the name, so it survives into the confirmation, the email and
+      // anywhere else the line is printed. A line reading just "MOT £21" is what got booked
+      // on its own.
+      name: 'MOT (£' + S.mot_with_service_inc_vat + ' with a full or major service)',
+      kind: 'fixed',
       low: S.mot_with_service_inc_vat, high: S.mot_with_service_inc_vat,
       label: '£' + S.mot_with_service_inc_vat,
-      was: full ? full.low : null,
-      note: 'Normally £' + (full ? full.low : '') + '. This price is only with a full or major service.'
+      was: standalone,
+      note: 'This price applies only alongside a full or major service. On its own an MOT is £' +
+            standalone + ', and that is what it reverts to if the service comes off the booking.'
     };
   }
 
@@ -608,6 +683,6 @@
            ulezLikely: ulezLikely,
            priceJob: priceJob, totals: totals, bodyBand: bodyBand, clampAi: clampAi, findJob: findJob, tyrePrice: tyrePrice,
            tyreLine: tyreLine, bodyLine: bodyLine, alloyLine: alloyLine, tuneLines: tuneLines, recoveryLine: recoveryLine, milesFrom: milesFrom,
-           svcLine: svcLine, svcPrice: svcPrice, svcBand: svcBand, svcBandById: svcBandById, svcLevel: svcLevel, motWithService: motWithService,
+           svcLine: svcLine, svcPrice: svcPrice, partsGrade: partsGrade, svcAddon: svcAddon, addonLine: addonLine, addonsFor: addonsFor, svcBand: svcBand, svcBandById: svcBandById, svcLevel: svcLevel, motWithService: motWithService,
            couponEligible: couponEligible, bookableDays: bookableDays, safeNote: safeNote };
 });

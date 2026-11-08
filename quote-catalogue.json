@@ -1007,7 +1007,6 @@
       "includes": [
         "Castrol engine oil, drained and replaced with the exact grade your engine’s maker specifies",
         "New oil filter and sump plug washer",
-        "Sump plug washer renewed",
         "All fluid levels topped up: coolant, brake fluid, screen wash, power steering",
         "Tyre condition, tread depths and pressures set",
         "Brake pads and discs inspected for wear",
@@ -1071,7 +1070,6 @@
       "includes": [
         "Everything in the interim service",
         "New air filter",
-        "New cabin or pollen filter",
         "Brake fluid tested for moisture content",
         "Suspension, steering joints and exhaust inspected on the ramp",
         "Battery tested under load, charging system checked",
@@ -1134,7 +1132,7 @@
       },
       "includes": [
         "Everything in the full service",
-        "New spark plugs (petrol) or new fuel filter (diesel, where it is a serviceable item)",
+        "New cabin or pollen filter",
         "Brake fluid changed, not just tested",
         "Coolant strength tested and topped or changed to the manufacturer’s interval",
         "Gearbox and differential oil levels checked",
@@ -1987,13 +1985,6 @@
           {
             "label": "Cabin / pollen filter",
             "in": [
-              "f",
-              "m"
-            ]
-          },
-          {
-            "label": "Spark plugs (petrol) or fuel filter (diesel)",
-            "in": [
               "m"
             ]
           }
@@ -2191,11 +2182,27 @@
       "standard_ex_vat_per_litre": 12,
       "specialist_ex_vat_per_litre": 16,
       "specialist_brand": "Castrol",
-      "default": "standard"
+      "default": "standard",
+      "_note": "Standard £12/l, OEM-grade £15/l, Castrol specialist £16/l. The parts grade sets the floor; choosing Castrol lifts it to £16 either way."
     },
     "parts_grade": {
-      "quoted": "aftermarket",
-      "_note": "These prices assume quality aftermarket parts. OEM is dearer and is quoted on the call."
+      "default": "aftermarket",
+      "grades": [
+        {
+          "id": "aftermarket",
+          "label": "Quality aftermarket",
+          "parts_multiplier": 1.0,
+          "oil_ex_vat_per_litre": 12,
+          "note": "Brands we fit every day and stand behind. What the prices above assume."
+        },
+        {
+          "id": "oem",
+          "label": "OEM",
+          "parts_multiplier": 1.4,
+          "oil_ex_vat_per_litre": 15,
+          "note": "The same parts the franchise dealer fits, and a higher-grade oil with them."
+        }
+      ]
     },
     "bands": [
       {
@@ -2326,6 +2333,34 @@
     "mot_bundle_levels": [
       "full",
       "major"
-    ]
+    ],
+    "_mot_bundle_note": "People were booking the £21 MOT on its own and arriving expecting that price. The figure is never shown without the condition attached to it now — in the name of the line, in the confirmation and in the workshop email.",
+    "addons": [
+      {
+        "id": "cabin-filter",
+        "label": "Cabin / pollen filter",
+        "part": "pollen_filter",
+        "hours": 0.2,
+        "included_in": [
+          "major"
+        ],
+        "note": "Worth adding if the heater smells damp or the screen is slow to clear. Already included if you pick the major service."
+      },
+      {
+        "id": "spark-plugs",
+        "label": "Spark plugs (petrol)",
+        "quote": true,
+        "fuel": "petrol",
+        "note": "Priced per engine — the number of plugs and how far into the engine they sit varies a lot. We confirm the figure before any work."
+      },
+      {
+        "id": "fuel-filter",
+        "label": "Fuel filter (diesel)",
+        "quote": true,
+        "fuel": "diesel",
+        "note": "Where it is a serviceable item. Priced per engine, confirmed before any work."
+      }
+    ],
+    "_addons_note": "Spark plugs and the fuel filter were listed in the major service and costed in neither. They are add-ons now, which is the honest version: chosen, quoted and paid for."
   }
 }

@@ -6,7 +6,7 @@
 // page asks the customer for the car by hand, which still prices correctly.
 // Netlify version. Keys go in Site configuration -> Environment variables.
 import { allowedOrigin, json, throttled, readJson, cacheGet, cacheSet } from './_shared.mjs';
-import { motConfigured, motLookup } from './_mot.mjs';
+import { motConfigured, motLookup, motDiagnose } from './_mot.mjs';
 
 const DVLA_URL = 'https://driver-vehicle-licensing.api.gov.uk/vehicle-enquiry/v1/vehicles';
 const FIELDS = ['registrationNumber', 'make', 'colour', 'yearOfManufacture', 'monthOfFirstRegistration', 'engineCapacity',
@@ -33,6 +33,14 @@ export default async (request, context) => {
   if (request.method === 'GET') {
     const url = new URL(request.url);
     if (url.searchParams.has('health')) return json(credentialHealth(), 200);
+    // GET /api/vehicle?diag=AB12CDE runs a real lookup and reports which step failed and what
+    // the provider said. Names, status codes and the provider's own error code only.
+    if (url.searchParams.has('diag')) {
+      const reg = String(url.searchParams.get('diag') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (!/^[A-Z0-9]{2,8}$/.test(reg)) return json({ error: 'invalid_reg' }, 400);
+      if (!motConfigured()) return json({ error: 'not_configured', ...credentialHealth() }, 503);
+      return json(await motDiagnose(reg), 200);
+    }
   }
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   if (!allowedOrigin(request, context)) return json({ error: 'forbidden' }, 403);
