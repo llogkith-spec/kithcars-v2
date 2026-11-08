@@ -18,6 +18,18 @@ export function motConfigured() {
             process.env.MOT_API_KEY && process.env.MOT_TOKEN_URL);
 }
 
+/* Netlify gives a function about ten seconds. A fetch with no deadline of its own can eat all
+   of it and return nothing at all, which is exactly what a blank page is. */
+async function fetchWithTimeout(url, opts, ms) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms || 4000);
+  try {
+    return await fetch(url, { ...(opts || {}), signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /* Tokens last an hour. Cached for 55 minutes so a token is never used in the minute it expires. */
 async function token() {
   const hit = cacheGet('mot:token');
@@ -28,11 +40,11 @@ async function token() {
     client_secret: process.env.MOT_CLIENT_SECRET,
     scope: SCOPE(),
   });
-  const res = await fetch(process.env.MOT_TOKEN_URL, {
+  const res = await fetchWithTimeout(process.env.MOT_TOKEN_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
-  });
+  }, 4000);
   if (!res.ok) throw new Error('token_failed');
   const data = await res.json();
   if (!data.access_token) throw new Error('token_missing');
@@ -80,9 +92,9 @@ function toVehicle(v, reg) {
    Throws for anything else, so the caller answers 502 rather than "not found". */
 export async function motLookup(reg) {
   const t = await token();
-  const res = await fetch(`${API()}/${encodeURIComponent(reg)}`, {
+  const res = await fetchWithTimeout(`${API()}/${encodeURIComponent(reg)}`, {
     headers: { authorization: `Bearer ${t}`, 'x-api-key': process.env.MOT_API_KEY, accept: 'application/json' },
-  });
+  }, 4000);
   if (res.status === 404) return null;
   if (res.status === 401 || res.status === 403) {
     // Most likely a token that went stale early; drop it so the next call fetches a fresh one.
@@ -121,7 +133,7 @@ export async function motDiagnose(reg) {
   let access;
   try {
     out.step = 'token';
-    const res = await fetch(process.env.MOT_TOKEN_URL, {
+    const res = await fetchWithTimeout(process.env.MOT_TOKEN_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -130,7 +142,7 @@ export async function motDiagnose(reg) {
         client_secret: process.env.MOT_CLIENT_SECRET,
         scope: SCOPE(),
       }).toString(),
-    });
+    }, 4000);
     out.tokenStatus = res.status;
     const body = await res.text();
     if (!res.ok) {
@@ -146,16 +158,19 @@ export async function motDiagnose(reg) {
     out.tokenOk = !!access;
     if (!access) { out.tokenDetail = 'response had no access_token'; return out; }
   } catch (e) {
-    out.tokenDetail = 'could not reach the token endpoint: ' + String(e.message || e).slice(0, 120);
+    out.tokenDetail = (e && e.name === 'AbortError')
+      ? 'the token endpoint did not answer within 4 seconds — check MOT_TOKEN_URL for a stray space or line break'
+      : 'could not reach the token endpoint: ' + String(e.message || e).slice(0, 120);
+    out.tokenUrlStart = String(process.env.MOT_TOKEN_URL || '').slice(0, 42);
     return out;
   }
 
   try {
     out.step = 'api';
-    const res = await fetch(`${API()}/${encodeURIComponent(reg)}`, {
+    const res = await fetchWithTimeout(`${API()}/${encodeURIComponent(reg)}`, {
       headers: { authorization: `Bearer ${access}`, 'x-api-key': process.env.MOT_API_KEY,
                  accept: 'application/json' },
-    });
+    }, 4000);
     out.apiStatus = res.status;
     if (!res.ok) { out.apiDetail = (await res.text()).slice(0, 200); return out; }
     const data = await res.json();

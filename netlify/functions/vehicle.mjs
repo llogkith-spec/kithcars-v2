@@ -39,7 +39,16 @@ export default async (request, context) => {
       const reg = String(url.searchParams.get('diag') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (!/^[A-Z0-9]{2,8}$/.test(reg)) return json({ error: 'invalid_reg' }, 400);
       if (!motConfigured()) return json({ error: 'not_configured', ...credentialHealth() }, 503);
-      return json(await motDiagnose(reg), 200);
+      // A diagnostic that can itself fail silently is no use: the first version returned a blank
+      // page and told us nothing. Anything thrown in here comes back as readable text.
+      try {
+        const report = await motDiagnose(reg);
+        return json(report && Object.keys(report).length ? report
+                    : { error: 'diagnose_returned_nothing' }, 200);
+      } catch (e) {
+        return json({ error: 'diagnose_threw', name: e && e.name,
+                      message: String((e && e.message) || e).slice(0, 300) }, 200);
+      }
     }
   }
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
