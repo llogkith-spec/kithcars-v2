@@ -980,10 +980,234 @@
       });
     });
   }
+  // The KITH pricing Brain — HaynesPro SRTs + SOP v8.0 + AI fallback. Mechanical
+  // flow only (bodywork / recovery / tuning use their own catalogue bands).
+  // We still compute the local estimate first so the customer sees a number
+  // instantly; the Brain's result overwrites S.brainRange + swaps into the
+  // headline figure when it lands (usually 3–10s). If Brain fails or the flow
+  // isn't mechanical, local estimate stays as the authoritative on-page figure.
+  var BRAIN_URL = 'https://mxyrxyhvjndgjqupgstu.supabase.co/functions/v1/brain';
+  var BRAIN_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14eXJ4eWh2am5kZ2pxdXBnc3R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMTMyNjgsImV4cCI6MjA5Nzc4OTI2OH0.z7F_sUqx56bIcBLxjWFJSP3rT1jhNPAL9_1SWZ7cUog';
+  function brainComplaint() {
+    // Build a natural-language complaint from the picked jobs + model, so the
+    // Brain's identify step has what it needs.
+    var bits = S.lines && S.lines.length
+      ? S.lines.map(function (l) { return l.name; }).filter(Boolean)
+      : [];
+    return bits.join(', ') || (FLOWS[S.flow] ? FLOWS[S.flow].label : 'mechanical work');
+  }
+  function fetchBrain() {
+    if (S.flow !== 'mechanical') { S.brainRange = null; S.brainTried = true; return Promise.resolve(); }
+    if (!S.vehicle || !S.vehicle.make) { S.brainRange = null; S.brainTried = true; return Promise.resolve(); }
+    var complaint = brainComplaint();
+    if (!complaint) { S.brainRange = null; S.brainTried = true; return Promise.resolve(); }
+    S.brainLoading = true;
+    S.brainTried = true;
+    S.brainStartedAt = Date.now();
+    S.brainTargetSeconds = 8;
+    var vehicle = [S.vehicle.yearOfManufacture, S.vehicle.make, S.model || '', S.vehicle.fuelType || ''].filter(Boolean).join(' ');
+    return fetch(BRAIN_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': BRAIN_KEY, 'Authorization': 'Bearer ' + BRAIN_KEY,
+        'x-caller': 'website'
+      },
+      body: JSON.stringify({
+        customer_type: 'retail',
+        vehicle: vehicle,
+        reg: (S.vehicle && S.vehicle.registrationNumber) || '',
+        complaint: complaint
+      })
+    }).then(function (r) {
+      if (!r.ok) { console.warn('[KITH Brain] HTTP ' + r.status); return null; }
+      return r.json();
+    }).then(function (d) {
+      S.brainLoading = false;
+      if (d && d.error) console.warn('[KITH Brain] error:', d.error);
+      if (d && d.total_range && d.total_range.hi > 0) {
+        S.brainRange = { lo: Math.round(d.total_range.lo), hi: Math.round(d.total_range.hi), confidence: d.confidence || 'low', allFirm: !!d.all_firm, usedFallback: !!d.used_ai_fallback };
+      } else { S.brainRange = null; }
+    }).catch(function (e) {
+      console.warn('[KITH Brain] network:', e && e.message);
+      S.brainLoading = false; S.brainRange = null;
+    });
+  }
+
+  // Countdown view shown while the Brain works out the price (mechanical only).
+  // Starts at 8 seconds. If the Brain takes longer, the number holds at 1 and
+  // the copy switches to "almost there". If Brain finally returns, viewEstimate
+  // re-renders normally; if it fails, we fall back to the local estimate.
+  var BRAIN_TICK = null;
+  function startBrainTicker() {
+    if (BRAIN_TICK) return;
+    BRAIN_TICK = setInterval(function () {
+      if (!S.brainLoading) { stopBrainTicker(); render(); return; }
+      var elapsed = Math.floor((Date.now() - (S.brainStartedAt || Date.now())) / 1000);
+      var left = Math.max(0, (S.brainTargetSeconds || 8) - elapsed);
+      var n = document.getElementById('kq-countdown-n');
+      var l = document.getElementById('kq-countdown-label');
+      if (n) n.textContent = left > 0 ? left : 1;
+      if (l && left <= 0) l.textContent = 'Almost there…';
+    }, 250);
+  }
+  function stopBrainTicker() { if (BRAIN_TICK) { clearInterval(BRAIN_TICK); BRAIN_TICK = null; } stopSnake(); }
+  function brainCountdownView() {
+    var elapsed = S.brainStartedAt ? Math.floor((Date.now() - S.brainStartedAt) / 1000) : 0;
+    var left = Math.max(0, (S.brainTargetSeconds || 8) - elapsed);
+    // Kick off the ticker AND the mini-game after the DOM is painted.
+    setTimeout(function () { startBrainTicker(); startSnake(); }, 50);
+    return '<div class="kq-brain-count" role="status">' +
+             '<p class="kq-brain-count-lead">Working out your estimate for <strong>' + esc(vehicleName()) + '</strong>' +
+               (S.vehicle && S.vehicle.registrationNumber ? ' <span class="kq-mini-plate">' + esc(S.vehicle.registrationNumber) + '</span>' : '') +
+             '</p>' +
+             '<div class="kq-game-wrap">' +
+               '<div class="kq-game-head">' +
+                 '<div class="kq-game-timer"><span id="kq-countdown-n">' + (left > 0 ? left : 1) + '</span><small>sec</small></div>' +
+                 '<div class="kq-game-title"><strong>Pit-stop Snake</strong><span id="kq-game-score">Score 0</span></div>' +
+                 '<div class="kq-game-best"><span>Best</span><strong id="kq-game-best">' + (S.snakeBest || 0) + '</strong></div>' +
+               '</div>' +
+               '<canvas id="kq-snake" width="320" height="320" tabindex="0" aria-label="Snake mini-game — swipe or use arrow keys"></canvas>' +
+               '<div class="kq-game-help" id="kq-countdown-label">Swipe or use ← ↑ ↓ → to collect the bolts while we price your car</div>' +
+             '</div>' +
+           '</div>';
+  }
+
+  // ── PIT-STOP SNAKE (plays during the Brain wait) ────────────────────────
+  // Tiny, no-framework canvas snake. Auto-plays if the customer doesn't
+  // touch anything — a demo snake wandering so the screen doesn't feel dead.
+  // Takes over on first input. Cleans up on view change.
+  var SNAKE = null;
+  function stopSnake() {
+    if (!SNAKE) return;
+    cancelAnimationFrame(SNAKE.raf);
+    if (SNAKE.onkey) document.removeEventListener('keydown', SNAKE.onkey);
+    SNAKE = null;
+  }
+  function startSnake() {
+    stopSnake();
+    var c = document.getElementById('kq-snake'); if (!c) return;
+    var ctx = c.getContext('2d');
+    var GRID = 16, CELLS = 20, W = GRID * CELLS;  // canvas 320x320
+    // Resize for retina
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = W * dpr; c.height = W * dpr; c.style.width = W + 'px'; c.style.height = W + 'px';
+    ctx.scale(dpr, dpr);
+
+    var s = SNAKE = {
+      snake: [{x:10,y:10},{x:9,y:10},{x:8,y:10}],
+      dir: {x:1,y:0}, nextDir: {x:1,y:0},
+      food: spawnFood([{x:10,y:10},{x:9,y:10},{x:8,y:10}]),
+      score: 0, best: S.snakeBest || 0, auto: true, lastStep: 0,
+      stepMs: 140, dead: false, raf: 0
+    };
+    function spawnFood(snake){ var p, tries=0; do { p = {x:(Math.random()*CELLS)|0, y:(Math.random()*CELLS)|0}; tries++; } while (snake.some(seg=>seg.x===p.x&&seg.y===p.y) && tries<200); return p; }
+
+    function turn(dx,dy){ if (dx === -s.dir.x && dy === -s.dir.y) return; s.nextDir = {x:dx,y:dy}; s.auto = false; }
+    s.onkey = function(e){
+      var k = e.key;
+      if (k==='ArrowUp'||k==='w'||k==='W') { turn(0,-1); e.preventDefault(); }
+      else if (k==='ArrowDown'||k==='s'||k==='S') { turn(0,1); e.preventDefault(); }
+      else if (k==='ArrowLeft'||k==='a'||k==='A') { turn(-1,0); e.preventDefault(); }
+      else if (k==='ArrowRight'||k==='d'||k==='D') { turn(1,0); e.preventDefault(); }
+    };
+    document.addEventListener('keydown', s.onkey);
+    c.addEventListener('click', function(){ c.focus(); });
+    // Touch: swipe
+    var tStart = null;
+    c.addEventListener('touchstart', function(e){ var t = e.touches[0]; tStart = {x:t.clientX,y:t.clientY}; }, {passive:true});
+    c.addEventListener('touchend', function(e){
+      if (!tStart) return;
+      var t = e.changedTouches[0], dx = t.clientX - tStart.x, dy = t.clientY - tStart.y;
+      if (Math.abs(dx) > Math.abs(dy)) { if (Math.abs(dx) > 15) turn(dx>0?1:-1, 0); }
+      else { if (Math.abs(dy) > 15) turn(0, dy>0?1:-1); }
+      tStart = null;
+    }, {passive:true});
+
+    function step() {
+      // Auto-pilot: wander toward food so the snake isn't dead on screen
+      if (s.auto) {
+        var head = s.snake[0], best = s.dir, bestD = Infinity;
+        [[1,0],[-1,0],[0,1],[0,-1]].forEach(function(d){
+          if (d[0]===-s.dir.x&&d[1]===-s.dir.y) return;
+          var nx = head.x+d[0], ny = head.y+d[1];
+          if (nx<0||nx>=CELLS||ny<0||ny>=CELLS) return;
+          if (s.snake.some(seg=>seg.x===nx&&seg.y===ny)) return;
+          var dd = Math.abs(nx - s.food.x) + Math.abs(ny - s.food.y);
+          if (dd < bestD) { bestD = dd; best = {x:d[0],y:d[1]}; }
+        });
+        s.nextDir = best;
+      }
+      s.dir = s.nextDir;
+      var head = s.snake[0], nx = head.x + s.dir.x, ny = head.y + s.dir.y;
+      // Wrap on walls (friendlier than game over)
+      if (nx<0) nx = CELLS-1; if (nx>=CELLS) nx = 0;
+      if (ny<0) ny = CELLS-1; if (ny>=CELLS) ny = 0;
+      // Self-hit → reset with current score as best
+      if (s.snake.some(function(seg){ return seg.x===nx && seg.y===ny; })) {
+        if (s.score > s.best) { s.best = s.score; S.snakeBest = s.best; try { localStorage.setItem('kq_snake_best', String(s.best)); } catch(e){} }
+        s.snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}]; s.dir = {x:1,y:0}; s.nextDir = {x:1,y:0};
+        s.food = spawnFood(s.snake); s.score = 0; s.auto = true; return;
+      }
+      s.snake.unshift({x:nx,y:ny});
+      if (nx === s.food.x && ny === s.food.y) {
+        s.score++;
+        s.food = spawnFood(s.snake);
+        s.stepMs = Math.max(70, s.stepMs - 2);
+      } else {
+        s.snake.pop();
+      }
+      // HUD
+      var sc = document.getElementById('kq-game-score'); if (sc) sc.textContent = 'Score ' + s.score;
+      var bs = document.getElementById('kq-game-best'); if (bs) bs.textContent = s.best;
+    }
+
+    function draw() {
+      ctx.fillStyle = '#1B1E24'; ctx.fillRect(0,0,W,W);
+      // Grid dots
+      ctx.fillStyle = 'rgba(216,163,43,0.08)';
+      for (var i=0;i<CELLS;i++) for (var j=0;j<CELLS;j++) ctx.fillRect(i*GRID+GRID/2-1, j*GRID+GRID/2-1, 2, 2);
+      // Food — gold bolt
+      ctx.fillStyle = '#D8A32B';
+      ctx.beginPath();
+      ctx.arc(s.food.x*GRID + GRID/2, s.food.y*GRID + GRID/2, GRID/2 - 3, 0, Math.PI*2);
+      ctx.fill();
+      // Snake — darker gold body, brighter head
+      s.snake.forEach(function(seg, i) {
+        ctx.fillStyle = i === 0 ? '#F0C04A' : 'rgba(216,163,43,' + (0.95 - Math.min(0.55, i*0.015)) + ')';
+        var pad = i === 0 ? 1 : 2;
+        var r = 3;
+        var x = seg.x*GRID + pad, y = seg.y*GRID + pad, w = GRID - pad*2, h = GRID - pad*2;
+        ctx.beginPath();
+        ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+        ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+        ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+        ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y); ctx.closePath(); ctx.fill();
+      });
+    }
+
+    function loop(t) {
+      if (!SNAKE) return;
+      if (!s.lastStep) s.lastStep = t;
+      if (t - s.lastStep >= s.stepMs) { step(); s.lastStep = t; }
+      draw();
+      s.raf = requestAnimationFrame(loop);
+    }
+    // Restore best from localStorage
+    try { var b = parseInt(localStorage.getItem('kq_snake_best') || '0', 10); if (b > s.best) s.best = b; } catch(e){}
+    S.snakeBest = s.best;
+    s.raf = requestAnimationFrame(loop);
+  }
 
   /* ---------- step: estimate ---------- */
   function viewEstimate() {
     if (!S.lines.length) return '<div class="kq-loading" role="status"><span class="kq-spin"></span>Working out your price…</div>';
+    // For mechanical, the Brain is the only source of the headline figure.
+    // While it's thinking, show a countdown rather than the local estimate —
+    // one number the customer sees, no flash.
+    if (S.flow === 'mechanical' && !S.brainRange && (S.brainLoading || !S.brainTried)) {
+      return brainCountdownView();
+    }
     var t = S.totals, offer = coupon(), eligible = E.couponEligible(C, t, t.unpriced > 0) && !S.offerGone;
     var h = '<div class="kq-result">';
     if (S.power) h += gauge(S.power);
@@ -1002,7 +1226,25 @@
           (tags.length ? '<small>' + tags.join(' · ') + '</small>' : '') + includesFor(l) + breakdown(l) + '</div>' + price + '</li>';
       }).join('') + '</ul>';
     if (t.count) {
-      h += '<div class="kq-total"><span>Your estimate' + (t.unpriced ? ' so far' : '') + '</span><b>' + rangeOf(t) + '</b></div>';
+      /* Two pricing systems meet here, and which one speaks depends on whether the rate card
+         already knows the answer.
+
+         Where the catalogue prices a job exactly - the four services, built from Logan's own
+         engine-size rate card - that figure stands. It is not an estimate to be improved on. The
+         Brain was overriding it, and a full service the rate card puts at £247 was being quoted
+         at £387-£537: a 45-100% overquote against the garage's own price list, on the line item
+         the customer can see for themselves. Any total that disagrees with the lines above it is
+         wrong however clever the thing that produced it.
+
+         Where the catalogue cannot price firmly - repairs quoted "from", anything leaning on the
+         AI tags - the Brain is the better answer, because it is reading KITH's actual job history
+         rather than a generic book time. So it keeps the total there, and keeps its badge. */
+      var firmLocally = t.count > 0 && !t.unpriced;
+      var bRange = (!firmLocally && S.brainRange && S.brainRange.hi > 0) ? S.brainRange : null;
+      var shown = bRange ? { low: bRange.lo, high: bRange.hi } : spread(t);
+      var hLabel = 'Your estimate' + (!bRange && t.unpriced ? ' so far' : '');
+      var hTag = bRange ? '<small class="kq-brain-tag">Priced using KITH’s live pricing system' + (bRange.allFirm ? ' (all lines firm from our history)' : '') + '</small>' : '';
+      h += '<div class="kq-total"><span>' + hLabel + '</span><b>' + range(shown.low, shown.high) + '</b>' + hTag + '</div>';
       if (t.showDealer) {
         var dl2 = dealerLabel();
         h += '<div class="kq-dealer"><span>' + esc(dl2.a + ' ' + dl2.text) + ', typically</span><s>~' + money(t.dealer) + '</s><em>Around ' +
@@ -1208,27 +1450,10 @@
   }
   function sendLead() {
     var d = leadPayload(), id = S.lead.id || (S.lead.id = 'web-' + Date.now().toString(36));
-    var fd = new FormData();
-    fd.append('access_key', WEB3FORMS_KEY);
-    fd.append('subject', (d.priority === 'urgent' ? 'URGENT RECOVERY' : d.priority === 'hot' ? 'BOOKED' : 'Estimate') + ': ' + d.service + ' · ' + vehicleName() + (d.webEstimate ? ' · ' + range(d.webEstimate.lo, d.webEstimate.hi) : ''));
-    fd.append('from_name', 'KITH website instant quote');
-    fd.append('Name', d.name); fd.append('Phone', d.phone);
-    if (d.email) { fd.append('email', d.email); fd.append('Email', d.email); }
-    fd.append('Registration', d.reg || '-');
-    fd.append('Vehicle', [d.vehicle.year, d.vehicle.make, d.vehicle.model].filter(Boolean).join(' ') + ' · ' + d.vehicle.size);
-    fd.append('Service', d.service);
-    fd.append('Quote', d.jobs.map(function (j) { return '• ' + j.name + (typeof j.low === 'number' ? ': ' + range(j.low, j.high) : ': to confirm'); }).join('\n') + (d.webEstimate ? '\nEstimate: ' + range(d.webEstimate.lo, d.webEstimate.hi) : ''));
-    fd.append('Slot', d.requestedSlot ? d.requestedSlot.date + ' ' + d.requestedSlot.time + ' (' + d.requestedSlot.calendar + ')' : 'not picked');
-    fd.append('Collection', d.collection ? 'Yes, please collect' : 'No');
-    if (d.vehicle.motExpiry) {
-      var md = motDays(S.vehicle);
-      fd.append('MOT', d.vehicle.motExpiry + (md === null ? '' :
-        md < 0 ? ' — EXPIRED ' + Math.abs(md) + ' days ago' : ' — ' + motHowLong(md)) +
-        (d.wantMot ? ' · CUSTOMER WANTS THE MOT DOING THIS VISIT' : ''));
-    }
-    fd.append('Discount', d.coupon ? d.coupon.code + ' · £' + d.coupon.amount : 'none');
-    fd.append('Price book', d.priceBookVersion);
-    var email = fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd }).then(function (r) { return r.json(); }).then(function (j) { return !!j.success; }).catch(function () { return false; });
+    // Email send was removed Nov 2026 — the triage AI's ping (WhatsApp /
+    // push on the service adviser's phone) + the CRM board entry is the
+    // notification path now. No email needed.
+    var email = Promise.resolve('disabled');
     var crm = Promise.resolve('not connected');
     if (C.crm && C.crm.supabase_url && C.crm.anon_key) {
       crm = fetch(C.crm.supabase_url.replace(/\/$/, '') + '/rest/v1/' + (C.crm.table || 'jobs') + '?on_conflict=id', {
@@ -1237,7 +1462,37 @@
         body: JSON.stringify({ id: id, data: d, updated_at: new Date().toISOString() })
       }).then(function (r) { return r.ok ? 'sent' : 'failed ' + r.status; }).catch(function () { return 'failed'; });
     }
-    return Promise.all([email, crm]).then(function (r) { return { emailed: r[0], crm: r[1] }; });
+    // ── Parallel POST to KITH's unified inbox (triage AI picks it up and
+    // fires the rapid-fire SRT-informed range on WhatsApp within seconds).
+    // The page-side range above is still shown instantly from the client
+    // catalogue; the Brain's range lands on the customer's WhatsApp.
+    var jobsBrief = d.jobs.map(function (j) { return '• ' + j.name + (typeof j.low === 'number' ? ': ' + range(j.low, j.high) : ''); }).join('\n');
+    var combinedText = d.service + '\n' + jobsBrief +
+      (d.webEstimate ? '\nWebsite estimate: ' + range(d.webEstimate.lo, d.webEstimate.hi) : '') +
+      (d.requestedSlot ? '\nWants: ' + d.requestedSlot.date + ' ' + d.requestedSlot.time + ' (' + d.requestedSlot.calendar + ')' : '');
+    var inbox = fetch('https://mxyrxyhvjndgjqupgstu.supabase.co/functions/v1/inbox-ingest', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14eXJ4eWh2am5kZ2pxdXBnc3R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMTMyNjgsImV4cCI6MjA5Nzc4OTI2OH0.z7F_sUqx56bIcBLxjWFJSP3rT1jhNPAL9_1SWZ7cUog',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14eXJ4eWh2am5kZ2pxdXBnc3R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMTMyNjgsImV4cCI6MjA5Nzc4OTI2OH0.z7F_sUqx56bIcBLxjWFJSP3rT1jhNPAL9_1SWZ7cUog',
+        'x-caller': 'kithcars_website_form'
+      },
+      body: JSON.stringify({
+        channel: 'website',
+        sender_name: d.name,
+        sender_phone: d.phone,
+        sender_email: d.email || '',
+        reg: d.reg || '',
+        year: d.vehicle.year || null,
+        make: d.vehicle.make || '',
+        model: d.vehicle.model || '',
+        message_text: combinedText,
+        context_hints: 'Customer has already seen a website estimate of ' + (d.webEstimate ? range(d.webEstimate.lo, d.webEstimate.hi) : '(not yet calculated)') + '. Rapid-fire a brain-based range on WhatsApp to confirm.'
+      })
+    }).then(function (r) { return r.ok ? 'sent' : 'failed ' + r.status; }).catch(function () { return 'failed'; });
+
+    return Promise.all([email, crm, inbox]).then(function (r) { return { emailed: r[0], crm: r[1], inbox: r[2] }; });
   }
 
   /* ---------- render + events ---------- */
@@ -1396,20 +1651,22 @@
     else if (a === 'to-build') { readCar(); go('build'); }
     else if (a === 'to-estimate') {
       readBuild();
-      // One page between the job card and the price, and only where it has something to ask.
+      // One page between the job card and the price, and only where it has something to ask:
+      // engine size, oil and parts all move the servicing figure, so they are settled before a
+      // price is shown rather than underneath it.
       if (S.step === 'build' && optionsNeeded()) { go('options'); return; }
-      S.lines = []; go('estimate');
-      /* The AI pass sharpens a few job notes; it is not where the price comes from. When it was
-         allowed to reject - the endpoint down, a timeout, anything - nothing after it ran, so
-         compute() never happened and the customer sat on "Working out your price..." forever with
-         a perfectly good rate-card figure sitting uncalculated. Swallowing the failure here means
-         the price always arrives, with or without the embellishment. */
-      fetchAi().catch(function () {}).then(function () {
-        compute();
-        if (!S.expires) S.expires = Date.now() + (coupon().hold_minutes || 15) * 60000;
-        track('quote_price', { value: S.totals.low, currency: 'GBP', flow: S.flow });
-        save(); render();
-      });
+      /* Compute from the local catalogue FIRST so S.lines is populated and the estimate renders
+         straight away, then fire the Brain and fetchAi in parallel - neither blocks the view.
+         This shape is the right one: it is why a price always appears even when a remote call is
+         slow or dead, which is the failure that used to leave a customer on "Working out your
+         price..." indefinitely. Both calls re-render when they land. */
+      S.brainRange = null; S.brainTried = false;
+      compute();
+      if (!S.expires) S.expires = Date.now() + (coupon().hold_minutes || 15) * 60000;
+      track('quote_price', { value: S.totals ? S.totals.low : 0, currency: 'GBP', flow: S.flow });
+      go('estimate');
+      fetchBrain().then(function () { save(); render(); }).catch(function () {});
+      fetchAi().then(function () { compute(); save(); render(); }).catch(function () {});
     }
     else if (a === 'to-details') { track('quote_book_click'); go('details'); }
     else if (a === 'day') { S.day = v; S.time = null; save(); render(); }

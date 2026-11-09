@@ -42,12 +42,20 @@
      find people who visit websites; one that sees Purchase with a job value teaches it to find
      people who book work, which is a different thing entirely. */
   var FB_EVENTS = {
-    quote_start: 'ViewContent',        // reg entered - they have a car and an intention
-    quote_price: 'InitiateCheckout',   // a price was shown
+    vehicle_found: 'Search',           // reg looked up and a car came back
+    quote_start: 'ViewContent',        // they have a car and an intention
+    quote_price: 'InitiateCheckout',   // a price was shown, with its value
     generate_lead: 'Lead',             // details submitted
-    quote_booked: 'Purchase',          // slot taken, with the value of the job
+    booking_submit: 'Lead',            // the older booking form, same outcome
+    // A booking is both of these. Purchase carries the job value and is what Meta optimises
+    // hardest against; Schedule is the name Meta made for appointments and is what the account
+    // will read naturally in a year. Sending both costs nothing and loses neither.
+    quote_booked: ['Purchase', 'Schedule'],
+    directions_click: 'FindLocation',  // they are working out how to get here
     call_click: 'Contact',
     whatsapp_click: 'Contact',
+    quote_whatsapp: 'Contact',         // sent their quote through to us on WhatsApp
+    email_click: 'Contact',
   };
 
   if (GA_ID) {
@@ -84,13 +92,16 @@
     try {
       // Sent separately rather than inside the block above: if Google is switched off or its
       // script is blocked, Meta must still get the conversion. They are two accounts, not one.
-      var fbName = FB_ID && window.fbq && FB_EVENTS[name];
-      if (!fbName) return;
+      var mapped = FB_ID && window.fbq && FB_EVENTS[name];
+      if (!mapped) return;
       var p = params || {};
       var value = Number(p.value);
-      window.fbq('track', fbName, (value > 0)
+      var payload = (value > 0)
         ? { value: Math.round(value * 100) / 100, currency: p.currency || 'GBP' }
-        : {});
+        : {};
+      // One of ours can be two of theirs: a booking is a Purchase and a Schedule at once.
+      var names = (typeof mapped === 'string') ? [mapped] : mapped;
+      for (var i = 0; i < names.length; i++) window.fbq('track', names[i], payload);
     } catch (e) {}
   }
   window.kithTrack = ev;                // quote.js falls back to dataLayer on its own; this is for anything else
