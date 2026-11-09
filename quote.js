@@ -877,12 +877,19 @@
         reg: (S.vehicle && S.vehicle.registrationNumber) || '',
         complaint: complaint
       })
-    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+    }).then(function (r) {
+      if (!r.ok) { console.warn('[KITH Brain] HTTP ' + r.status); return null; }
+      return r.json();
+    }).then(function (d) {
       S.brainLoading = false;
+      if (d && d.error) console.warn('[KITH Brain] error:', d.error);
       if (d && d.total_range && d.total_range.hi > 0) {
         S.brainRange = { lo: Math.round(d.total_range.lo), hi: Math.round(d.total_range.hi), confidence: d.confidence || 'low', allFirm: !!d.all_firm, usedFallback: !!d.used_ai_fallback };
       } else { S.brainRange = null; }
-    }).catch(function () { S.brainLoading = false; S.brainRange = null; });
+    }).catch(function (e) {
+      console.warn('[KITH Brain] network:', e && e.message);
+      S.brainLoading = false; S.brainRange = null;
+    });
   }
 
   // Countdown view shown while the Brain works out the price (mechanical only).
@@ -1486,16 +1493,20 @@
     else if (a === 'flag-mot') { S.wantMot = true; track('quote_add_mot', { flow: S.flow }); save(); render(); }
     else if (a === 'to-build') { readCar(); go('build'); }
     else if (a === 'to-estimate') {
-      readBuild(); S.lines = []; S.brainRange = null; S.brainTried = false; go('estimate');
-      fetchAi().then(function () {
-        compute();
-        if (!S.expires) S.expires = Date.now() + (coupon().hold_minutes || 15) * 60000;
-        track('quote_price', { value: S.totals.low, currency: 'GBP', flow: S.flow });
-        save(); render();
-        // Fire the Brain in the background. When it returns the headline
-        // figure swaps to the SRT-informed range.
-        fetchBrain().then(function () { save(); render(); });
-      });
+      // Compute from the local catalogue FIRST so S.lines is populated and the
+      // Brain countdown view renders straight away. Then fire the Brain +
+      // fetchAi in parallel — neither blocks the UI. If fetchAi returns
+      // something useful, we re-compute and re-render; same for the Brain.
+      readBuild(); S.brainRange = null; S.brainTried = false;
+      compute();
+      if (!S.expires) S.expires = Date.now() + (coupon().hold_minutes || 15) * 60000;
+      track('quote_price', { value: S.totals ? S.totals.low : 0, currency: 'GBP', flow: S.flow });
+      go('estimate');
+      // Kick the Brain IMMEDIATELY (its countdown starts now)
+      fetchBrain().then(function () { save(); render(); });
+      // fetchAi runs for any "AI job" tags in the local catalogue — nice to have,
+      // not a blocker for the Brain's headline figure.
+      fetchAi().then(function () { compute(); save(); render(); }).catch(function(){});
     }
     else if (a === 'to-details') { track('quote_book_click'); go('details'); }
     else if (a === 'day') { S.day = v; S.time = null; save(); render(); }
