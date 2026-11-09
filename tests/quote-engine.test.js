@@ -232,8 +232,10 @@ for (const id of ['service-interim','service-full','brake-discs-front','clutch',
 
   // Each lever moves only what it should: oil by the per-litre difference, parts by 40%.
   const band = E.svcBandById(cat, 'ccbig');
-  const oilGap = (cat.servicing.oil.specialist_ex_vat_per_litre
-                - cat.servicing.oil.standard_ex_vat_per_litre) * band.litres * (1 + cat.vat_rate);
+  // Castrol is an uplift per litre on whatever the parts grade already costs, so the gap is the
+  // uplift itself - the same on aftermarket as on OEM, which is the point of expressing it that way.
+  const oilGap = cat.servicing.oil.specialist_uplift_ex_vat_per_litre
+                * band.litres * (1 + cat.vat_rate);
   assert.ok(Math.abs(E.svcPrice(cat, 'interim', 'ccbig', 'specialist', false, 'aftermarket')
                    - E.svcPrice(cat, 'interim', 'ccbig', 'standard', false, 'aftermarket')
                    - oilGap) < 0.01, 'the oil upgrade is the oil and nothing else');

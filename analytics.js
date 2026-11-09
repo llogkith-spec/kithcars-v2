@@ -4,6 +4,11 @@
    TO SWITCH ON: paste your GA4 Measurement ID (looks like G-ABC1234XYZ) into GA_ID below, and redeploy.
    With it blank, nothing is sent anywhere: every event still goes into window.dataLayer, so a tag
    manager (or the console) can see it, but no third-party script is loaded and no cookie is set.
+   FB_ID is the Meta dataset (pixel) id and works the same way: blank it and no Meta script loads.
+
+   Neither is gated on consent, because this site has no consent banner. Under UK PECR both of
+   these need permission before they fire. Logan was told this when the pixel went in and chose
+   to run it; the gate is a banner away if that changes, and ev() is the single place to hook it.
 
    Events sent (all from the customer's own browser, no personal data in any of them):
      page_view          automatic, GA4
@@ -26,7 +31,24 @@
 (function () {
   'use strict';
   var GA_ID = 'G-7NH2HFJWNQ';          // KITH Cars GA4 property "kith cars web"
+  var FB_ID = '1431276708362160';      // Meta dataset (pixel) for the KITH Cars ad account
   var dl = (window.dataLayer = window.dataLayer || []);
+
+  /* Our events, named for Meta. Only the ones Meta has a standard event for are sent: a custom
+     event name cannot be optimised against or used to build a lookalike, so sending the rest
+     would fill the account with noise that no campaign can act on.
+
+     The point of the mapping is the money. A pixel that only sees PageView teaches Facebook to
+     find people who visit websites; one that sees Purchase with a job value teaches it to find
+     people who book work, which is a different thing entirely. */
+  var FB_EVENTS = {
+    quote_start: 'ViewContent',        // reg entered - they have a car and an intention
+    quote_price: 'InitiateCheckout',   // a price was shown
+    generate_lead: 'Lead',             // details submitted
+    quote_booked: 'Purchase',          // slot taken, with the value of the job
+    call_click: 'Contact',
+    whatsapp_click: 'Contact',
+  };
 
   if (GA_ID) {
     var s = document.createElement('script');
@@ -38,10 +60,37 @@
     window.gtag('config', GA_ID, { anonymize_ip: true });
   }
 
+  if (FB_ID) {
+    /* Meta's own loader, verbatim apart from the id. It defines fbq before the script arrives and
+       queues anything fired in the meantime, so an event in the first second is not lost. */
+    !function (f, b, e, v, n, t, s) {
+      if (f.fbq) return; n = f.fbq = function () {
+        n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+      };
+      if (!f._fbq) f._fbq = n;
+      n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = [];
+      t = b.createElement(e); t.async = !0; t.src = v;
+      s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
+    }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+    window.fbq('init', FB_ID);
+    window.fbq('track', 'PageView');
+  }
+
   function ev(name, params) {
     try {
       if (window.gtag && GA_ID) window.gtag('event', name, params || {});
       else dl.push(Object.assign({ event: name }, params || {}));
+    } catch (e) {}
+    try {
+      // Sent separately rather than inside the block above: if Google is switched off or its
+      // script is blocked, Meta must still get the conversion. They are two accounts, not one.
+      var fbName = FB_ID && window.fbq && FB_EVENTS[name];
+      if (!fbName) return;
+      var p = params || {};
+      var value = Number(p.value);
+      window.fbq('track', fbName, (value > 0)
+        ? { value: Math.round(value * 100) / 100, currency: p.currency || 'GBP' }
+        : {});
     } catch (e) {}
   }
   window.kithTrack = ev;                // quote.js falls back to dataLayer on its own; this is for anything else

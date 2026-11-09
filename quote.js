@@ -117,12 +117,47 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function money(n) { return '£' + Number(n).toLocaleString('en-GB', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
   function range(lo, hi) { return lo === hi ? money(lo) : money(lo) + ' – ' + money(hi); }
+
+  /* An estimate shown as a range, which is what the small print under it has always promised.
+     Once engine size, oil and parts are all answered the rate card produces one exact figure and
+     the range collapsed to a single number, contradicting the copy beside it.
+
+     The range runs UPWARDS from that figure, never downwards. The exact price is what we would
+     charge for the job as quoted, so it is the floor; the ceiling covers what genuinely varies
+     once the car is on the ramp - an engine that takes more oil than its band allows, a
+     non-standard filter, a bolt that has seized. Padding downwards would advertise a number no
+     customer ever actually pays, which is the one thing a price range must not do. */
+  function spread(t) {
+    if (!t || typeof t.low !== 'number' || typeof t.high !== 'number') return t;
+    if (t.high > t.low) return t;                       // a genuine range already
+    var s = C.estimate_spread;
+    if (!s) return t;
+    var step = s.round_to || 5;
+    var pad = Math.max(s.min || 0, Math.round(t.low * (s.pct || 0)));
+    // Capped. On a big job 10% runs away with itself, and a range wider than £50 stops reading
+    // as an estimate and starts reading as a refusal to quote.
+    if (s.max) pad = Math.min(pad, s.max);
+    return { low: t.low, high: Math.ceil((t.low + pad) / step) * step };
+  }
+  function rangeOf(t) { var r = spread(t); return range(r.low, r.high); }
   function $(s) { return root.querySelector(s); }
   function $$(s) { return [].slice.call(root.querySelectorAll(s)); }
   function title(s) { s = String(s || ''); if (s.length <= 3) return s.toUpperCase(); return s.toLowerCase().replace(/\b[\w']/g, function (c) { return c.toUpperCase(); }); }
   function save() { try { sessionStorage.setItem('kq2', JSON.stringify(S)); } catch (e) {} }
   function load() { try { var s = JSON.parse(sessionStorage.getItem('kq2') || 'null'); if (s && !s.sent) { Object.keys(s).forEach(function (k) { S[k] = s[k]; }); } } catch (e) {} }
-  function track(n, p) { try { if (window.gtag) window.gtag('event', n, p || {}); else (window.dataLayer = window.dataLayer || []).push(Object.assign({ event: n }, p || {})); } catch (e) {} }
+  /* Through analytics.js where it is loaded, not straight to Google. That file is the one place
+     that knows every destination an event has to reach - Google, the Meta pixel, and whatever
+     comes next - so an event sent past it arrives at one of them and silently misses the rest.
+     This widget raises the only events worth paying for (a price shown, details submitted, a slot
+     booked), and those were going to Google alone. gtag and the dataLayer remain the fallback for
+     a page that loads the widget without analytics.js. */
+  function track(n, p) {
+    try {
+      if (window.kithTrack) return window.kithTrack(n, p || {});
+      if (window.gtag) return window.gtag('event', n, p || {});
+      (window.dataLayer = window.dataLayer || []).push(Object.assign({ event: n }, p || {}));
+    } catch (e) {}
+  }
 
   /* The make, for the main-dealer comparison. "An Audi main dealer" lands where "a main dealer"
      does not, because the reader is picturing the garage they would otherwise be ringing. It
@@ -174,7 +209,9 @@
   function progress() {
     var urgent = S.flow === 'recovery' && S.rec.when === 'now';
     var shown = STEPS.filter(function (s) { return s !== 'flow' && s !== 'done' && !(urgent && s === 'calendar'); });
-    var i = shown.indexOf(S.step);
+    // "How you want it done" is a second page of the same step, not a sixth dot on the bar: the
+    // customer is still answering "the work", and a bar that grows mid-flow reads as going backwards.
+    var i = shown.indexOf(S.step === 'options' ? 'build' : S.step);
     if (S.step === 'done') i = shown.length;
     return '<ol class="kq-steps">' + shown.map(function (s, n) {
       return '<li class="' + (n < i ? 'done' : n === i ? 'on' : '') + '"><span>' + (n + 1) + '</span>' + STEP_LABEL[s] + '</li>';
@@ -232,7 +269,31 @@
      they typed — and only ask when we genuinely can't tell. They can always correct it. */
   /* What the price is made of, and what the job covers. Folded away by default so the estimate
      still reads as a price rather than an invoice, but there for anyone who wants to check it. */
+  /* What a service actually buys, listed on the estimate rather than only on the page that sold
+     it. A customer reading "£247" with nothing under it has to take the number on trust; the same
+     number above a list of eight jobs is obviously a fair one. It also means the promise and the
+     price are read together, which is how the cabin-filter mix-up got as far as it did. */
+  function includesFor(l) {
+    var job = E.findJob(C, l.id);
+    var items = job && job.includes;
+    if (!items || !items.length) return '';
+    return '<details class="kq-incl"><summary>What&rsquo;s included</summary><ul>' +
+      items.map(function (i) { return '<li>' + esc(i) + '</li>'; }).join('') +
+      '</ul></details>';
+  }
+
   function breakdown(l) {
+    // A service shows its working the same way a repair does, from the rate card's own figures.
+    if (typeof l.low === 'number' && l.rateIncVat && l.hoursCharged) {
+      var v = isFinite(Number(C.vat_rate)) ? Number(C.vat_rate) : 0.2;
+      var ex = Math.round((l.rateIncVat / (1 + v)) * 100) / 100;
+      var r = ['<li><span>Labour</span><em>' + l.hoursCharged + ' hrs at ' + money(ex) + ' an hour plus VAT</em></li>'];
+      if (l.litres) r.push('<li><span>Oil</span><em>' + l.litres + ' litres' +
+        (l.oil === 'specialist' ? ', ' + esc(C.servicing.oil.specialist_brand) + ' specialist' : '') + '</em></li>');
+      if (l.dealer) { var sd = dealerLabel(); r.push('<li><span>' + esc(sd.a + ' ' + sd.text) +
+        ', same service</span><em>around ' + money(l.dealer) + '</em></li>'); }
+      return '<details class="kq-breakdown"><summary>How this is worked out</summary><ul>' + r.join('') + '</ul></details>';
+    }
     if (typeof l.low !== 'number' || !l.hours || !l.rate) return '';
     // Hours as charged, which is the book time times the multiplier - that is what the price is
     // built from, so this is the figure that reconciles with it.
@@ -386,10 +447,20 @@
       Object.keys(S.wheels || {}).length > 0;
     var hasRealService = jobs.some(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
     var onlyServicing = hasRealService && !hasOther;
-    return onlyServicing
+    return stampReg(onlyServicing
       ? { amount: base.servicing.amount, code: base.servicing.code,
           min_spend: base.min_spend, hold_minutes: base.hold_minutes }
-      : base;
+      : base);
+  }
+
+  /* The code carries the car's registration - KITHPO13VFL rather than KITHSERV20 - so a code
+     read out at the counter names the booking it came from, and Logan can see who the discount
+     actually went to. Where there is no registration (the customer entered the car by hand) the
+     generic code stands, because a code still has to be sayable down a phone. */
+  function stampReg(c) {
+    var reg = ((S.vehicle || {}).registrationNumber || S.reg || '')
+      .toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return reg ? Object.assign({}, c, { code: 'KITH' + reg }) : c;
   }
 
   function motDate(v) {
@@ -447,11 +518,16 @@
   /* Servicing prices off engine size, not body size. The lookup usually hands us the exact
      capacity; where it doesn't, the customer picks a band and we say so rather than guessing a
      price from the model name. */
+  /* Engine size, best source first: what the customer picked, then the capacity the lookup gave
+     us, then the commonest engine for the body size they already told us. The last of those is a
+     guess, so it is never silent - engineSizeUI shows what was assumed and offers to change it. */
   function svcBandId() {
     if (S.ccBand) return S.ccBand;
     var b = S.cc ? E.svcBand(C, S.cc) : null;
-    return b ? b.id : null;
+    if (b) return b.id;
+    return E.ccFromCarSize(S.band);
   }
+  function ccIsGuess() { return !S.ccBand && !S.cc; }
   function svcBandKnown() { return !!svcBandId(); }
 
   /* Engine size. Shown as a confirmation when the lookup gave it to us, as a question when it
@@ -463,12 +539,26 @@
       return '<p class="kq-ccnote">Priced for your <b>' + S.cc + 'cc</b> engine (' + esc(b.label) + '). ' +
         '<button type="button" class="kq-link" data-act="cc-edit">Not right?</button></p>';
     }
+    // Answered or inferred, so it stays a single line. Six options with example cars is a tall
+    // list; opened by default it buries everything under it. "Not right?" opens it for the
+    // customer whose car is a 1.0 or a 3.0 and whose price would otherwise be wrong.
+    if (!S.ccOpen) {
+      var cb = E.svcBandById(C, svcBandId());
+      return '<p class="kq-ccnote">' + (ccIsGuess() ? 'Priced as a ' : 'Priced as a ') +
+        '<b>' + esc(cb.pick || cb.label) + '</b> engine' +
+        (ccIsGuess() ? ', going by the size of the car' : ' (' + esc(cb.label) + ')') + '. ' +
+        '<button type="button" class="kq-link" data-act="cc-edit">Not right?</button></p>';
+    }
     var chosen = S.ccBand;
-    return '<div class="kq-ccpick"><label class="kq-label">How big is the engine?</label>' +
-      '<p class="kq-help">It is on your V5C, or in the handbook &mdash; 1.4 litre is 1400cc. It changes how much oil goes in.</p>' +
-      '<div class="kq-pills">' + C.servicing.bands.map(function (b) {
-        return '<button type="button" class="kq-pill' + (chosen === b.id ? ' on' : '') +
-          '" data-act="ccband" data-v="' + b.id + '">' + esc(b.label) + '</button>';
+    return '<div class="kq-ccpick"><label class="kq-label">What size is the engine?</label>' +
+      '<p class="kq-help">Pick the one your car is sold as &mdash; a &ldquo;1.6&rdquo; or a &ldquo;2.0 TDI&rdquo;. ' +
+      'It is on the boot badge, your insurance, or your V5C. It sets how much oil goes in, so it moves the price.</p>' +
+      '<div class="kq-pills kq-ccopts">' + C.servicing.bands.map(function (b) {
+        return '<button type="button" class="kq-pill kq-ccopt' + (chosen === b.id ? ' on' : '') +
+          '" data-act="ccband" data-v="' + b.id + '">' +
+          '<b>' + esc(b.pick || b.label) + '</b>' +
+          (b.examples ? '<small>' + esc(b.examples) + '</small>' : '') +
+          '<i>' + esc(b.label) + '</i></button>';
       }).join('') + '</div></div>';
   }
 
@@ -502,26 +592,51 @@
   /* Parts grade. OEM costs 40% more on parts and runs a dearer oil with it; aftermarket is what
      the headline figures assume. Both choices have to be made before a single price exists, so
      the range stays on screen until they are. */
-  function partsUI() {
+  /* Which service a delta is quoted against. Asked up front, nothing is ticked yet, so the full
+     service stands in: it is the one most people are here for and the difference is honest for it. */
+  function svcLevelOf(id) {
+    return { 'service-interim': 'interim', 'service-full': 'full',
+             'service-major': 'major', 'oil-filter-change': 'oil-change' }[id];
+  }
+  function basisLevel() {
     var picked = S.mech.filter(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
-    if (!picked.length || !svcBandKnown()) return '';
+    return picked.length ? svcLevelOf(picked[0]) : 'full';
+  }
+  function basisIsGuess() {
+    return !S.mech.some(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
+  }
+
+  function partsUI() {
+    if (!svcBandKnown()) return '';
     var grades = C.servicing.parts_grade.grades;
     var band = E.svcBandById(C, svcBandId());
-    var lvl = { 'service-interim': 'interim', 'service-full': 'full',
-                'service-major': 'major', 'oil-filter-change': 'oil-change' }[picked[0]];
+    var lvl = basisLevel();
     var base = E.svcPrice(C, lvl, band.id, S.oil || 'standard', false, 'aftermarket');
     var oem = E.svcPrice(C, lvl, band.id, S.oil || 'standard', false, 'oem');
     var diff = Math.round(oem - base);
     var h = '<div class="kq-parts"><label class="kq-label">Which parts?</label>' +
-      '<div class="kq-pills">' + grades.map(function (g) {
-        var extra = g.id === 'oem' && diff > 0 ? ' <i>+' + money(diff) + '</i>' : '';
-        return '<button type="button" class="kq-pill' + (S.parts === g.id ? ' on' : '') +
-          '" data-act="parts" data-v="' + g.id + '">' + esc(g.label) + extra + '</button>';
+      '<div class="kq-pills kq-choice">' + grades.map(function (g) {
+        var best = g.id === 'oem';
+        var extra = best && diff > 0 ? '<i>+' + money(diff) + (basisIsGuess() ? ' on a full service' : '') + '</i>' : '';
+        return '<button type="button" class="kq-pill kq-ccopt' + (S.parts === g.id ? ' on' : '') +
+          '" data-act="parts" data-v="' + g.id + '">' +
+          '<b>' + esc(g.label) + (best ? ' <span class="kq-rec">what we’d fit</span>' : '') + '</b>' +
+          '<small>' + esc(g.note || '') + '</small>' + extra + '</button>';
       }).join('') + '</div>';
-    var chosen = S.parts ? E.partsGrade(C, S.parts) : null;
-    h += chosen
-      ? '<p class="kq-partsnote">' + esc(chosen.note) + '</p>'
-      : '<p class="kq-help">Aftermarket is what most people take and what the lower figure shows.</p>';
+    // The case for OEM is made to the person who has not taken it, and made once. Anyone who has
+    // already chosen it is told what they are getting instead of sold it a second time.
+    if (S.parts === 'oem') {
+      h += '<p class="kq-partsnote">OEM parts throughout, and we run the ' +
+        esc(C.servicing.oil.specialist_brand) + ' grade with them.</p>';
+    } else if (S.parts === 'aftermarket') {
+      h += '<p class="kq-partsadvice"><b>Worth ' + money(diff) + ' to think about.</b> ' +
+        'OEM is the same part your car left the factory with, so it fits first time and lasts the ' +
+        'interval it was designed for. It also keeps the service record clean if you sell the car ' +
+        'or the warranty gets looked at. The aftermarket parts we fit are good ones and we stand ' +
+        'behind them &mdash; this is a choice, not a warning.</p>';
+    } else {
+      h += '<p class="kq-help">Pick one to firm up your price.</p>';
+    }
     return h + '</div>';
   }
 
@@ -529,31 +644,38 @@
      case for the specialist grade — so the advice appears on that choice, not as a nag before
      they have chosen anything. */
   function oilUI() {
-    var picked = S.mech.filter(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
-    if (!picked.length || !svcBandKnown()) return '';
+    if (!svcBandKnown()) return '';
     var O = C.servicing.oil, band = E.svcBandById(C, svcBandId());
-    var lvlId = { 'service-interim': 'interim', 'service-full': 'full',
-                  'service-major': 'major', 'oil-filter-change': 'oil-change' }[picked[0]];
+    var lvlId = basisLevel();
     var pg = S.parts || 'aftermarket';
     var diff = Math.round(E.svcPrice(C, lvlId, band.id, 'specialist', false, pg) -
                           E.svcPrice(C, lvlId, band.id, 'standard', false, pg));
+    var on = basisIsGuess() ? ' on a full service' : '';
     var h = '<div class="kq-oil"><label class="kq-label">Which oil?</label>' +
-      '<div class="kq-pills">' +
-      '<button type="button" class="kq-pill' + (S.oil === 'standard' ? ' on' : '') + '" data-act="oil" data-v="standard">Standard</button>' +
-      '<button type="button" class="kq-pill' + (S.oil === 'specialist' ? ' on' : '') + '" data-act="oil" data-v="specialist">' +
-      esc(O.specialist_brand) + ' specialist <i>+' + money(Math.round(diff)) + '</i></button></div>';
+      '<div class="kq-pills kq-choice">' +
+      '<button type="button" class="kq-pill kq-ccopt' + (S.oil === 'standard' ? ' on' : '') +
+      '" data-act="oil" data-v="standard"><b>Standard</b>' +
+      '<small>Matched to your engine&rsquo;s grade and meets the manufacturer&rsquo;s minimum. ' +
+      'A perfectly good service.</small></button>' +
+      '<button type="button" class="kq-pill kq-ccopt' + (S.oil === 'specialist' ? ' on' : '') +
+      '" data-act="oil" data-v="specialist"><b>' + esc(O.specialist_brand) +
+      ' specialist <span class="kq-rec">what we&rsquo;d use</span></b>' +
+      '<small>Holds its protection longer between services. It is what we run in our own ' +
+      'vehicles, and all we put in a KITH service.</small>' +
+      '<i>+' + money(Math.round(diff)) + esc(on) + '</i></button></div>';
     if (S.oil === 'standard') {
       h += '<p class="kq-oiladvice"><b>We\u2019d point you at the ' + esc(O.specialist_brand) + ' grade.</b> ' +
         'It holds its protection longer between services, which matters most on turbocharged and ' +
-        'direct-injection engines \u2014 most cars built in the last ten years. It is ' + money(Math.round(diff)) +
-        ' more on a ' + band.litres + '-litre fill and it is what we run in our own vehicles. ' +
+        'direct-injection engines \u2014 most cars built in the last ten years. It is ' +
+        money(O.specialist_uplift_ex_vat_per_litre) + ' a litre more, so ' + money(Math.round(diff)) +
+        ' on your ' + band.litres + '-litre fill, and it is what we run in our own vehicles. ' +
         'Standard oil is a perfectly safe service and meets the manufacturer\u2019s minimum.</p>';
     } else if (S.oil === 'specialist') {
       h += '<p class="kq-oilnote">' + esc(O.specialist_brand) + ' specialist grade, ' + band.litres + ' litres. ' +
         'We confirm the exact specification your engine needs before we fill it.</p>';
-    } else {
-      h += '<p class="kq-help">Pick one and the range above becomes a single price.</p>';
     }
+    // No prompt in this block: the parts question above already carries one, and the same
+    // sentence twice on a page this short reads as a mistake.
     return h + '</div>';
   }
 
@@ -581,7 +703,6 @@
       var jobs = C.jobs.filter(function (j) { return j.cat === g.id; });
       if (!jobs.length) return;
       h += '<h3 class="kq-sub">' + esc(g.label) + '</h3>';
-      if (g.id === 'servicing') h += engineSizeUI();
       h += '<div class="kq-jobs">' + jobs.map(function (j) {
         var isSvc = SERVICE_IDS.indexOf(j.id) !== -1;
         var on = S.mech.indexOf(j.id) !== -1;
@@ -598,14 +719,32 @@
         }
         return '<label class="kq-job' + (on ? ' on' : '') + '"><input type="checkbox" value="' + j.id + '"' + (on ? ' checked' : '') + '/><span>' + esc(j.name) + '</span><em>' + esc(hint) + '</em></label>';
       }).join('') + '</div>';
-      if (g.id === 'servicing') h += partsUI() + oilUI() + addonUI() + motBundleUI();
+      if (g.id === 'servicing') h += addonUI() + motBundleUI();
     });
-    var svcPicked = S.mech.some(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
-    var blocked = !S.mech.length || (svcPicked && !svcBandKnown());
-    var label = !S.mech.length ? 'Pick at least one'
-              : (svcPicked && !svcBandKnown()) ? 'Tell us the engine size first'
-              : 'Show my price (' + S.mech.length + ')';
-    return h + nav('car', 'to-estimate', label, blocked);
+    // No gate on engine size any more: it is derived from the car size the customer has already
+    // given, and confirmed on the next page. The guard that used to sit here existed because an
+    // unknown engine size silently dropped the service and left a £21 MOT standing on its own -
+    // which cannot happen now the size is always known.
+    var label = !S.mech.length ? 'Pick at least one' : 'Next (' + S.mech.length + ')';
+    return h + nav('car', 'to-estimate', label, !S.mech.length);
+  }
+
+  /* How the work gets done, on a page of its own after the job card.
+     This lived inline twice and was wrong both times: buried under the job list it was missed,
+     and hoisted above it the customer met three questions before the thing they came to read.
+     On its own page, after Next, each question gets asked once and the job list stays clean. */
+  /* Only servicing prices move on oil, parts and engine size, so only a service earns this page.
+     Someone here for brake pads goes straight from the job card to their price. */
+  function optionsNeeded() {
+    return S.flow === 'mechanical' &&
+      S.mech.some(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
+  }
+
+  function viewOptions() {
+    return '<h2 class="kq-h">How would you like it done?</h2>' +
+      '<p class="kq-help">Two quick choices, then your price.</p>' +
+      '<div class="kq-basis">' + engineSizeUI() + partsUI() + oilUI() + '</div>' +
+      nav('build', 'to-estimate', 'Show my price');
   }
 
   function viewTyres() {
@@ -831,241 +970,20 @@
     if (S.flow !== 'mechanical') return Promise.resolve();
     var want = S.mech.filter(function (id) { var j = E.findJob(C, id); return j && j.ai && !S.ai[id]; });
     if (!want.length || !S.vehicle || !S.vehicle.make) return Promise.resolve();
-    return post('/api/estimate', { vehicle: S.vehicle, model: S.model, band: S.band, jobs: want }, 12000).then(function (r) {
+    /* Eight seconds, not twelve. This call only sharpens the wording on a few jobs, and the
+       customer is watching a spinner for every second of it. Long enough for a healthy answer,
+       short enough that a sick endpoint is a pause rather than an abandonment. */
+    return post('/api/estimate', { vehicle: S.vehicle, model: S.model, band: S.band, jobs: want }, 8000).then(function (r) {
       if (r && r.jobs) Object.keys(r.jobs).forEach(function (id) {
         var a = r.jobs[id];
         if (a && typeof a === 'object') { a.note = E.safeNote(a.note); S.ai[id] = a; }   // filtered again here, not just server-side
       });
     });
   }
-  // The KITH pricing Brain — HaynesPro SRTs + SOP v8.0 + AI fallback. Mechanical
-  // flow only (bodywork / recovery / tuning use their own catalogue bands).
-  // We still compute the local estimate first so the customer sees a number
-  // instantly; the Brain's result overwrites S.brainRange + swaps into the
-  // headline figure when it lands (usually 3–10s). If Brain fails or the flow
-  // isn't mechanical, local estimate stays as the authoritative on-page figure.
-  var BRAIN_URL = 'https://mxyrxyhvjndgjqupgstu.supabase.co/functions/v1/brain';
-  var BRAIN_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14eXJ4eWh2am5kZ2pxdXBnc3R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMTMyNjgsImV4cCI6MjA5Nzc4OTI2OH0.z7F_sUqx56bIcBLxjWFJSP3rT1jhNPAL9_1SWZ7cUog';
-  function brainComplaint() {
-    // Build a natural-language complaint from the picked jobs + model, so the
-    // Brain's identify step has what it needs.
-    var bits = S.lines && S.lines.length
-      ? S.lines.map(function (l) { return l.name; }).filter(Boolean)
-      : [];
-    return bits.join(', ') || (FLOWS[S.flow] ? FLOWS[S.flow].label : 'mechanical work');
-  }
-  function fetchBrain() {
-    if (S.flow !== 'mechanical') { S.brainRange = null; S.brainTried = true; return Promise.resolve(); }
-    if (!S.vehicle || !S.vehicle.make) { S.brainRange = null; S.brainTried = true; return Promise.resolve(); }
-    var complaint = brainComplaint();
-    if (!complaint) { S.brainRange = null; S.brainTried = true; return Promise.resolve(); }
-    S.brainLoading = true;
-    S.brainTried = true;
-    S.brainStartedAt = Date.now();
-    S.brainTargetSeconds = 8;
-    var vehicle = [S.vehicle.yearOfManufacture, S.vehicle.make, S.model || '', S.vehicle.fuelType || ''].filter(Boolean).join(' ');
-    return fetch(BRAIN_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': BRAIN_KEY, 'Authorization': 'Bearer ' + BRAIN_KEY,
-        'x-caller': 'website'
-      },
-      body: JSON.stringify({
-        customer_type: 'retail',
-        vehicle: vehicle,
-        reg: (S.vehicle && S.vehicle.registrationNumber) || '',
-        complaint: complaint
-      })
-    }).then(function (r) {
-      if (!r.ok) { console.warn('[KITH Brain] HTTP ' + r.status); return null; }
-      return r.json();
-    }).then(function (d) {
-      S.brainLoading = false;
-      if (d && d.error) console.warn('[KITH Brain] error:', d.error);
-      if (d && d.total_range && d.total_range.hi > 0) {
-        S.brainRange = { lo: Math.round(d.total_range.lo), hi: Math.round(d.total_range.hi), confidence: d.confidence || 'low', allFirm: !!d.all_firm, usedFallback: !!d.used_ai_fallback };
-      } else { S.brainRange = null; }
-    }).catch(function (e) {
-      console.warn('[KITH Brain] network:', e && e.message);
-      S.brainLoading = false; S.brainRange = null;
-    });
-  }
-
-  // Countdown view shown while the Brain works out the price (mechanical only).
-  // Starts at 8 seconds. If the Brain takes longer, the number holds at 1 and
-  // the copy switches to "almost there". If Brain finally returns, viewEstimate
-  // re-renders normally; if it fails, we fall back to the local estimate.
-  var BRAIN_TICK = null;
-  function startBrainTicker() {
-    if (BRAIN_TICK) return;
-    BRAIN_TICK = setInterval(function () {
-      if (!S.brainLoading) { stopBrainTicker(); render(); return; }
-      var elapsed = Math.floor((Date.now() - (S.brainStartedAt || Date.now())) / 1000);
-      var left = Math.max(0, (S.brainTargetSeconds || 8) - elapsed);
-      var n = document.getElementById('kq-countdown-n');
-      var l = document.getElementById('kq-countdown-label');
-      if (n) n.textContent = left > 0 ? left : 1;
-      if (l && left <= 0) l.textContent = 'Almost there…';
-    }, 250);
-  }
-  function stopBrainTicker() { if (BRAIN_TICK) { clearInterval(BRAIN_TICK); BRAIN_TICK = null; } stopSnake(); }
-  function brainCountdownView() {
-    var elapsed = S.brainStartedAt ? Math.floor((Date.now() - S.brainStartedAt) / 1000) : 0;
-    var left = Math.max(0, (S.brainTargetSeconds || 8) - elapsed);
-    // Kick off the ticker AND the mini-game after the DOM is painted.
-    setTimeout(function () { startBrainTicker(); startSnake(); }, 50);
-    return '<div class="kq-brain-count" role="status">' +
-             '<p class="kq-brain-count-lead">Working out your estimate for <strong>' + esc(vehicleName()) + '</strong>' +
-               (S.vehicle && S.vehicle.registrationNumber ? ' <span class="kq-mini-plate">' + esc(S.vehicle.registrationNumber) + '</span>' : '') +
-             '</p>' +
-             '<div class="kq-game-wrap">' +
-               '<div class="kq-game-head">' +
-                 '<div class="kq-game-timer"><span id="kq-countdown-n">' + (left > 0 ? left : 1) + '</span><small>sec</small></div>' +
-                 '<div class="kq-game-title"><strong>Pit-stop Snake</strong><span id="kq-game-score">Score 0</span></div>' +
-                 '<div class="kq-game-best"><span>Best</span><strong id="kq-game-best">' + (S.snakeBest || 0) + '</strong></div>' +
-               '</div>' +
-               '<canvas id="kq-snake" width="320" height="320" tabindex="0" aria-label="Snake mini-game — swipe or use arrow keys"></canvas>' +
-               '<div class="kq-game-help" id="kq-countdown-label">Swipe or use ← ↑ ↓ → to collect the bolts while we price your car</div>' +
-             '</div>' +
-           '</div>';
-  }
-
-  // ── PIT-STOP SNAKE (plays during the Brain wait) ────────────────────────
-  // Tiny, no-framework canvas snake. Auto-plays if the customer doesn't
-  // touch anything — a demo snake wandering so the screen doesn't feel dead.
-  // Takes over on first input. Cleans up on view change.
-  var SNAKE = null;
-  function stopSnake() {
-    if (!SNAKE) return;
-    cancelAnimationFrame(SNAKE.raf);
-    if (SNAKE.onkey) document.removeEventListener('keydown', SNAKE.onkey);
-    SNAKE = null;
-  }
-  function startSnake() {
-    stopSnake();
-    var c = document.getElementById('kq-snake'); if (!c) return;
-    var ctx = c.getContext('2d');
-    var GRID = 16, CELLS = 20, W = GRID * CELLS;  // canvas 320x320
-    // Resize for retina
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    c.width = W * dpr; c.height = W * dpr; c.style.width = W + 'px'; c.style.height = W + 'px';
-    ctx.scale(dpr, dpr);
-
-    var s = SNAKE = {
-      snake: [{x:10,y:10},{x:9,y:10},{x:8,y:10}],
-      dir: {x:1,y:0}, nextDir: {x:1,y:0},
-      food: spawnFood([{x:10,y:10},{x:9,y:10},{x:8,y:10}]),
-      score: 0, best: S.snakeBest || 0, auto: true, lastStep: 0,
-      stepMs: 140, dead: false, raf: 0
-    };
-    function spawnFood(snake){ var p, tries=0; do { p = {x:(Math.random()*CELLS)|0, y:(Math.random()*CELLS)|0}; tries++; } while (snake.some(seg=>seg.x===p.x&&seg.y===p.y) && tries<200); return p; }
-
-    function turn(dx,dy){ if (dx === -s.dir.x && dy === -s.dir.y) return; s.nextDir = {x:dx,y:dy}; s.auto = false; }
-    s.onkey = function(e){
-      var k = e.key;
-      if (k==='ArrowUp'||k==='w'||k==='W') { turn(0,-1); e.preventDefault(); }
-      else if (k==='ArrowDown'||k==='s'||k==='S') { turn(0,1); e.preventDefault(); }
-      else if (k==='ArrowLeft'||k==='a'||k==='A') { turn(-1,0); e.preventDefault(); }
-      else if (k==='ArrowRight'||k==='d'||k==='D') { turn(1,0); e.preventDefault(); }
-    };
-    document.addEventListener('keydown', s.onkey);
-    c.addEventListener('click', function(){ c.focus(); });
-    // Touch: swipe
-    var tStart = null;
-    c.addEventListener('touchstart', function(e){ var t = e.touches[0]; tStart = {x:t.clientX,y:t.clientY}; }, {passive:true});
-    c.addEventListener('touchend', function(e){
-      if (!tStart) return;
-      var t = e.changedTouches[0], dx = t.clientX - tStart.x, dy = t.clientY - tStart.y;
-      if (Math.abs(dx) > Math.abs(dy)) { if (Math.abs(dx) > 15) turn(dx>0?1:-1, 0); }
-      else { if (Math.abs(dy) > 15) turn(0, dy>0?1:-1); }
-      tStart = null;
-    }, {passive:true});
-
-    function step() {
-      // Auto-pilot: wander toward food so the snake isn't dead on screen
-      if (s.auto) {
-        var head = s.snake[0], best = s.dir, bestD = Infinity;
-        [[1,0],[-1,0],[0,1],[0,-1]].forEach(function(d){
-          if (d[0]===-s.dir.x&&d[1]===-s.dir.y) return;
-          var nx = head.x+d[0], ny = head.y+d[1];
-          if (nx<0||nx>=CELLS||ny<0||ny>=CELLS) return;
-          if (s.snake.some(seg=>seg.x===nx&&seg.y===ny)) return;
-          var dd = Math.abs(nx - s.food.x) + Math.abs(ny - s.food.y);
-          if (dd < bestD) { bestD = dd; best = {x:d[0],y:d[1]}; }
-        });
-        s.nextDir = best;
-      }
-      s.dir = s.nextDir;
-      var head = s.snake[0], nx = head.x + s.dir.x, ny = head.y + s.dir.y;
-      // Wrap on walls (friendlier than game over)
-      if (nx<0) nx = CELLS-1; if (nx>=CELLS) nx = 0;
-      if (ny<0) ny = CELLS-1; if (ny>=CELLS) ny = 0;
-      // Self-hit → reset with current score as best
-      if (s.snake.some(function(seg){ return seg.x===nx && seg.y===ny; })) {
-        if (s.score > s.best) { s.best = s.score; S.snakeBest = s.best; try { localStorage.setItem('kq_snake_best', String(s.best)); } catch(e){} }
-        s.snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}]; s.dir = {x:1,y:0}; s.nextDir = {x:1,y:0};
-        s.food = spawnFood(s.snake); s.score = 0; s.auto = true; return;
-      }
-      s.snake.unshift({x:nx,y:ny});
-      if (nx === s.food.x && ny === s.food.y) {
-        s.score++;
-        s.food = spawnFood(s.snake);
-        s.stepMs = Math.max(70, s.stepMs - 2);
-      } else {
-        s.snake.pop();
-      }
-      // HUD
-      var sc = document.getElementById('kq-game-score'); if (sc) sc.textContent = 'Score ' + s.score;
-      var bs = document.getElementById('kq-game-best'); if (bs) bs.textContent = s.best;
-    }
-
-    function draw() {
-      ctx.fillStyle = '#1B1E24'; ctx.fillRect(0,0,W,W);
-      // Grid dots
-      ctx.fillStyle = 'rgba(216,163,43,0.08)';
-      for (var i=0;i<CELLS;i++) for (var j=0;j<CELLS;j++) ctx.fillRect(i*GRID+GRID/2-1, j*GRID+GRID/2-1, 2, 2);
-      // Food — gold bolt
-      ctx.fillStyle = '#D8A32B';
-      ctx.beginPath();
-      ctx.arc(s.food.x*GRID + GRID/2, s.food.y*GRID + GRID/2, GRID/2 - 3, 0, Math.PI*2);
-      ctx.fill();
-      // Snake — darker gold body, brighter head
-      s.snake.forEach(function(seg, i) {
-        ctx.fillStyle = i === 0 ? '#F0C04A' : 'rgba(216,163,43,' + (0.95 - Math.min(0.55, i*0.015)) + ')';
-        var pad = i === 0 ? 1 : 2;
-        var r = 3;
-        var x = seg.x*GRID + pad, y = seg.y*GRID + pad, w = GRID - pad*2, h = GRID - pad*2;
-        ctx.beginPath();
-        ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-        ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-        ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-        ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y); ctx.closePath(); ctx.fill();
-      });
-    }
-
-    function loop(t) {
-      if (!SNAKE) return;
-      if (!s.lastStep) s.lastStep = t;
-      if (t - s.lastStep >= s.stepMs) { step(); s.lastStep = t; }
-      draw();
-      s.raf = requestAnimationFrame(loop);
-    }
-    // Restore best from localStorage
-    try { var b = parseInt(localStorage.getItem('kq_snake_best') || '0', 10); if (b > s.best) s.best = b; } catch(e){}
-    S.snakeBest = s.best;
-    s.raf = requestAnimationFrame(loop);
-  }
 
   /* ---------- step: estimate ---------- */
   function viewEstimate() {
     if (!S.lines.length) return '<div class="kq-loading" role="status"><span class="kq-spin"></span>Working out your price…</div>';
-    // For mechanical, the Brain is the only source of the headline figure.
-    // While it's thinking, show a countdown rather than the local estimate —
-    // one number the customer sees, no flash.
-    if (S.flow === 'mechanical' && !S.brainRange && (S.brainLoading || !S.brainTried)) {
-      return brainCountdownView();
-    }
     var t = S.totals, offer = coupon(), eligible = E.couponEligible(C, t, t.unpriced > 0) && !S.offerGone;
     var h = '<div class="kq-result">';
     if (S.power) h += gauge(S.power);
@@ -1081,16 +999,10 @@
         if (l.blend === true) tags.push('Near the edge, so blended into the next panel');
         else if (l.blend === false) tags.push('Well inside the panel, no blending needed');
         return '<li class="kq-line"><div><strong>' + esc(l.name) + '</strong>' + (l.note ? '<p>' + esc(l.note) + '</p>' : '') +
-          (tags.length ? '<small>' + tags.join(' · ') + '</small>' : '') + breakdown(l) + '</div>' + price + '</li>';
+          (tags.length ? '<small>' + tags.join(' · ') + '</small>' : '') + includesFor(l) + breakdown(l) + '</div>' + price + '</li>';
       }).join('') + '</ul>';
     if (t.count) {
-      // Brain's range wins for mechanical. Local range for bodywork/recovery/tuning.
-      var bRange = S.brainRange && S.brainRange.hi > 0 ? S.brainRange : null;
-      var hLow  = bRange ? bRange.lo  : t.low;
-      var hHigh = bRange ? bRange.hi : t.high;
-      var hLabel = 'Your estimate' + (!bRange && t.unpriced ? ' so far' : '');
-      var hTag = bRange ? '<small class="kq-brain-tag">Priced using KITH’s live pricing system' + (bRange.allFirm ? ' (all lines firm from our history)' : '') + '</small>' : '';
-      h += '<div class="kq-total"><span>' + hLabel + '</span><b>' + range(hLow, hHigh) + '</b>' + hTag + '</div>';
+      h += '<div class="kq-total"><span>Your estimate' + (t.unpriced ? ' so far' : '') + '</span><b>' + rangeOf(t) + '</b></div>';
       if (t.showDealer) {
         var dl2 = dealerLabel();
         h += '<div class="kq-dealer"><span>' + esc(dl2.a + ' ' + dl2.text) + ', typically</span><s>~' + money(t.dealer) + '</s><em>Around ' +
@@ -1111,7 +1023,7 @@
           (t.low === t.high
             ? 'This is a fixed-method repair, so it is one figure rather than a span.'
             : 'Bodywork moves with how deep the damage goes and what sits behind the panel, which is why we give you the span we stand behind rather than a figure that changes later.') +
-          ' We also decide the repair method, so you don&rsquo;t have to. No deposit, paid on collection. 3-month workmanship warranty. Courtesy car available at &pound;36 a day while your car is with us.</p>'
+          ' We also decide the repair method, so you don&rsquo;t have to. No deposit, paid on collection. 12-month workmanship warranty. Courtesy car available at &pound;36 a day while your car is with us.</p>'
         : '<p class="kq-small">Includes VAT, parts and labour, and it&rsquo;s worked out with the same pricing rules our estimators use, so <b>your job will land inside this range</b>. Book in and we&rsquo;ll send the exact figure for your reg in writing before any work starts. If anything we find changes it, you decide whether to go ahead, and you owe us nothing for looking. 3-month workmanship warranty.</p>') +
       '</div>' +
       '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="build">Change the job</button>' +
@@ -1191,7 +1103,7 @@
   function summaryStrip() {
     var t = S.totals;
     return '<div class="kq-strip"><div><b>' + esc(FLOWS[S.flow].label) + '</b><span>' + esc(vehicleName()) + '</span></div>' +
-      (t && t.count ? '<div class="kq-strip-p"><b>' + range(t.low, t.high) + '</b>' + (!S.offerGone && E.couponEligible(C, t, t.unpriced > 0) ? '<span>less ' + money(coupon().amount) + ' if booked now <i id="kq-timer">' + fmtLeft() + '</i></span>' : '') + '</div>' : '') + '</div>';
+      (t && t.count ? '<div class="kq-strip-p"><b>' + rangeOf(t) + '</b>' + (!S.offerGone && E.couponEligible(C, t, t.unpriced > 0) ? '<span>less ' + money(coupon().amount) + ' if booked now <i id="kq-timer">' + fmtLeft() + '</i></span>' : '') + '</div>' : '') + '</div>';
   }
 
   /* ---------- step: calendar ---------- */
@@ -1296,10 +1208,27 @@
   }
   function sendLead() {
     var d = leadPayload(), id = S.lead.id || (S.lead.id = 'web-' + Date.now().toString(36));
-    // Email send was removed Nov 2026 — the triage AI's ping (WhatsApp /
-    // push on the service adviser's phone) + the CRM board entry is the
-    // notification path now. No email needed.
-    var email = Promise.resolve('disabled');
+    var fd = new FormData();
+    fd.append('access_key', WEB3FORMS_KEY);
+    fd.append('subject', (d.priority === 'urgent' ? 'URGENT RECOVERY' : d.priority === 'hot' ? 'BOOKED' : 'Estimate') + ': ' + d.service + ' · ' + vehicleName() + (d.webEstimate ? ' · ' + range(d.webEstimate.lo, d.webEstimate.hi) : ''));
+    fd.append('from_name', 'KITH website instant quote');
+    fd.append('Name', d.name); fd.append('Phone', d.phone);
+    if (d.email) { fd.append('email', d.email); fd.append('Email', d.email); }
+    fd.append('Registration', d.reg || '-');
+    fd.append('Vehicle', [d.vehicle.year, d.vehicle.make, d.vehicle.model].filter(Boolean).join(' ') + ' · ' + d.vehicle.size);
+    fd.append('Service', d.service);
+    fd.append('Quote', d.jobs.map(function (j) { return '• ' + j.name + (typeof j.low === 'number' ? ': ' + range(j.low, j.high) : ': to confirm'); }).join('\n') + (d.webEstimate ? '\nEstimate: ' + range(d.webEstimate.lo, d.webEstimate.hi) : ''));
+    fd.append('Slot', d.requestedSlot ? d.requestedSlot.date + ' ' + d.requestedSlot.time + ' (' + d.requestedSlot.calendar + ')' : 'not picked');
+    fd.append('Collection', d.collection ? 'Yes, please collect' : 'No');
+    if (d.vehicle.motExpiry) {
+      var md = motDays(S.vehicle);
+      fd.append('MOT', d.vehicle.motExpiry + (md === null ? '' :
+        md < 0 ? ' — EXPIRED ' + Math.abs(md) + ' days ago' : ' — ' + motHowLong(md)) +
+        (d.wantMot ? ' · CUSTOMER WANTS THE MOT DOING THIS VISIT' : ''));
+    }
+    fd.append('Discount', d.coupon ? d.coupon.code + ' · £' + d.coupon.amount : 'none');
+    fd.append('Price book', d.priceBookVersion);
+    var email = fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd }).then(function (r) { return r.json(); }).then(function (j) { return !!j.success; }).catch(function () { return false; });
     var crm = Promise.resolve('not connected');
     if (C.crm && C.crm.supabase_url && C.crm.anon_key) {
       crm = fetch(C.crm.supabase_url.replace(/\/$/, '') + '/rest/v1/' + (C.crm.table || 'jobs') + '?on_conflict=id', {
@@ -1308,42 +1237,13 @@
         body: JSON.stringify({ id: id, data: d, updated_at: new Date().toISOString() })
       }).then(function (r) { return r.ok ? 'sent' : 'failed ' + r.status; }).catch(function () { return 'failed'; });
     }
-    // ── Parallel POST to KITH's unified inbox (triage AI picks it up and
-    // fires the rapid-fire SRT-informed range on WhatsApp within seconds).
-    // The page-side range above is still shown instantly from the client
-    // catalogue; the Brain's range lands on the customer's WhatsApp.
-    var jobsBrief = d.jobs.map(function (j) { return '• ' + j.name + (typeof j.low === 'number' ? ': ' + range(j.low, j.high) : ''); }).join('\n');
-    var combinedText = d.service + '\n' + jobsBrief +
-      (d.webEstimate ? '\nWebsite estimate: ' + range(d.webEstimate.lo, d.webEstimate.hi) : '') +
-      (d.requestedSlot ? '\nWants: ' + d.requestedSlot.date + ' ' + d.requestedSlot.time + ' (' + d.requestedSlot.calendar + ')' : '');
-    var inbox = fetch('https://mxyrxyhvjndgjqupgstu.supabase.co/functions/v1/inbox-ingest', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14eXJ4eWh2am5kZ2pxdXBnc3R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMTMyNjgsImV4cCI6MjA5Nzc4OTI2OH0.z7F_sUqx56bIcBLxjWFJSP3rT1jhNPAL9_1SWZ7cUog',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14eXJ4eWh2am5kZ2pxdXBnc3R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMTMyNjgsImV4cCI6MjA5Nzc4OTI2OH0.z7F_sUqx56bIcBLxjWFJSP3rT1jhNPAL9_1SWZ7cUog',
-        'x-caller': 'kithcars_website_form'
-      },
-      body: JSON.stringify({
-        channel: 'website',
-        sender_name: d.name,
-        sender_phone: d.phone,
-        sender_email: d.email || '',
-        reg: d.reg || '',
-        year: d.vehicle.year || null,
-        make: d.vehicle.make || '',
-        model: d.vehicle.model || '',
-        message_text: combinedText,
-        context_hints: 'Customer has already seen a website estimate of ' + (d.webEstimate ? range(d.webEstimate.lo, d.webEstimate.hi) : '(not yet calculated)') + '. Rapid-fire a brain-based range on WhatsApp to confirm.'
-      })
-    }).then(function (r) { return r.ok ? 'sent' : 'failed ' + r.status; }).catch(function () { return 'failed'; });
-
-    return Promise.all([email, crm, inbox]).then(function (r) { return { emailed: r[0], crm: r[1], inbox: r[2] }; });
+    return Promise.all([email, crm]).then(function (r) { return { emailed: r[0], crm: r[1] }; });
   }
 
   /* ---------- render + events ---------- */
   function render() {
     var body = S.step === 'flow' ? viewFlow() : S.step === 'car' ? viewCar() : S.step === 'build' ? viewBuild() :
+      S.step === 'options' ? viewOptions() :
       S.step === 'estimate' ? viewEstimate() : S.step === 'details' ? viewDetails() : S.step === 'calendar' ? viewCalendar() : viewDone();
     root.innerHTML = (C.draft ? '<p class="kq-draft">Draft prices: still being checked by KITH.</p>' : '') +
       (S.step === 'flow' ? '' : progress()) + '<div class="kq-body">' + body + '</div>';
@@ -1481,8 +1381,10 @@
     else if (a === 'add-mot') { if (S.mech.indexOf('mot') === -1) S.mech.push('mot'); track('quote_add_mot'); save(); render(); }
     // Outside the mechanical flow there is no job card to add it to, so record the intent and
     // put it on the booking the workshop receives.
-    else if (a === 'ccband') { S.ccBand = v; save(); render(); }
-    else if (a === 'cc-edit') { S.ccBand = null; S.cc = null; save(); render(); }
+    else if (a === 'ccband') { S.ccBand = v; S.ccOpen = false; save(); render(); }
+    // Opens the picker rather than wiping what we have: the customer is checking an assumption,
+    // and clearing it first would blank the prices they are standing in front of.
+    else if (a === 'cc-edit') { S.ccOpen = true; save(); render(); }
     else if (a === 'oil') { S.oil = v; track('quote_oil', { grade: v }); save(); render(); }
     else if (a === 'parts') { S.parts = v; track('quote_parts', { grade: v }); save(); render(); }
     else if (a === 'bundle-mot') {
@@ -1493,20 +1395,21 @@
     else if (a === 'flag-mot') { S.wantMot = true; track('quote_add_mot', { flow: S.flow }); save(); render(); }
     else if (a === 'to-build') { readCar(); go('build'); }
     else if (a === 'to-estimate') {
-      // Compute from the local catalogue FIRST so S.lines is populated and the
-      // Brain countdown view renders straight away. Then fire the Brain +
-      // fetchAi in parallel — neither blocks the UI. If fetchAi returns
-      // something useful, we re-compute and re-render; same for the Brain.
-      readBuild(); S.brainRange = null; S.brainTried = false;
-      compute();
-      if (!S.expires) S.expires = Date.now() + (coupon().hold_minutes || 15) * 60000;
-      track('quote_price', { value: S.totals ? S.totals.low : 0, currency: 'GBP', flow: S.flow });
-      go('estimate');
-      // Kick the Brain IMMEDIATELY (its countdown starts now)
-      fetchBrain().then(function () { save(); render(); });
-      // fetchAi runs for any "AI job" tags in the local catalogue — nice to have,
-      // not a blocker for the Brain's headline figure.
-      fetchAi().then(function () { compute(); save(); render(); }).catch(function(){});
+      readBuild();
+      // One page between the job card and the price, and only where it has something to ask.
+      if (S.step === 'build' && optionsNeeded()) { go('options'); return; }
+      S.lines = []; go('estimate');
+      /* The AI pass sharpens a few job notes; it is not where the price comes from. When it was
+         allowed to reject - the endpoint down, a timeout, anything - nothing after it ran, so
+         compute() never happened and the customer sat on "Working out your price..." forever with
+         a perfectly good rate-card figure sitting uncalculated. Swallowing the failure here means
+         the price always arrives, with or without the embellishment. */
+      fetchAi().catch(function () {}).then(function () {
+        compute();
+        if (!S.expires) S.expires = Date.now() + (coupon().hold_minutes || 15) * 60000;
+        track('quote_price', { value: S.totals.low, currency: 'GBP', flow: S.flow });
+        save(); render();
+      });
     }
     else if (a === 'to-details') { track('quote_book_click'); go('details'); }
     else if (a === 'day') { S.day = v; S.time = null; save(); render(); }

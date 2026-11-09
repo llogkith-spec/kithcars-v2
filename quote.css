@@ -365,6 +365,38 @@
 .kq-parts { margin: .9rem 0 .2rem; }
 .kq-parts .kq-pill i { font-style: normal; opacity: .75; margin-left: .3rem; }
 .kq-partsnote { margin: .6rem 0 0; font-size: .86rem; line-height: 1.5; color: var(--kq-muted, #6b6b73); }
+.kq-partsadvice {
+  margin: .6rem 0 0; padding: .7rem .85rem; border-radius: 10px;
+  background: #fbf6ec; border-left: 3px solid #b8862a; color: #5c441a;
+  font-size: .88rem; line-height: 1.5;
+}
+.kq-partsadvice b { color: inherit; }
+
+/* The three questions that decide every servicing figure, asked before the job list rather than
+   buried under it. Boxed together so it reads as one short preamble, not three stray questions. */
+.kq-basis {
+  margin: .2rem 0 1.1rem; padding: .9rem 1rem .4rem;
+  border: 1px solid var(--kq-line, #e6e6ea); border-radius: 14px; background: #fcfcfd;
+}
+.kq-basis > div:first-child { margin-top: 0; }
+
+/* A choice with room to explain itself: the headline people recognise, the detail under it, and
+   the price difference last. Used for engine size, oil and parts alike so the three read as one
+   set of questions. */
+#kq .kq-ccopt { padding: 11px 14px; align-content: start; }
+#kq .kq-ccopt b { display: block; }
+#kq .kq-ccopt small { display: block; margin-top: 1px; }
+#kq .kq-ccopt i {
+  display: block; margin: 4px 0 0 0; font-style: normal; font-weight: 700;
+  font-size: 12.5px; opacity: .8;
+}
+#kq .kq-ccopts .kq-ccopt i { font-weight: 500; opacity: .55; }
+#kq .kq-rec {
+  display: inline-block; margin-left: .4rem; padding: 1px 7px; border-radius: 999px;
+  background: #1f4620; color: #fff; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .02em; text-transform: uppercase; vertical-align: 1px;
+}
+#kq .kq-ccopt.on .kq-rec { background: #fff; color: var(--kq-ink, #15151a); }
 
 /* Service add-ons */
 .kq-addons { margin: .9rem 0 .2rem; }
@@ -380,30 +412,21 @@
 .kq-addon small { display: block; margin-top: .15rem; font-size: .8rem; line-height: 1.45; color: var(--kq-muted, #6b6b73); }
 .kq-addon em { flex: 0 0 auto; font-style: normal; font-weight: 600; font-size: .9rem; }
 
-/* Brain pricing badge — appears under the headline estimate once the live
-   pricing system has refined the local estimate. */
-.kq-brain-tag{display:block;margin-top:6px;font-size:11px;color:#8a7a3a;letter-spacing:.3px;font-weight:500}
-.kq-brain-tag.kq-brain-loading{color:#a09880;font-style:italic}
-
-/* Brain countdown — shown while the pricing system works out the number. */
-.kq-brain-count{text-align:center;padding:36px 20px;max-width:440px;margin:0 auto}
-.kq-brain-count-lead{font-size:14px;color:#A8B1BD;margin:0 0 20px;line-height:1.5}
-.kq-brain-count-ring{position:relative;width:140px;height:140px;margin:14px auto}
-.kq-brain-count-ring .kq-spin-lg{position:absolute;inset:0;width:140px;height:140px;border:3px solid rgba(216,163,43,.15);border-top-color:#D8A32B;border-radius:50%;animation:kq-spin 1.2s linear infinite}
-.kq-brain-count-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;font-weight:500;font-size:60px;color:#D8A32B;line-height:1}
-.kq-brain-count-sub{font-size:13px;color:#EDEFF2;margin:18px 0 6px;font-weight:600;letter-spacing:.3px}
-.kq-brain-count-note{font-size:12px;color:#8a8470;line-height:1.5;margin:14px 0 0;max-width:360px;margin-left:auto;margin-right:auto}
-@keyframes kq-spin{to{transform:rotate(360deg)}}
-
-/* ── Pit-stop Snake mini-game shown during the Brain wait ────────────── */
-.kq-game-wrap{max-width:360px;margin:12px auto 0;background:#0F1217;border:1px solid #2A2F37;border-radius:10px;padding:14px;color:#EDEFF2;font-family:system-ui,-apple-system,sans-serif}
-.kq-game-head{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;margin-bottom:10px;padding:0 4px}
-.kq-game-timer{font-family:Georgia,serif;font-weight:500;color:#D8A32B;font-size:30px;line-height:1;display:flex;align-items:baseline;gap:4px}
-.kq-game-timer small{font-size:10px;color:#8a8470;letter-spacing:1px;text-transform:uppercase;font-family:system-ui,sans-serif}
-.kq-game-title{text-align:center}
-.kq-game-title strong{display:block;font-size:12px;color:#EDEFF2;letter-spacing:1px;text-transform:uppercase;font-weight:700}
-.kq-game-title span{display:block;font-size:11px;color:#A8B1BD;margin-top:2px}
-.kq-game-best{text-align:right;font-size:10px;color:#8a8470;letter-spacing:1px;text-transform:uppercase}
-.kq-game-best strong{display:block;color:#D8A32B;font-size:16px;font-family:Georgia,serif;font-weight:500;margin-top:2px}
-#kq-snake{display:block;margin:0 auto;border-radius:6px;background:#1B1E24;outline:none;max-width:100%;touch-action:none;cursor:crosshair}
-.kq-game-help{font-size:11px;color:#8a8470;text-align:center;margin-top:10px;line-height:1.5}
+/* What a service includes, and how its price was arrived at. Both collapsed: the customer who
+   wants the number gets the number, and the one who wants to check the working can open it. */
+.kq-incl, .kq-breakdown { margin: .45rem 0 0; }
+.kq-incl > summary, .kq-breakdown > summary {
+  cursor: pointer; font-size: .82rem; font-weight: 600;
+  color: var(--kq-muted, #6b6b73); list-style: none; padding: .15rem 0;
+}
+.kq-incl > summary::-webkit-details-marker, .kq-breakdown > summary::-webkit-details-marker { display: none; }
+.kq-incl > summary::before, .kq-breakdown > summary::before { content: "+ "; font-weight: 700; }
+.kq-incl[open] > summary::before, .kq-breakdown[open] > summary::before { content: "– "; }
+.kq-incl ul { margin: .35rem 0 .2rem; padding-left: 1.1rem; }
+.kq-incl li { font-size: .84rem; line-height: 1.55; color: var(--kq-muted, #6b6b73); }
+.kq-breakdown ul { margin: .35rem 0 .2rem; padding: 0; list-style: none; }
+.kq-breakdown li {
+  display: flex; justify-content: space-between; gap: 1rem;
+  font-size: .84rem; line-height: 1.6; color: var(--kq-muted, #6b6b73);
+}
+.kq-breakdown li em { font-style: normal; text-align: right; }

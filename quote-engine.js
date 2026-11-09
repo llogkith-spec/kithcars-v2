@@ -116,8 +116,19 @@
      by id all over the site and the build scripts. Rather than rewrite every caller, those ids
      are answered from the new model here. Callers that pass an engine-size band get that band;
      callers still passing an old size band get the engine size that size usually means. */
+  /* Body size is the only thing we can count on knowing, so it has to stand in for engine size.
+     It is a weak proxy and the old values leaned far too high: "prestige" meant a 2401-3500cc
+     engine, which priced a BMW 118i - a 1.6 - as a three litre. Most prestige cars through the
+     door are 2.0 diesels, most mid-size SUVs are 1.5 to 2.0, and the catalogue's own examples for
+     a family car (Focus 1.5, Golf 1.4, Astra 1.4, Qashqai 1.3) sit in the 1201-1500 band.
+
+     These are therefore the commonest fitment for each body size, not the largest. The customer
+     is always shown what we assumed and can change it in one tap, which is what makes a guess
+     here acceptable at all. */
+  function ccFromCarSize(band) { return LEGACY_BAND_TO_CC[band] || 'cc2000'; }
+
   var LEGACY_BAND_TO_CC = {
-    small: 'cc1200', medium: 'cc2000', large: 'cc2400', prestige: 'cc3500',
+    small: 'cc1200', medium: 'cc1500', large: 'cc2000', prestige: 'cc2000',
     // Vans price by engine size like everything else now; a working van is typically a 2.0.
     van: 'cc2000'
   };
@@ -556,11 +567,50 @@
     var parts = 0;
     for (var i = 0; i < lvl.parts.length; i++) parts += Number(band[lvl.parts[i]]) || 0;
     parts = parts * (Number(grade.parts_multiplier) || 1);
+    /* Castrol is an uplift per litre, not a flat rate. As a flat £16/l it cost £4 a litre more
+       than standard but only £1 more than the OEM grade, so an OEM customer was offered the
+       upgrade for about £6 on a fill - which is not what the oil costs. An uplift makes the
+       promise on screen true whichever parts grade is underneath it: £5 a litre more, every time. */
+    var base = Number(grade.oil_ex_vat_per_litre) || S.oil.standard_ex_vat_per_litre;
     var perLitre = oilGrade === 'specialist'
-      ? S.oil.specialist_ex_vat_per_litre
-      : (Number(grade.oil_ex_vat_per_litre) || S.oil.standard_ex_vat_per_litre);
+      ? base + Number(S.oil.specialist_uplift_ex_vat_per_litre)
+      : base;
     var ex = rate * lvl.hours[bandId] + parts + band.litres * perLitre;
     return Math.round(ex * (1 + cat.vat_rate) * 100) / 100;
+  }
+
+  /* The same service at a main dealer: the identical book hours at their labour rate, and their
+     markup on the same parts and oil. Built from the job rather than a flat multiple, because on
+     a service the hours and the parts list are known exactly, so the comparison is arithmetic
+     rather than assertion.
+
+     Returned only when the gap clears show_if_saving_at_least. A comparison that saves somebody
+     four pounds is not a reason to choose a garage, and printing it reads as though we had to
+     scrape to find one. */
+  function svcDealer(cat, levelId, bandId, oilGrade, partsGradeId, ours) {
+    var D = cat.dealer, S = cat.servicing;
+    if (!D || !ours) return null;
+    var band = svcBandById(cat, bandId), lvl = svcLevel(cat, levelId);
+    if (!band || !lvl) return null;
+
+    var dr = D.labour_rate_inc_vat;
+    var rate = (dr && typeof dr === 'object') ? Number(dr[bandId] || dr.medium) : Number(dr);
+    if (!rate) return null;
+
+    var grade = partsGrade(cat, partsGradeId || S.parts_grade.default);
+    var parts = 0;
+    for (var i = 0; i < lvl.parts.length; i++) parts += Number(band[lvl.parts[i]]) || 0;
+    var base = Number(grade.oil_ex_vat_per_litre) || S.oil.standard_ex_vat_per_litre;
+    var perLitre = oilGrade === 'specialist'
+      ? base + Number(S.oil.specialist_uplift_ex_vat_per_litre) : base;
+
+    // A dealer fits its own parts at its own markup; labour is already inclusive of VAT.
+    var factor = Number(D.parts_factor) || 1;
+    var ex = (parts + band.litres * perLitre) * factor;
+    var dealer = rate * lvl.hours[bandId] + ex * (1 + cat.vat_rate);
+
+    var floor = ours * (1 + (Number(D.show_if_saving_at_least) || 0));
+    return dealer >= floor ? Math.round(dealer / 5) * 5 : null;
   }
 
   /* What the widget shows. Before the customer picks an oil grade the honest answer is a range:
@@ -592,6 +642,16 @@
       hours: lvl.hours[bandId],
       check: lvl.check,
       parts: lvl.parts.slice(),
+      /* What the price is made of, so the estimate can show its working the way it already does
+         for a repair. Named apart from hours/parts above, which carry the rate card's own shapes
+         and are read by other callers. Dealer figure only once a price is actually settled -
+         comparing a range to a single number tells the customer nothing. */
+      rateIncVat: Math.round(cat.servicing.rate_ex_vat * (1 + cat.vat_rate) * 100) / 100,
+      hoursCharged: lvl.hours[bandId],
+      // Absent, not null, when there is no comparison worth printing: every caller and the test
+      // suite read "no dealer key" as "no gap to show", and a null is not the same statement.
+      dealer: chosen === null ? undefined
+        : (svcDealer(cat, levelId, bandId, opts.oil, opts.parts, chosen) || undefined),
       // The two ends of the range, kept so the widget can explain what moves the price.
       standard: std,
       specialist: spec,
@@ -599,7 +659,9 @@
         ? 'Lower figure is aftermarket parts and standard oil; upper is OEM parts with ' +
           cat.servicing.oil.specialist_brand + ' specialist grade. Choose both and this becomes ' +
           'a single price.'
-        : (partsGrade(cat, opts.parts).label + ' parts, ' +
+        // Some grade labels already end in the word ("OEM parts"), some do not ("Quality
+        // aftermarket"). Appending it blindly produced "OEM parts parts".
+        : (partsGrade(cat, opts.parts).label.replace(/\s+parts$/i, '') + ' parts, ' +
            (opts.oil === 'specialist' ? cat.servicing.oil.specialist_brand + ' specialist' : 'standard') +
            ' oil, ' + band.litres + ' litres.')
     };
@@ -684,5 +746,6 @@
            priceJob: priceJob, totals: totals, bodyBand: bodyBand, clampAi: clampAi, findJob: findJob, tyrePrice: tyrePrice,
            tyreLine: tyreLine, bodyLine: bodyLine, alloyLine: alloyLine, tuneLines: tuneLines, recoveryLine: recoveryLine, milesFrom: milesFrom,
            svcLine: svcLine, svcPrice: svcPrice, partsGrade: partsGrade, svcAddon: svcAddon, addonLine: addonLine, addonsFor: addonsFor, svcBand: svcBand, svcBandById: svcBandById, svcLevel: svcLevel, motWithService: motWithService,
+           ccFromCarSize: ccFromCarSize,
            couponEligible: couponEligible, bookableDays: bookableDays, safeNote: safeNote };
 });
