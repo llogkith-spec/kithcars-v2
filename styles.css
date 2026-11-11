@@ -3744,9 +3744,13 @@ main {
 
 /* Tighten page-hero top padding on phone: the desktop value had to clear a
    140px tall fixed header; the phone header is only ~56px tall, so a big chunk
-   of white space was sitting between header and breadcrumbs. */
+   of white space was sitting between header and breadcrumbs. If regbar.js has
+   appended a .kith-regbar to the header the hero needs enough room for both,
+   so the body class `.has-regbar` (toggled by regbar.js when it injects) gets a
+   taller top padding to clear header+regbar (56 + 54 = 110px). */
 @media (max-width: 720px) {
   .page-hero { padding: calc(56px + 1.25rem) 0 2.25rem !important; }
+  body.has-regbar .page-hero { padding-top: calc(112px + 1rem) !important; }
 }
 
 /* iPhone SE / small-screen tightening */

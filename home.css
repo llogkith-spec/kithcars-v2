@@ -228,6 +228,31 @@ h3{font-size:1.2rem;font-weight:700}
   .body-pics picture:first-child img{min-height:300px}
   .ft-grid{grid-template-columns:1fr 1fr}
   .mbar{display:flex}
+
+  /* Phone hero: the reg card is the sales funnel; it comes FIRST, not second.
+     The headline and trust strip follow underneath. Tightened spacing so
+     the reg plate is visible without any scroll. */
+  .hero-in{display:flex;flex-direction:column;gap:22px;padding:22px 18px 32px}
+  .hero-in > div:first-child{order:2}
+  .hero-in .qcard{order:1;padding:18px 18px 16px;border-radius:14px}
+  .hero .qcard h2{font-size:1.35rem;margin-bottom:.15rem}
+  .hero .qcard > p{font-size:.95rem;margin-bottom:.9rem;color:var(--muted)}
+  .hero .qcard .btn{min-height:52px;font-size:1.05rem;font-weight:800}
+  .hero .qcard-foot{margin-top:.75rem;font-size:12px;gap:.35rem;flex-wrap:wrap}
+
+  /* Headline underneath — small enough to breathe, big enough to anchor. */
+  .hero .eyebrow{font-size:10.5px;letter-spacing:.14em;margin-bottom:.45rem;color:#ff9aa0}
+  .hero h1{font-size:1.75rem;line-height:1.1;margin-bottom:.4rem}
+  .hero p.sub{font-size:.98rem;line-height:1.5;margin-bottom:1rem;color:var(--on-ink-2)}
+  .pillars-mini{gap:6px;margin-bottom:1rem}
+  .pillars-mini li a{padding:8px 12px;font-size:13px}
+  .trust{font-size:12.5px;gap:6px 14px}
+}
+@media (max-width:420px){
+  .hero-in{padding:16px 14px 26px;gap:18px}
+  .hero .qcard{padding:16px 14px 14px}
+  .hero .qcard h2{font-size:1.2rem}
+  .hero h1{font-size:1.55rem}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 
