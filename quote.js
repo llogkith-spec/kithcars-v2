@@ -143,8 +143,30 @@
   function $(s) { return root.querySelector(s); }
   function $$(s) { return [].slice.call(root.querySelectorAll(s)); }
   function title(s) { s = String(s || ''); if (s.length <= 3) return s.toUpperCase(); return s.toLowerCase().replace(/\b[\w']/g, function (c) { return c.toUpperCase(); }); }
-  function save() { try { sessionStorage.setItem('kq2', JSON.stringify(S)); } catch (e) {} }
-  function load() { try { var s = JSON.parse(sessionStorage.getItem('kq2') || 'null'); if (s && !s.sent) { Object.keys(s).forEach(function (k) { S[k] = s[k]; }); } } catch (e) {} }
+  /* The shape of the saved state, taken from the defaults above before anything touches them.
+     State is restored by copying every stored key over S, with no check that the two agree. That
+     is fine until the widget changes shape - which it does on most deploys - and then a visitor
+     whose tab still holds yesterday's state gets a half-populated S and a widget that throws,
+     which the customer reads as "Instant quotes are unavailable right now. Please call us."
+     Nobody reports that; they just ring, or they don't.
+
+     Deriving the stamp from the keys rather than a hand-bumped number means it invalidates
+     itself whenever a field is added or removed, with nothing to remember. */
+  var STATE_SHAPE = Object.keys(S).sort().join(',');
+
+  function save() {
+    try { sessionStorage.setItem('kq2', JSON.stringify(Object.assign({ __shape: STATE_SHAPE }, S))); } catch (e) {}
+  }
+  function load() {
+    try {
+      var s = JSON.parse(sessionStorage.getItem('kq2') || 'null');
+      if (!s || s.sent) return;
+      // Saved by a different version of this widget: start clean rather than merge two shapes.
+      // A customer losing a half-filled quote is a small cost; a dead widget is the whole booking.
+      if (s.__shape !== STATE_SHAPE) { try { sessionStorage.removeItem('kq2'); } catch (e) {} return; }
+      Object.keys(s).forEach(function (k) { if (k !== '__shape') S[k] = s[k]; });
+    } catch (e) {}
+  }
   /* Through analytics.js where it is loaded, not straight to Google. That file is the one place
      that knows every destination an event has to reach - Google, the Meta pixel, and whatever
      comes next - so an event sent past it arrives at one of them and silently misses the rest.
