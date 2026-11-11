@@ -1,32 +1,45 @@
-/* KITH house style — white ground, deepened gold, condensed display type.
+/* KITH house style — white ground, red accent, Inter throughout.
    Loaded last, so it restyles the existing markup rather than replacing it:
-   the 751 pages keep their structure, headings and links, and only look different. */
+   the pages keep their structure, headings and links, and only look different.
+
+   This file used to set a brass palette and condensed Barlow display type, which is why the site
+   read as two different businesses: the homepage was red and set in Inter, every other page was
+   gold and set in Barlow, and a customer could see a red reg-plate bar sitting directly above a
+   gold button on the same screen. The values below are now the homepage's own, taken from
+   home.css, so the whole site shares one palette and one typeface.
+
+   The variable names are left as they were. "--gold" now holds red. Renaming it would mean
+   touching every rule in this file and in four others for no visual gain, so the name is simply
+   historical - treat it as "the accent". */
 
 :root, :root[data-theme] {
   --ink: #FFFFFF;
-  --surface: #F8F6F1;
-  --surface-2: #F1EEE7;
-  --border: #E4DED2;
-  --line: #E4DED2;
-  --text: #17150F;
-  --text-2: #3C372C;
-  --muted: #6A6356;
-  --gold: #B8862A;
-  --gold-2: #D6A84C;
-  --primary: #B8862A;
-  --accent: #B8862A;
-  --good: #1F9D5B;
-  --hot: #D9481C;
-  --display: "Barlow Condensed", "Arial Narrow", Impact, sans-serif;
-  --body: "Barlow", "Helvetica Neue", Arial, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
-  --shadow: 0 1px 2px rgba(23,21,15,.04), 0 8px 24px rgba(23,21,15,.05);
-  --radius: 12px;
+  --surface: #F4F5F7;
+  --surface-2: #EEF0F3;
+  --border: #E4E6EA;
+  --line: #E4E6EA;
+  --text: #111318;
+  --text-2: #4A505C;
+  --muted: #6B7280;
+  --gold: #DC2626;          /* the accent; red, as on the homepage */
+  --gold-2: #EF4444;
+  --primary: #DC2626;
+  --accent: #DC2626;
+  --good: #15803D;
+  --hot: #B45309;
+  --display: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Menlo, Consolas, monospace;
+  --shadow: 0 1px 2px rgba(12,13,16,.04), 0 8px 24px rgba(12,13,16,.06);
+  --radius: 14px;
 }
 
 body { background: var(--ink); color: var(--text); font-family: var(--body); font-size: 15px; line-height: 1.6; }
-h1, h2, h3, h4 { font-family: var(--display); font-weight: 700; line-height: 1.04; letter-spacing: .005em; text-wrap: balance; color: var(--text); }
-h2 { text-transform: uppercase; }
+/* Set for Inter, matching home.css. The old values - line-height 1.04, positive tracking and
+   uppercase h2 - were tuned for condensed Barlow, where tight leading and caps read as a
+   deliberate display face. Inter is not condensed, so at those settings headings looked cramped
+   and shouty rather than styled. */
+h1, h2, h3, h4 { font-family: var(--display); font-weight: 800; line-height: 1.12; letter-spacing: -.02em; text-wrap: balance; color: var(--text); }
 .page-hero h1 { font-family: var(--body); font-weight: 800; font-size: clamp(32px, 5vw, 56px); line-height: 1.08; letter-spacing: -.015em; text-transform: none; }
 .lead { font-size: 17px; line-height: 1.7; color: var(--text-2); }
 .num, .kx-stats b, .kx-big, .kq-total b { font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -44,17 +57,59 @@ h2 { text-transform: uppercase; }
 .site-header a { color: var(--text); }
 .site-header a:hover { color: var(--gold); }
 
+/* The logo was 120px tall on every screen above phone size - more than twice the homepage's
+   52px - and it was pushing the row wide enough that the "Get a Quote" button ran off the right
+   edge of the window. At 1280px, a common laptop width, its right edge sat at 1301px, so the
+   main call to action on 923 pages was clipped; at 1100px it lost 70px. Matching the homepage's
+   mark fixes the appearance and the overflow together, since the row then has room again.
+   Phones already capped this at 44px with !important, and those rules still win. */
+.site-logo { max-height: 56px; }
+.header-inner { padding: .7rem 0; gap: 1rem; }
+/* "About Us" was wrapping onto two lines and setting the height of the whole header. */
+.site-nav > .nav-item-dropdown > a, .site-nav > a { white-space: nowrap; }
+.site-nav { gap: .05rem; }
+.site-nav a { font-size: .86rem; padding: .5rem .7rem; }
+.site-nav a:hover, .site-nav a.active { color: var(--gold); background: rgba(220,38,38,.06); }
+
+/* The hamburger only took over at 720px and under, but the full nav needs about 1024px to fit.
+   Everything between - iPads, 768 and 820 wide, and small laptops at 900 - was served the
+   desktop nav and had the "Get a Quote" button cut off the right of the screen, by 248px at
+   768. These are the same rules the phone breakpoint uses, applied from 1023px down, so the
+   menu collapses wherever it would otherwise overflow. Below 720px the existing phone rules
+   take over unchanged. */
+@media (max-width: 1023px) {
+  .site-nav {
+    display: none; position: absolute; top: 100%; left: 0; right: 0;
+    background: rgba(250,251,253,.99); border-bottom: 1px solid var(--border);
+    padding: 1rem; flex-direction: column; align-items: stretch; gap: .2rem;
+    justify-content: flex-start; box-shadow: 0 8px 24px rgba(12,13,16,.08); z-index: 99;
+  }
+  .site-nav.is-open { display: flex; }
+  .site-nav a { padding: .75rem 1rem; font-size: 1rem; }
+  .nav-toggle { display: grid; }
+  .nav-item-dropdown { display: block; }
+  .site-nav .nav-item-dropdown > a { display: block; padding: .75rem 1rem; font-size: 1rem; }
+  .nav-item-dropdown::after { display: none; }
+  .nav-dropdown-menu,
+  .nav-item-dropdown:hover > .nav-dropdown-menu,
+  .nav-item-dropdown:focus-within > .nav-dropdown-menu { display: none; }
+}
+
 /* buttons: pills, gold fill */
 .btn, .kq-btn, .kh-svc, .kx-faq summary { font-family: var(--body); }
 .btn { border-radius: 999px; padding: .95em 1.6em; font-weight: 700; font-size: 15px; border: 1px solid transparent; transition: transform .12s ease, box-shadow .12s ease, background .12s ease; }
 .btn:active { transform: translateY(1px); }
-.btn-primary, .btn-red, .kq-btn-main { background: var(--gold); color: #16120A; border-color: var(--gold); box-shadow: 0 6px 18px rgba(184,134,42,.25); }
-.btn-primary:hover, .btn-red:hover, .kq-btn-main:hover { background: #A5771F; border-color: #A5771F; }
+.btn-primary, .btn-red, .kq-btn-main { background: var(--gold); color: #fff; border-color: var(--gold); box-shadow: 0 6px 18px rgba(220,38,38,.25); }
+.btn-primary:hover, .btn-red:hover, .kq-btn-main:hover { background: #B91C1C; border-color: #B91C1C; }
 .btn-outline, .kq-btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
 .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
 
-/* hero: the gold wash from the house style */
-/* no padding override here: the header is sticky and the original top padding clears it */
+/* hero */
+/* The top padding was calc(140px + 3rem): 140px to clear the sticky header, which used to be
+   that tall because of the 120px logo. The header is 79px now, so that left about 110px of
+   empty white between the nav and the first line of every page. Reset to clear the real
+   header. Phone breakpoints set their own value with !important and are unaffected. */
+.page-hero { padding-top: calc(80px + 1.75rem); }
 .page-hero { position: relative; overflow: hidden; background: var(--ink); }
 .page-hero::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
@@ -87,14 +142,15 @@ h2 { text-transform: uppercase; }
 
 /* quote widget sits on the same palette */
 .kq-pill.on, .kq-tier.on, .kq-pick.on, .kq-job.on { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
-.kq-offer { background: rgba(184,134,42,.10); border: 1px solid rgba(184,134,42,.35); }
+.kq-offer { background: rgba(220,38,38,.07); border: 1px solid rgba(220,38,38,.30); }
 .kq-recprice { border-left-color: var(--gold); background: var(--surface-2); }
 
 /* footer */
-.site-footer { background: #17150F; color: #F3EDE1; }
-.site-footer a { color: #D8D2C4; }
-.site-footer a:hover { color: var(--gold-2); }
-.site-footer h4 { font-family: var(--display); text-transform: uppercase; letter-spacing: .06em; color: #fff; }
+/* Same ink and the same cool greys as the homepage footer, which was a warm near-black here. */
+.site-footer { background: #0C0D10; color: #B4BAC5; }
+.site-footer a { color: #B4BAC5; }
+.site-footer a:hover { color: #fff; }
+.site-footer h4 { font-family: var(--display); text-transform: uppercase; letter-spacing: .1em; font-size: 13px; color: #fff; }
 
 @media (max-width: 700px) {
   .section { padding-block: 52px; }

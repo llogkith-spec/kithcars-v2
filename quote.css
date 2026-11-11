@@ -345,7 +345,7 @@
 .kq-oil .kq-pill i { font-style: normal; opacity: .75; margin-left: .3rem; }
 .kq-oiladvice {
   margin: .6rem 0 0; padding: .7rem .85rem; border-radius: 10px;
-  background: #fbf6ec; border-left: 3px solid #b8862a; color: #5c441a;
+  background: #FEF6EC; border-left: 3px solid #B45309; color: #7C4A0A;
   font-size: .88rem; line-height: 1.5;
 }
 .kq-oiladvice b { color: inherit; }
@@ -367,7 +367,7 @@
 .kq-partsnote { margin: .6rem 0 0; font-size: .86rem; line-height: 1.5; color: var(--kq-muted, #6b6b73); }
 .kq-partsadvice {
   margin: .6rem 0 0; padding: .7rem .85rem; border-radius: 10px;
-  background: #fbf6ec; border-left: 3px solid #b8862a; color: #5c441a;
+  background: #FEF6EC; border-left: 3px solid #B45309; color: #7C4A0A;
   font-size: .88rem; line-height: 1.5;
 }
 .kq-partsadvice b { color: inherit; }

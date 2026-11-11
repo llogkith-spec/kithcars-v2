@@ -45,7 +45,7 @@
   backdrop-filter:blur(4px);transition:opacity .15s;pointer-events:none
 }
 .kc-tag-b{left:12px}
-.kc-tag-a{right:12px;background:rgba(184,134,42,.92)}
+.kc-tag-a{right:12px;background:rgba(220,38,38,.92)}
 
 /* Gallery */
 .kc-gallery{margin:0}
