@@ -143,7 +143,16 @@
       var lvl = SERVICE_JOB_TO_LEVEL[jobId];
       var ccBand = svcBandById(cat, band) ? band : (LEGACY_BAND_TO_CC[band] || 'cc2000');
       var line = svcLine(cat, lvl, ccBand, opts);
-      if (line) { line.band = ccBand; return line; }
+      /* The line is named after the rate-card LEVEL it was priced from, not the job that was
+         ticked, and for three of the four services those happen to coincide. They do not for the
+         oil and filter change: the job is "oil-filter-change", the level is "oil-change", and the
+         line came back as "service-oil-change". The caller matched the two by name, found no
+         match, threw the priced line away, and left the customer on "Working out your price..."
+         with nothing to show - on the cheapest service in the list and the first item on the card.
+
+         jobId travels with the line so the match is on identity rather than on two naming schemes
+         agreeing by luck. */
+      if (line) { line.band = ccBand; line.jobId = jobId; return line; }
     }
     var job = findJob(cat, jobId);
     if (!job) throw new Error('Unknown job ' + jobId);

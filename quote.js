@@ -933,7 +933,11 @@
 
       lines = S.mech.map(function (id) {
         if (id !== 'mot') {
-          return priced.filter(function (l) { return l.id === id || l.id === 'service-' + id; })[0] || null;
+          // jobId first: it is what the line was priced FROM. The two id comparisons are kept for
+          // the non-service lines, which carry no jobId.
+          return priced.filter(function (l) {
+            return l.jobId === id || l.id === id || l.id === 'service-' + id;
+          })[0] || null;
         }
         if (bundle) {
           return { id: 'mot', name: bundle.name, kind: 'fixed', low: bundle.low, high: bundle.low,
@@ -1010,9 +1014,26 @@
     S.brainTried = true;
     S.brainStartedAt = Date.now();
     S.brainTargetSeconds = 8;
+    /* A hard deadline on the Brain. Without one, a call that never answers left the countdown
+       sitting on "Almost there…" and the customer playing Snake indefinitely - no price, no
+       booking, and nothing on screen admitting anything had gone wrong. Tested by holding the
+       request open: it stalls at one second and stays there.
+
+       The local rate-card figure is already computed by the time this runs, so when the deadline
+       passes there is a real price to fall back to. Twelve seconds: comfortably past the eight
+       the countdown promises, short enough that nobody is still waiting. */
+    var brainCtl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var brainTimer = setTimeout(function () {
+      if (brainCtl) brainCtl.abort();
+      if (S.brainLoading) {
+        S.brainLoading = false; S.brainRange = null;
+        save(); render();                 // falls through to the local estimate
+      }
+    }, 12000);
     var vehicle = [S.vehicle.yearOfManufacture, S.vehicle.make, S.model || '', S.vehicle.fuelType || ''].filter(Boolean).join(' ');
     return fetch(BRAIN_URL, {
       method: 'POST',
+      signal: brainCtl ? brainCtl.signal : undefined,
       headers: {
         'Content-Type': 'application/json',
         'apikey': BRAIN_KEY, 'Authorization': 'Bearer ' + BRAIN_KEY,
@@ -1028,12 +1049,14 @@
       if (!r.ok) { console.warn('[KITH Brain] HTTP ' + r.status); return null; }
       return r.json();
     }).then(function (d) {
+      clearTimeout(brainTimer);
       S.brainLoading = false;
       if (d && d.error) console.warn('[KITH Brain] error:', d.error);
       if (d && d.total_range && d.total_range.hi > 0) {
         S.brainRange = { lo: Math.round(d.total_range.lo), hi: Math.round(d.total_range.hi), confidence: d.confidence || 'low', allFirm: !!d.all_firm, usedFallback: !!d.used_ai_fallback };
       } else { S.brainRange = null; }
     }).catch(function (e) {
+      clearTimeout(brainTimer);
       console.warn('[KITH Brain] network:', e && e.message);
       S.brainLoading = false; S.brainRange = null;
     });
