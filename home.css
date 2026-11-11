@@ -213,9 +213,44 @@ h3{font-size:1.2rem;font-weight:700}
   .quote-grid,.body-grid,.visit{grid-template-columns:1fr;gap:32px}.quote-why{position:static}
   .mech{grid-template-columns:repeat(2,1fr)}
 }
+/* On a phone the hero stacks, and the reg card - the one thing the page asks you to do - landed
+   930px down an 1080px hero on an 844px screen. You had to scroll past the whole pitch to reach
+   the box the pitch was telling you to use.
+
+   display:contents dissolves the text wrapper so the headline, the card and the supporting copy
+   all become siblings of the flex column and can be ordered one by one. The headline still sells
+   first; the card comes straight after it, in view; everything else follows. */
+@media (max-width:1080px){
+  .hero-in{display:flex;flex-direction:column;gap:22px}
+  .hero-in>div:first-child{display:contents}
+  .hero-in .eyebrow{order:1}
+  .hero-in h1{order:2;margin-bottom:0}
+  .hero-in .qcard{order:3}
+  .hero-in .sub{order:4}
+  .hero-in .pillars-mini{order:5;margin:0}
+  .hero-in .trust{order:6}
+}
 @media (max-width:720px){
+  /* Tighter still, so the headline and the whole card clear the fold on a 6.1" screen. */
+  .hero-in{padding:28px 20px 40px;gap:16px}
+  .hero h1{font-size:clamp(1.9rem,8vw,2.4rem);line-height:1.08}
+  .hero .eyebrow{font-size:11px;letter-spacing:.06em;line-height:1.5}
+  .hero .sub{font-size:15px;line-height:1.55}
+  .qcard{padding:20px}
+  .qcard h2{font-size:1.25rem}
+  .qcard p{font-size:14px;margin-bottom:.8rem}
   .sec{padding:60px 0}
   .hd-in{height:64px}
+  /* An SE-sized screen is 568px tall and was still thirty pixels short of the button. The
+     eyebrow goes to two lines there and the headline carries the page on its own. */
+  @media (max-height:620px),(max-width:400px){
+    .hero-in{padding:20px 20px 32px;gap:12px}
+    .hero h1{font-size:1.7rem;line-height:1.06}
+    .hero .eyebrow{font-size:10.5px}
+    .qcard{padding:16px}
+    .qcard h2{font-size:1.15rem}
+    .qcard p{margin-bottom:.6rem}
+  }
   .hd-logo img{height:42px}
   .hd-phone{display:none}
   .hd-cta .btn{display:none}

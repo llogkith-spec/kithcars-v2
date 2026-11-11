@@ -42,9 +42,13 @@
      find people who visit websites; one that sees Purchase with a job value teaches it to find
      people who book work, which is a different thing entirely. */
   var FB_EVENTS = {
+    /* The funnel as Logan reads it, which is also the standard shape: look the car up, see the
+       price, start booking, leave details, book. Meta's names were a step ahead of the customer
+       before - InitiateCheckout fired merely on seeing a price, when nothing had been started -
+       so an audience of "began booking" was really an audience of "glanced at a figure". */
     vehicle_found: 'Search',           // reg looked up and a car came back
-    quote_start: 'ViewContent',        // they have a car and an intention
-    quote_price: 'InitiateCheckout',   // a price was shown, with its value
+    quote_price: 'ViewContent',        // the estimate appeared, with its value
+    quote_book_click: 'InitiateCheckout', // tapped through to book - checkout has begun
     generate_lead: 'Lead',             // details submitted
     booking_submit: 'Lead',            // the older booking form, same outcome
     // A booking is both of these. Purchase carries the job value and is what Meta optimises

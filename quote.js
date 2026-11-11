@@ -306,7 +306,12 @@
     var exRate = Math.round((l.rate / (1 + vat)) * 100) / 100;
     var rows = ['<li><span>Labour</span><em>' + hrs + ' at ' + money(exRate) + ' an hour plus VAT</em></li>'];
     if (l.parts && (l.parts[0] || l.parts[1])) {
-      rows.push('<li><span>Parts and oil</span><em>' + range(l.parts[0], l.parts[1]) + '</em></li>');
+      /* "Parts and oil" was hardcoded, so a brake job listed oil it does not use - and a customer
+         reading a breakdown line by line is exactly the one who notices. None of the 33 repair
+         jobs in the catalogue involve oil today, but the test is on the job rather than a flat
+         rename, so one that does will still say so. */
+      var oily = /\boils?\b|\bfluid\b/i.test([l.name || '', (l.includes || []).join(' ')].join(' '));
+      rows.push('<li><span>' + (oily ? 'Parts and oil' : 'Parts') + '</span><em>' + range(l.parts[0], l.parts[1]) + '</em></li>');
     }
     if (l.dealer) { var dl = dealerLabel(); rows.push('<li><span>' + esc(dl.a + ' ' + dl.text) + ', same job</span><em>around ' + money(l.dealer) + '</em></li>'); }
     var items = (l.includes || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
@@ -1245,10 +1250,23 @@
       var hLabel = 'Your estimate' + (!bRange && t.unpriced ? ' so far' : '');
       var hTag = bRange ? '<small class="kq-brain-tag">Priced using KITH’s live pricing system' + (bRange.allFirm ? ' (all lines firm from our history)' : '') + '</small>' : '';
       h += '<div class="kq-total"><span>' + hLabel + '</span><b>' + range(shown.low, shown.high) + '</b>' + hTag + '</div>';
-      if (t.showDealer) {
+      /* Compared against the figure actually on screen, and only when the dealer beats the TOP of
+         it. This was measuring the dealer against t.low/t.high - the raw local total - while the
+         headline showed something else entirely, so a £781-£1,085 estimate sat above "an Audi
+         main dealer, typically £830" and "around £285 less with us". Three numbers, no two of
+         them agreeing, and the one a customer checks says we are the dearer option.
+
+         The saving is quoted from our high end, so it holds however the job lands rather than
+         only at its cheapest. And if the dealer does not clear our top end by the catalogue's
+         margin, nothing is shown: there are jobs where a franchised dealer is genuinely
+         competitive, and the honest move there is to say nothing rather than to find a number
+         that flatters us. A comparison a customer can disprove costs more than it wins. */
+      var saving = t.showDealer ? Math.round((t.dealer - shown.high) / 5) * 5 : 0;
+      var dealerWorthShowing = t.showDealer && t.dealer > shown.high && saving >= (C.dealer.min_saving_shown || 0);
+      if (dealerWorthShowing) {
         var dl2 = dealerLabel();
-        h += '<div class="kq-dealer"><span>' + esc(dl2.a + ' ' + dl2.text) + ', typically</span><s>~' + money(t.dealer) + '</s><em>Around ' +
-          money(Math.max(0, Math.round((t.dealer - (t.low + t.high) / 2) / 5) * 5)) + ' less with us</em></div>' +
+        h += '<div class="kq-dealer"><span>' + esc(dl2.a + ' ' + dl2.text) + ', typically</span><s>~' + money(t.dealer) + '</s><em>At least ' +
+          money(saving) + ' less with us</em></div>' +
           '<p class="kq-dealer-note">A typical franchised dealer figure for the same work, not a quote from any particular garage. ' +
           'Main dealer labour in London runs around half as much again as ours, and their parts carry a bigger margin.</p>';
       }
@@ -1507,12 +1525,45 @@
     if (S.step === 'details') bindDetails();
     if ((S.step === 'estimate' || S.step === 'details' || S.step === 'calendar') && !S.offerGone && S.expires) startTimer(); else clearInterval(TICK);
   }
+  /* The registration of the car we are actually holding - not S.reg, which the homepage hero box
+     sets for itself before handing over, so a guard on S.reg compares a plate with itself. */
+  function heldReg() {
+    return ((S.vehicle && S.vehicle.registrationNumber) || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+
+  /* A different plate is a different car, so everything inferred from the last one goes.
+     Without this the previous vehicle survived a second lookup, and the line that reads
+     "if (model && !S.model)" actively preferred the old car's model to the new car's - which is
+     why a quote could come back showing the reg typed before this one.
+
+     The job selections stay: what someone wants doing does not change because they corrected a
+     typo in their plate, only the car it is priced against. */
+  function resetCar() {
+    S.vehicle = null; S.model = ''; S.manual = false;
+    S.cc = null; S.ccBand = null; S.ccOpen = false;
+    S.band = null; S.bandAuto = true; S.bandOpen = false;
+    S.ai = {}; S.brainRange = null; S.brainTried = false;
+    S.lines = []; S.totals = null;
+  }
+
   function bindCar() {
     var f = $('.kq-reg');
     if (f) f.addEventListener('submit', function (e) {
       e.preventDefault();
       var reg = f.reg.value.toUpperCase().replace(/[^A-Z0-9]/g, ''), err = $('.kq-err');
       if (!/^[A-Z0-9]{2,8}$/.test(reg)) { err.textContent = 'Please check the registration.'; err.hidden = false; return; }
+      /* A different registration is a different car, so everything inferred from the last one is
+         thrown away before we look this one up. Without this the previous vehicle survived: a
+         failed or ambiguous lookup left it standing whole, and on a successful one the line
+         below - "if (model && !S.model)" - actively preferred the old car's model to the new
+         car's. That is the quote showing the reg you typed before this one.
+
+         The job selections stay. What someone wants doing does not change because they corrected
+         a typo in their plate; only the car it is priced against does. */
+      /* Compared against the car we are actually holding, not S.reg. The hero box on the homepage
+         sets S.reg itself before handing over to this form, so a guard on S.reg compares the new
+         plate with itself and never fires - which is the path most people take. */
+      if (heldReg() && heldReg() !== reg) resetCar();
       S.reg = reg; track('quote_start', { flow: S.flow });
       var b = f.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Finding your car…';
       post('/api/vehicle', { reg: reg }, 8000).then(function (r) {
@@ -1527,7 +1578,9 @@
           S.bandAuto = true; S.bandOpen = false;
           track('vehicle_found'); render(); save();
         }
-        else if (r._status === 404) { b.disabled = false; b.textContent = 'Find my car'; err.innerHTML = 'We couldn’t find that reg. Check it, or <button type="button" class="kq-link" data-act="manual">enter the car yourself</button>.'; err.hidden = false; }
+        // Saved even though nothing was found: the previous car has just been cleared, and
+        // without writing that away a reload would bring it back under the new registration.
+        else if (r._status === 404) { save(); b.disabled = false; b.textContent = 'Find my car'; err.innerHTML = 'We couldn’t find that reg. Check it, or <button type="button" class="kq-link" data-act="manual">enter the car yourself</button>.'; err.hidden = false; }
         else { S.vehicle = { registrationNumber: reg }; S.manual = true; render(); save(); }
       });
     });
@@ -1668,7 +1721,12 @@
       fetchBrain().then(function () { save(); render(); }).catch(function () {});
       fetchAi().then(function () { compute(); save(); render(); }).catch(function () {});
     }
-    else if (a === 'to-details') { track('quote_book_click'); go('details'); }
+    // Carries the value: this is the start of checkout, and a conversion event without a figure
+    // on it is one Meta cannot optimise against.
+    else if (a === 'to-details') {
+      track('quote_book_click', { value: S.totals ? S.totals.low : 0, currency: 'GBP', flow: S.flow });
+      go('details');
+    }
     else if (a === 'day') { S.day = v; S.time = null; save(); render(); }
     else if (a === 'time') { S.time = v; save(); render(); }
     else if (a === 'skip-slot') { S.day = null; S.time = null; S.sent = true; save(); go('done'); }
@@ -1751,6 +1809,12 @@
     e.preventDefault();
     var reg = hero.querySelector('input').value.trim();
     if (!C) { PENDING = { flow: 'mechanical', reg: reg.toUpperCase() }; root.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    /* A new plate here has to clear the old car before we render, or the car step shows the
+       confirmation for the car we already hold instead of the registration form - and with no
+       form on the page there is nothing to submit, so the plate just typed is never looked up.
+       That is the bug where a second registration appears to do nothing at all. */
+    var typed = reg.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (heldReg() && heldReg() !== typed) resetCar();
     S.reg = reg.toUpperCase(); S.step = S.flow ? 'car' : 'flow';
     if (!S.flow) { S.flow = 'mechanical'; S.step = 'car'; }
     render(); root.scrollIntoView({ behavior: 'smooth', block: 'start' });

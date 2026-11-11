@@ -56,3 +56,18 @@
   for = "/kpi"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
+
+# The pricing page was removed. It was linked from 923 pages and had been crawled, so the URL is
+# kept alive and sent to the instant quote - which answers the same question with a real number
+# for the customer's own car. 301, because it is not coming back.
+[[redirects]]
+  from = "/pricing"
+  to = "/#quote"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/pricing.html"
+  to = "/#quote"
+  status = 301
+  force = true

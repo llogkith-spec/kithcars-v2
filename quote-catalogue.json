@@ -17,9 +17,10 @@
     },
     "parts_factor": 1.35,
     "show_if_saving_at_least": 0.1,
-    "_note": "Main dealer comparison. With use_multiplier on, the dealer figure is simply our price times multiplier -- KITH reports a franchised dealer at roughly half as much again for the same work. The labour_rate/parts_factor model below is the alternative: it works the dealer figure out from book hours at their rate, which varies honestly by job but on short jobs shows almost no gap. Shown as a typical average, never as a quote for a named garage.",
+    "_note": "A dealer comparison is shown only when the dealer figure beats the TOP of our estimate by at least min_saving_shown. Quoting a saving a customer might not get, or one worth four pounds, costs more than it wins.",
     "multiplier": 1.5,
-    "use_multiplier": true
+    "use_multiplier": true,
+    "min_saving_shown": 40
   },
   "bands": {
     "small": {
