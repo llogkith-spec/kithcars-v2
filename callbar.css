@@ -22,9 +22,13 @@
   .kc-bar .kc-bar-wa{color:#128c7e}
   .kc-bar a:active{filter:brightness(.94)}
 
-  /* Keep the bar off the last of the page and off the WhatsApp bubble. */
+  /* Keep the bar off the last of the page. The sticky bar already carries
+     WhatsApp as its middle slot — a second floating green bubble just overlaps
+     body text ("vehicle rather than guess from the badge" on car-servicing was
+     being cut off by the bubble at the top of the page before the sticky bar
+     had scrolled into view). Hide it entirely on phones. */
   body{padding-bottom:62px}
-  .wa-float,.whatsapp-float,[class*="whatsapp"]{bottom:76px!important}
+  .whatsapp-float,.wa-float{display:none!important}
 }
 @media (prefers-reduced-motion:reduce){
   .kc-bar{transition:none}
