@@ -3694,3 +3694,68 @@ main {
 @media (max-width: 900px) {
   #get-a-quote div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; gap: 2rem !important; }
 }
+
+/* ============================================
+   PHONE HARDENING — added 2026-11-11
+   The service and location pages (anything using .site-header + .site-logo)
+   were served the full-desktop treatment: 120px logo, 15px form inputs
+   (iOS zooms when focused), pricing spans at 12-13px, hint lines at 10px.
+   And the floating WhatsApp bubble was sitting on top of body text at the
+   top of every service/location page, where the sticky bottom bar has not
+   yet scrolled into view. These rules fix all of that at a single
+   breakpoint; nothing above 720px changes.
+   ============================================ */
+@media (max-width: 720px) {
+  /* Shrink the sticky header. The logo was taking a third of the viewport.
+     Keep just enough to anchor the brand, drop the "Automotive Workshop"
+     subtitle which is marketing copy you cannot read at phone size anyway. */
+  .site-header { padding: 0 !important; }
+  .site-logo { max-height: 44px !important; }
+  .header-inner { padding: 0.55rem 0 !important; gap: 0.6rem; }
+  .logo-badge .logo-sub { display: none; }
+  .logo-badge .logo-kith { font-size: 1.1rem; }
+  .logo-badge .logo-cars { font-size: 1rem; }
+
+  /* iOS zooms any input under 16px on focus — fix across every form site-wide. */
+  input[type="text"], input[type="tel"], input[type="email"],
+  input[type="number"], input[type="search"], input[type="url"],
+  input[type="date"], input[type="time"], textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* The 12px service-type card descriptions. Text at 12px on phone is a strain
+     to read; 14px holds the hierarchy but remains legible. */
+  .svc-type-card span,
+  .svc-option-card span { font-size: 14px; line-height: 1.5; }
+
+  /* The ".hint" at 0.78em was rendering at ~10px on service-page forms —
+     'found on the tyre sidewall', 'approx', 'optional' lines. Pin to an
+     absolute minimum so it's readable even when the parent label is small. */
+  .hint { font-size: 13px !important; }
+
+  /* Supporting lines next to buttons — 'Max 5MB total', 'We reply within 30
+     minutes'. Were 12px; readable at 14px without stealing hierarchy. */
+  .file-size-note, .form-reply-promise { font-size: 14px; line-height: 1.5; }
+
+  /* Tap-size baseline for any button that wasn't styled explicitly. iOS HIG is
+     44px; most of the site already hits this, this is a safety net. */
+  .btn { min-height: 44px; }
+}
+
+/* Tighten page-hero top padding on phone: the desktop value had to clear a
+   140px tall fixed header; the phone header is only ~56px tall, so a big chunk
+   of white space was sitting between header and breadcrumbs. If regbar.js has
+   appended a .kith-regbar to the header the hero needs enough room for both,
+   so the body class `.has-regbar` (toggled by regbar.js when it injects) gets a
+   taller top padding to clear header+regbar (56 + 54 = 110px). */
+@media (max-width: 720px) {
+  .page-hero { padding: calc(56px + 1.25rem) 0 2.25rem !important; }
+  body.has-regbar .page-hero { padding-top: calc(112px + 1rem) !important; }
+}
+
+/* iPhone SE / small-screen tightening */
+@media (max-width: 400px) {
+  .site-logo { max-height: 40px !important; }
+  .header-inner { padding: 0.4rem 0 !important; }
+  .page-hero { padding: calc(52px + 1rem) 0 2rem !important; }
+}

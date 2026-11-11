@@ -30,10 +30,14 @@
     '<a href="' + quoteHref + '" data-track="quote" class="kc-bar-quote">' + icon.quote + '<span>Get a price</span></a>';
   document.body.appendChild(bar);
 
-  // Show it once the reader is past the hero, so it does not cover the page before they have begun.
+  // Show it once the reader has committed to the page. 2026-11-11: dropped
+  // from "60% of viewport or 420px" to "25% of viewport or 180px" — the
+  // floating WhatsApp bubble used to cover the first-screen contact need,
+  // but it was hiding body text on service/location pages, so it's gone on
+  // phones now and the sticky bar has to carry the first-screen CTA instead.
   var shown = false;
   function check() {
-    var past = window.scrollY > Math.min(window.innerHeight * 0.6, 420);
+    var past = window.scrollY > Math.min(window.innerHeight * 0.25, 180);
     if (past === shown) return;
     shown = past;
     bar.classList.toggle('on', past);
