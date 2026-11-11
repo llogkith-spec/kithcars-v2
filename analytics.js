@@ -24,7 +24,6 @@
      whatsapp_click     tapped WhatsApp                                   {page}
      email_click        tapped the email address                          {page}
      directions_click   opened Google Maps directions                     {page}
-     booking_submit     the older booking form was sent                   {page}
      scroll_50 / _90    read half / nearly all of the page                {page}
    The funnel that matters: quote_cta_click -> quote_start -> quote_price -> generate_lead -> quote_booked.
 */
@@ -50,7 +49,6 @@
     quote_price: 'ViewContent',        // the estimate appeared, with its value
     quote_book_click: 'InitiateCheckout', // tapped through to book - checkout has begun
     generate_lead: 'Lead',             // details submitted
-    booking_submit: 'Lead',            // the older booking form, same outcome
     // A booking is both of these. Purchase carries the job value and is what Meta optimises
     // hardest against; Schedule is the name Meta made for appointments and is what the account
     // will read naturally in a year. Sending both costs nothing and loses neither.
@@ -127,12 +125,6 @@
     if (/google\.[a-z.]+\/maps/i.test(href)) return ev('directions_click', { page: page });
     if (a.hasAttribute('data-quote') || href === '#quote' || href.indexOf('#get-a-quote') > -1)
       return ev('quote_cta_click', { page: page, label: label(a) });
-  }, true);
-
-  document.addEventListener('submit', function (e) {
-    var f = e.target;
-    if (f && (f.id === 'booking-wizard' || (f.closest && f.closest('#booking-wizard'))))
-      ev('booking_submit', { page: page });
   }, true);
 
   var hit = {};

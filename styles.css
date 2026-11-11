@@ -1864,7 +1864,6 @@ main {
 /* ============================================
    BOOKING WIZARD
    ============================================ */
-.booking-wizard { padding: 2rem; }
 
 /* Progress bar */
 .bw-progress {
@@ -2267,7 +2266,6 @@ main {
 
 /* Responsive */
 @media (max-width: 640px) {
-  .booking-wizard { padding: 1.25rem; }
   .svc-type-grid { grid-template-columns: 1fr 1fr; }
   .svc-option-grid { grid-template-columns: 1fr; }
   .time-slots-grid { grid-template-columns: repeat(3, 1fr); }
