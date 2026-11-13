@@ -27,7 +27,27 @@ function credentialHealth() {
   };
 }
 
+// The staff intake app (GitHub Pages) uses this same lookup so staff never type the car in.
+// Only that one origin is let in, and only for lookups — it is named, not a wildcard.
+const STAFF_ORIGINS = ['https://llogkith-spec.github.io'];
+function staffCors(request) {
+  const o = request.headers.get('origin') || '';
+  return STAFF_ORIGINS.includes(o) ? { 'access-control-allow-origin': o, 'vary': 'Origin' } : {};
+}
+
 export default async (request, context) => {
+  const cors = staffCors(request);
+  if (request.method === 'OPTIONS') {
+    if (!cors['access-control-allow-origin']) return new Response(null, { status: 403 });
+    return new Response(null, { status: 204, headers: { ...cors,
+      'access-control-allow-methods': 'POST', 'access-control-allow-headers': 'content-type', 'access-control-max-age': '86400' } });
+  }
+  const res = await handle(request, context, !!cors['access-control-allow-origin']);
+  if (cors['access-control-allow-origin']) for (const k in cors) res.headers.set(k, cors[k]);
+  return res;
+};
+
+async function handle(request, context, staff) {
   // GET /api/vehicle?health=1 says which credentials are visible, so a 503 can be diagnosed
   // without opening a support thread. It exposes no secret, only whether each name is set.
   if (request.method === 'GET') {
@@ -52,7 +72,7 @@ export default async (request, context) => {
     }
   }
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
-  if (!allowedOrigin(request, context)) return json({ error: 'forbidden' }, 403);
+  if (!staff && !allowedOrigin(request, context)) return json({ error: 'forbidden' }, 403);
   if (throttled(context, 15)) return json({ error: 'slow down' }, 429);
   // Say what is missing rather than only that something is: the page still falls back to asking
   // for the car by hand, so naming the gap costs the customer nothing and saves us the hunt.
@@ -108,6 +128,6 @@ export default async (request, context) => {
   FIELDS.forEach(k => { if (data[k] !== undefined) vehicle[k] = data[k]; });
   cacheSet('veh:' + reg, vehicle, 86400000);
   return json({ vehicle }, 200, { 'cache-control': 'public, max-age=86400' });
-};
+}
 
 export const config = { path: '/api/vehicle' };
