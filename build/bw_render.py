@@ -61,6 +61,9 @@ def _para(block):
         kind, body = block
         if kind == 'note':
             return f'<div class="kx-note"><p>{body}</p></div>'
+        if kind == 'rawlist':
+            # A hub's described link list, already assembled by the hub builder.
+            return f'<ul class="kx-hublist">{body}</ul>'
         if kind == 'steps':
             return '<ol class="kx-steps">' + ''.join(f'<li>{b}</li>' for b in body) + '</ol>'
         if kind == 'table':

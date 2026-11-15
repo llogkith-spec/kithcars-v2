@@ -306,7 +306,7 @@ PAGES = [
            'without paying up front. The thing to understand is that you are the hirer, and if '
            'the costs are not recovered from the at-fault insurer you can be liable. Read it, '
            'and ask what happens if liability is disputed.')],
-         [('courtesy-car-vs-credit-hire', 'Courtesy car vs credit hire'),
+         [('credit-hire-explained', 'Credit hire explained'),
           ('credit-hire-explained', 'Credit hire explained'),
           ('non-fault-accident-what-to-do', 'Non-fault accident: what to do'),
           ('what-happens-if-i-use-a-non-approved-garage', 'Using your own garage')],

@@ -42,6 +42,8 @@ def page(slug, title, desc, h1, label, lead, sections, faqs, related=(), key_poi
         'key_points': list(key_points), 'job': job, 'flow': flow,
         'service_type': service_type, 'quote_heading': quote_heading,
         'trust': trust or TRUST_DEFAULT,
-        'crumbs': [hub, (h1, None)],
+        # hub=None means this page IS a hub, so there is no intermediate crumb - otherwise the
+        # breadcrumb would link to the page you are already on.
+        'crumbs': ([hub] if hub else []) + [(h1, None)],
         'category': category,
     }

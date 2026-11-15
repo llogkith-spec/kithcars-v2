@@ -88,7 +88,7 @@ PAGES = [
          [('non-fault-accident-what-to-do', 'Non-fault accident: what to do'),
           ('supplementary-estimate-explained', 'Supplementary estimates'),
           ('what-the-engineer-does', 'What the engineer does'),
-          ('how-long-an-insurance-repair-takes', 'How long it takes')],
+          ('how-long-does-bodywork-take', 'How long it takes')],
          key_points=[
           'Nine stages. <strong>Name your repairer on the first call.</strong>',
           'The delays are <strong>authorisation</strong> and <strong>the supplementary</strong>, '
@@ -259,7 +259,7 @@ PAGES = [
            'bill afterwards.')],
          [('how-a-bodywork-insurance-claim-works-step-by-step', 'How a claim works'),
           ('what-the-engineer-does', 'What the engineer does'),
-          ('how-long-an-insurance-repair-takes', 'How long it takes'),
+          ('how-long-does-bodywork-take', 'How long it takes'),
           ('is-my-car-worth-repairing-or-writing-off', 'Repair or write off?')],
          key_points=[
           'A <strong>revised estimate</strong> for damage only visible once the panel came off.',

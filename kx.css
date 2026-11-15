@@ -65,3 +65,10 @@
 .kx-keycard li:before{content:"";position:absolute;left:0;top:.55em;width:.45rem;height:.45rem;border-radius:50%;background:var(--gold)}
 .kx-keycard strong{color:var(--text);font-weight:650}
 @media (max-width:900px){.kx-keycard{margin-top:.5rem}}
+/* Hub listings: a described link per row, so a hub is readable rather than a wall of links. */
+.kx-hublist{list-style:none;margin:1.4rem 0 0;padding:0;display:grid;gap:.1rem}
+.kx-hublist li{padding:.9rem 0;border-bottom:1px solid var(--border)}
+.kx-hublist li:last-child{border-bottom:0}
+.kx-hublist a{display:block;font-size:15.5px;font-weight:650;color:var(--text);text-decoration:none}
+.kx-hublist a:hover{color:var(--gold)}
+.kx-hublist span{display:block;margin-top:.25rem;font-size:14px;line-height:1.65;color:var(--muted)}

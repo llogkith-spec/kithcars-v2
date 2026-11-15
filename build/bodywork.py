@@ -39,6 +39,9 @@ MODULES = [
     'bw_content_ins3',
     'bw_content_writeoff',
     'bw_content_claim',
+    'bw_content_process',
+    'bw_content_fill',
+    'bw_hubs',
 ]
 
 # Similarity above this between two pages in the same category fails the build.
@@ -48,8 +51,13 @@ MAX_SIMILARITY = 0.62
 FORBIDDEN = [
     (r'\bapproved repairer for\b', 'claims to be an approved repairer for an insurer'),
     (r'\b(we are|kith is) (an? )?(insurer[- ])?approved\b', 'claims approved status'),
-    (r'\bmanufacturer[- ]approved\b.{0,40}\b(we|us|our)\b', 'claims manufacturer approval'),
-    (r'\b(bmw|audi|mercedes|volkswagen|tesla|ford|toyota)[- ]approved\b', 'implies marque approval'),
+    # "manufacturer-approved oil" and "manufacturer-approved tyres" are true and are about the
+    # product, not about us - the BMW star and Mercedes MO markings are real things we source.
+    # Only flag the phrase where it attaches to a repairer, bodyshop, garage or workshop.
+    (r'\bmanufacturer[- ]approved\s+(repairer|bodyshop|body shop|garage|workshop|centre)\b',
+     'claims manufacturer approval'),
+    (r'\b(bmw|audi|mercedes|volkswagen|tesla|ford|toyota)[- ]approved\s+'
+     r'(repairer|bodyshop|body shop|garage|workshop|centre)\b', 'implies marque approval'),
     (r'\bon (the )?(insurer|insurance) panel\b', 'claims panel membership'),
 ]
 
