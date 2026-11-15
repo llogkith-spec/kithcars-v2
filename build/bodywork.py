@@ -36,6 +36,9 @@ MODULES = [
     'bw_content_ins2',
     'bw_panels',
     'bw_damage',
+    'bw_content_ins3',
+    'bw_content_writeoff',
+    'bw_content_claim',
 ]
 
 # Similarity above this between two pages in the same category fails the build.
