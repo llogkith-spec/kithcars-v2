@@ -829,10 +829,35 @@
   }
 
   function viewOptions() {
-    return '<h2 class="kq-h">How would you like it done?</h2>' +
-      '<p class="kq-help">Two quick choices, then your price.</p>' +
-      '<div class="kq-basis">' + engineSizeUI() + partsUI() + oilUI() + '</div>' +
+    // These two choices change the SERVICING price and nothing else: partsGrade is only read by
+    // svcPrice in the engine, so a brake job's parts figure is unaffected by picking OEM here.
+    // The page used to ask "Which parts?" with no scope at all, which on a basket holding a
+    // service and a repair reads as though it covered both - someone choosing OEM would
+    // reasonably expect OEM brake pads and not get them.
+    var svcJobs = S.mech.filter(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
+    var others = S.mech.filter(function (id) { return SERVICE_IDS.indexOf(id) === -1 && id !== 'mot'; });
+    var svcName = svcJobs.length === 1 ? jobName(svcJobs[0]) : 'your service';
+
+    var scope = '<p class="kq-help">Two quick choices about <b>' + esc(svcName) + '</b>, then your price.</p>';
+    var tail = '';
+    if (others.length) {
+      tail = '<p class="kq-note">These two change the price of <b>' + esc(svcName) + '</b> only. ' +
+        'The parts for ' + esc(listNames(others)) + ' are already in the price you have been shown. ' +
+        'If you want a particular brand on those, say so on the call or in the notes and we will ' +
+        'price it for you.</p>';
+    }
+    return '<h2 class="kq-h">How would you like it done?</h2>' + scope +
+      '<div class="kq-basis">' + engineSizeUI() + partsUI() + oilUI() + '</div>' + tail +
       nav('build', 'to-estimate', 'Show my price');
+  }
+
+  function jobName(id) {
+    var j = E.findJob(C, id);
+    return j ? j.name.toLowerCase() : 'your service';
+  }
+  function listNames(ids) {
+    var n = ids.map(jobName);
+    return n.length === 1 ? n[0] : n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1];
   }
 
   function viewTyres() {
