@@ -458,3 +458,9 @@
 .kq-game-best strong{display:block;color:#D8A32B;font-size:16px;font-family:Georgia,serif;font-weight:500;margin-top:2px}
 #kq-snake{display:block;margin:0 auto;border-radius:6px;background:#1B1E24;outline:none;max-width:100%;touch-action:none;cursor:crosshair}
 .kq-game-help{font-size:11px;color:#8a8470;text-align:center;margin-top:10px;line-height:1.5}
+/* Compact car card for the choice step: the reg has just been entered, so this confirms we found
+   the right vehicle without repeating the full MOT panel from the step before. */
+.kq-car-sm{margin:0 0 1.1rem;padding:.7rem .85rem}
+.kq-car-sm .kq-car-plate{font-size:14px;padding:.2rem .5rem}
+.kq-car-sm strong{font-size:14.5px}
+.kq-car-sm span{font-size:12.5px}

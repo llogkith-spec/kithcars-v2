@@ -20,9 +20,21 @@
     tyres:      { label: 'Tyres',      sub: 'Priced by your tyre size',        cal: 'mechanical' },
     bodywork:   { label: 'Bodywork',   sub: 'Bumpers, panels, dents, paint',   cal: 'bodywork' },
     tuning:     { label: 'Tuning',     sub: 'Remaps, lowering, wheels',        cal: 'mechanical' },
-    recovery:   { label: 'Recovery',   sub: 'Broken down, or needs collecting', cal: 'mechanical' }
+    recovery:   { label: 'Recovery',   sub: 'Broken down, or needs collecting', cal: 'mechanical' },
+    // Not priced from the rate card: a claim is handled, not quoted. This one collects the
+    // incident and gets a callback booked, which is what a non-fault claim actually needs.
+    accident:   { label: 'Accident management', sub: 'Non-fault claim handled end to end', cal: 'bodywork' }
   };
-  var STEPS = ['flow', 'car', 'build', 'estimate', 'details', 'calendar', 'done'];
+
+  /* Flows that have no rate-card price and go straight from the intake to taking details. */
+  function callbackFlow() { return S.flow === 'accident' || (S.flow === 'recovery' && S.rec.when === 'now'); }
+  /* The registration comes first, then what they want done. It used to be the other way round,
+     and on a service page the flow was taken from the page's data-flow attribute, so someone who
+     entered a reg on the bumper page was dropped straight into the bodywork questions and never
+     got asked what they actually wanted. If they had come for a service and a bumper, there was
+     no way to say so. The page's own flow is now a suggestion that arrives pre-selected on the
+     choice step rather than something that skips it. */
+  var STEPS = ['car', 'flow', 'build', 'estimate', 'details', 'calendar', 'done'];
   var STEP_LABEL = { flow: 'Service', car: 'Your car', build: 'The work', estimate: 'Your price', details: 'Details', calendar: 'Your slot', done: 'Booked' };
 
   /* Panels of a car seen from above. key = the price-book panel it charges as. */
@@ -101,7 +113,8 @@
   ];
 
   var S = {
-    flow: '', step: 'flow', reg: '', vehicle: null, manual: false, model: '', band: 'medium',
+    flow: '', suggest: '', step: 'car', reg: '', vehicle: null, manual: false, model: '', band: 'medium',
+    acc: { fault: '', drivable: '', replacement: '', reported: '' },  // accident management intake
     mark: {},   // panelId -> {x, y, size} in car-diagram units: where the dent is and how big
     wheels: {}, // wheelId -> true for each kerbed alloy the customer taps
     collectBand: '', // which distance band for collection and return, '' until asked
@@ -229,8 +242,8 @@
 
   /* ---------- progress ---------- */
   function progress() {
-    var urgent = S.flow === 'recovery' && S.rec.when === 'now';
-    var shown = STEPS.filter(function (s) { return s !== 'flow' && s !== 'done' && !(urgent && s === 'calendar'); });
+    var urgent = callbackFlow();
+    var shown = STEPS.filter(function (s) { return s !== 'done' && !(urgent && s === 'calendar') && !(urgent && s === 'estimate'); });
     // "How you want it done" is a second page of the same step, not a sixth dot on the bar: the
     // customer is still answering "the work", and a bar that grows mid-flow reads as going backwards.
     var i = shown.indexOf(S.step === 'options' ? 'build' : S.step);
@@ -242,10 +255,52 @@
 
   /* ---------- step: choose a service ---------- */
   function viewFlow() {
-    return '<h2 class="kq-h">What does your car need?</h2><p class="kq-help">Pick one. You&rsquo;ll have a price in under a minute.</p>' +
+    var v = S.vehicle || {};
+    // Name the car back to them. They have just typed the reg and this is the step that confirms
+    // we found the right vehicle, so the choice is made against a car rather than in the abstract.
+    var car = (!S.manual && v.make)
+      ? '<div class="kq-car kq-car-sm"><div class="kq-car-plate">' + esc(v.registrationNumber || S.reg) + '</div><div><strong>' +
+        esc([v.yearOfManufacture, title(v.make)].filter(Boolean).join(' ')) + '</strong><span>' +
+        esc([v.engineCapacity ? v.engineCapacity + 'cc' : '', title(v.fuelType), title(v.colour)].filter(Boolean).join(' · ')) + '</span></div></div>'
+      : '';
+    var sel = S.flow || S.suggest;
+    return '<h2 class="kq-h">What does it need?</h2>' + car +
+      '<p class="kq-help">Pick one to get started. You can add more once we have priced the first.</p>' +
       '<div class="kq-picks">' + Object.keys(FLOWS).map(function (f) {
-        return '<button type="button" class="kq-pick" data-act="flow" data-v="' + f + '"><b>' + esc(FLOWS[f].label) + '</b><small>' + esc(FLOWS[f].sub) + '</small></button>';
+        return '<button type="button" class="kq-pick' + (sel === f ? ' on' : '') + '" data-act="flow" data-v="' + f + '"><b>' +
+          esc(FLOWS[f].label) + '</b><small>' + esc(FLOWS[f].sub) + '</small></button>';
+      }).join('') + '</div>' +
+      '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="car">Back</button></div>';
+  }
+
+  /* ---------- step: accident management ---------- */
+  function viewAccident() {
+    var a = S.acc;
+    function row(label, key, opts) {
+      return '<label class="kq-label">' + label + '</label><div class="kq-pills">' + opts.map(function (o) {
+        return '<button type="button" class="kq-pill' + (a[key] === o[0] ? ' on' : '') +
+          '" data-act="acc" data-v="' + key + ':' + o[0] + '">' + esc(o[1]) + '</button>';
       }).join('') + '</div>';
+    }
+    var h = '<h2 class="kq-h">Tell us what happened</h2>' +
+      '<p class="kq-help">Four questions, then we ring you back. We are on no insurer&rsquo;s panel, ' +
+      'which means you choose who repairs the car &mdash; not them.</p>' +
+      row('Whose fault was it?', 'fault', [['theirs', 'Not my fault'], ['mine', 'My fault'], ['unsure', 'Not sure yet']]) +
+      row('Is the car drivable?', 'drivable', [['yes', 'Yes'], ['no', 'No']]) +
+      row('Do you need a car in the meantime?', 'replacement', [['yes', 'Yes'], ['no', 'No']]) +
+      row('Told your insurer yet?', 'reported', [['yes', 'Yes'], ['no', 'Not yet'], ['noclaim', 'Not claiming']]);
+
+    if (a.drivable === 'no') {
+      h += '<p class="kq-note">If the car cannot be driven we can collect it. Pick <b>Recovery</b> ' +
+        'instead if you need it moved today, or carry on here and we will sort collection on the call.</p>';
+    }
+    if (a.fault === 'theirs') {
+      h += '<p class="kq-note">On a non-fault claim you are entitled to a like-for-like replacement ' +
+        'vehicle and your excess back. Both get missed if nobody asks for them. ' +
+        '<a href="/non-fault-accident-what-to-do" target="_blank" rel="noopener">What to do next</a>.</p>';
+    }
+    var ready = a.fault && a.drivable && a.replacement && a.reported;
+    return h + nav('flow', 'to-details', ready ? 'Next: your details' : 'Answer the four above', !ready);
   }
 
   /* ---------- step: the car ---------- */
@@ -284,7 +339,12 @@
         '<div><label class="kq-label" for="kq-year">Year</label><input class="kq-input" id="kq-year" inputmode="numeric" maxlength="4" placeholder="2016" value="' + esc(v.yearOfManufacture || '') + '"/></div></div>';
     }
     h += '<div class="kq-size">' + viewSize(found) + '</div>';
-    return h + nav('flow', 'to-build', 'Next');
+    // The car step is now the first step, so Back has nowhere to go. It does the thing someone
+    // actually wants here instead: clear the car and let them type the plate again, which is
+    // what you need when the lookup returned the wrong vehicle or you mistyped it.
+    return h + '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="recar">' +
+      (found ? 'Not my car' : 'Use a registration') + '</button>' +
+      '<button type="button" class="kq-btn kq-btn-main" data-act="to-build">Next</button></div>';
   }
   /* The size band decides the labour time, but a customer has no reason to know whether their car counts as
      an estate. So we work it out — from the DVLA record when we have one, otherwise from the make and model
@@ -367,6 +427,7 @@
 
   /* ---------- step: build (per flow) ---------- */
   function viewBuild() {
+    if (S.flow === 'accident') return viewAccident();
     if (S.flow === 'recovery') return viewRecovery();
     if (S.flow === 'tyres') return viewTyres();
     if (S.flow === 'bodywork') return viewBody();
@@ -414,7 +475,7 @@
         '<button type="button" class="kq-pill' + (rec.when === 'book' ? ' on' : '') + '" data-act="rwhen" data-v="book">Book a time</button></div>' +
         (rec.when === 'now' ? '<p class="kq-note">We will take your details and ring you straight back. Stay with the car if it is safe to, and put your hazards on.</p>' : '');
     }
-    return h + nav('car', 'to-estimate', line ? 'Continue' : 'Tell us where the car is', !line);
+    return h + nav('flow', 'to-estimate', line ? 'Continue' : 'Tell us where the car is', !line);
   }
 
   /* Postcode -> distance -> price. postcodes.io is the Ordnance Survey's open postcode data, free
@@ -753,7 +814,7 @@
     // unknown engine size silently dropped the service and left a £21 MOT standing on its own -
     // which cannot happen now the size is always known.
     var label = !S.mech.length ? 'Pick at least one' : 'Next (' + S.mech.length + ')';
-    return h + nav('car', 'to-estimate', label, !S.mech.length);
+    return h + nav('flow', 'to-estimate', label, !S.mech.length);
   }
 
   /* How the work gets done, on a page of its own after the job card.
@@ -790,7 +851,7 @@
         return '<button type="button" class="kq-tier' + (sz.tier === t.id ? ' on' : '') + '" data-act="tt" data-v="' + t.id + '"><b>' + esc(t.label) + '</b><small>' + esc(t.sub) + '</small>' +
           '<span><strong>' + range(p.lo + p.fit, p.hi + p.fit) + '</strong><small>per tyre, fitted</small></span></button>';
       }).join('') + '</div>';
-    return h + nav('car', 'to-estimate', 'Show my price');
+    return h + nav('flow', 'to-estimate', 'Show my price');
   }
 
 
@@ -880,7 +941,7 @@
     // The count has to include the wheels, or a customer who picked two alloys and a door is told
     // we are pricing one thing.
     var items = picked.length + Object.keys(S.wheels).length;
-    return h + nav('car', 'to-estimate', items ? 'Show my price (' + items + ')' : 'Tap a panel or a wheel', !items);
+    return h + nav('flow', 'to-estimate', items ? 'Show my price (' + items + ')' : 'Tap a panel or a wheel', !items);
   }
 
   function viewTune() {
@@ -899,7 +960,7 @@
         var on = S.tune.addons.indexOf(a.id) !== -1;
         return '<label class="kq-job' + (on ? ' on' : '') + '"><input type="checkbox" data-addon value="' + a.id + '"' + (on ? ' checked' : '') + '/><span>' + esc(a.label) + '<small>' + esc(a.sub) + '</small></span><em>' + (a.quote_after ? 'we’ll quote' : 'from ' + money(a.price[0])) + '</em></label>';
       }).join('') + '</div>';
-    return h + nav('car', 'to-estimate', 'Show my price');
+    return h + nav('flow', 'to-estimate', 'Show my price');
   }
   function gauge(p) {
     var max = Math.max(200, Math.ceil(p.high * 1.15 / 50) * 50), cx = 120, cy = 118, r = 92;
@@ -1400,7 +1461,7 @@
       '<div><label class="kq-label" for="kq-reg2">Reg</label><input class="kq-input" id="kq-reg2" name="reg" maxlength="10" value="' + esc((S.vehicle && S.vehicle.registrationNumber) || S.reg) + '"/></div></div>' +
       '<label class="kq-check"><input type="checkbox" name="collect"' + (lead().collect ? ' checked' : '') + ' data-act="collect-toggle"/> Please collect and return my car</label>' +
       collectUI() +
-      '<button class="kq-btn kq-btn-main" type="submit">' + (S.flow === 'recovery' && S.rec.when === 'now' ? 'Send this and call me back' : 'Next: pick my slot') + '</button>' +
+      '<button class="kq-btn kq-btn-main" type="submit">' + (callbackFlow() ? 'Send this and call me back' : 'Next: pick my slot') + '</button>' +
       '<p class="kq-err" role="alert" hidden></p>' +
       '<p class="kq-small">We only use your details to arrange this job.</p></form>' +
       '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="estimate">Back to the price</button></div>';
@@ -1443,14 +1504,14 @@
       // Last step before booking, and the one where people remember the panel they forgot.
       // Without this the only way back is the browser button, which drops the whole widget.
       '<div class="kq-nav kq-nav-amend"><button type="button" class="kq-btn kq-btn-link" data-act="back" data-v="' +
-      (S.flow === 'recovery' ? 'car' : 'build') + '">&larr; Add or change something on the job</button></div>';
+      (S.flow === 'recovery' ? 'flow' : 'build') + '">&larr; Add or change something on the job</button></div>';
   }
 
   /* ---------- step: done ---------- */
   function viewDone() {
     var booked = S.day && S.time, cal = FLOWS[S.flow].cal;
     var when = booked ? new Date(S.day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) + ' at ' + S.time : null;
-    var urgent = S.flow === 'recovery' && S.rec.when === 'now';
+    var urgent = callbackFlow();
     if (urgent) {
       return '<div class="kq-done"><h2 class="kq-h">We&rsquo;ve got it. Sit tight.</h2>' +
         '<p>Your details are with us now and you are at the top of the queue. We&rsquo;ll ring you straight back on the number you gave us.</p>' +
@@ -1494,7 +1555,7 @@
   function leadPayload() {
     var v = S.vehicle || {}, t = S.totals;
     return {
-      priority: (S.flow === 'recovery' && S.rec.when === 'now') ? 'urgent' : (S.day && S.time ? 'hot' : 'warm'),
+      priority: (S.flow === 'recovery' && S.rec.when === 'now') ? 'urgent' : (S.flow === 'accident' ? 'hot' : (S.day && S.time ? 'hot' : 'warm')),
       source: 'Website instant quote',
       stage: 'intake',
       name: lead().name, phone: lead().phone, email: lead().email || '',
@@ -1504,11 +1565,12 @@
       jobs: S.lines.map(function (l) { return { name: l.name, low: l.low, high: l.high, source: l.source || l.kind, hours: l.hours || null, parts: l.parts || null }; }),
       webEstimate: t && t.count ? { lo: t.low, hi: t.high } : null,
       requestedSlot: S.day && S.time ? { calendar: FLOWS[S.flow].cal, date: S.day, time: S.time } : null,
+      accident: S.flow === 'accident' ? { fault: S.acc.fault, drivable: S.acc.drivable, replacement: S.acc.replacement, reportedToInsurer: S.acc.reported } : null,
       collection: !!lead().collect,
       wantMot: !!S.wantMot,
       coupon: (S.day && S.time && !S.offerGone) ? { code: coupon().code, amount: coupon().amount, minSpend: coupon().min_spend } : null,
       priceBookVersion: C.version,
-      log: [{ at: new Date().toISOString(), by: 'Website', text: ((S.flow === 'recovery' && S.rec.when === 'now') ? 'URGENT: needs recovery now, call straight back' : S.day && S.time ? 'HOT: accepted the range and booked ' + S.day + ' ' + S.time : 'Estimate sent, no slot picked') }]
+      log: [{ at: new Date().toISOString(), by: 'Website', text: (S.flow === 'accident' ? ('ACCIDENT: ' + (S.acc.fault === 'theirs' ? 'non-fault' : S.acc.fault === 'mine' ? 'at fault' : 'liability unclear') + ', car ' + (S.acc.drivable === 'no' ? 'NOT drivable' : 'drivable') + ', ' + (S.acc.replacement === 'yes' ? 'needs a car' : 'no car needed') + ' - call back') : (S.flow === 'recovery' && S.rec.when === 'now') ? 'URGENT: needs recovery now, call straight back' : S.day && S.time ? 'HOT: accepted the range and booked ' + S.day + ' ' + S.time : 'Estimate sent, no slot picked') }]
     };
   }
   function sendLead() {
@@ -1713,8 +1775,8 @@
       var b = f.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Saving…';
       sendLead().then(function (res) {
         track('generate_lead', { value: S.totals ? S.totals.low : 0, currency: 'GBP', flow: S.flow });
-        if (!res.emailed && res.crm !== 'sent') { b.disabled = false; b.textContent = S.flow === 'recovery' && S.rec.when === 'now' ? 'Send this and call me back' : 'Next: pick my slot'; err.innerHTML = 'That didn’t send. Please <a href="tel:' + PHONE_TEL + '">call ' + PHONE + '</a> or <a href="' + waLink() + '" target="_blank" rel="noopener">WhatsApp us</a>.'; err.hidden = false; return; }
-        if (S.flow === 'recovery' && S.rec.when === 'now') { S.sent = true; track('quote_urgent'); try { sessionStorage.removeItem('kq2'); } catch (x) {} go('done'); return; }
+        if (!res.emailed && res.crm !== 'sent') { b.disabled = false; b.textContent = callbackFlow() ? 'Send this and call me back' : 'Next: pick my slot'; err.innerHTML = 'That didn’t send. Please <a href="tel:' + PHONE_TEL + '">call ' + PHONE + '</a> or <a href="' + waLink() + '" target="_blank" rel="noopener">WhatsApp us</a>.'; err.hidden = false; return; }
+        if (callbackFlow()) { S.sent = true; track('quote_urgent'); try { sessionStorage.removeItem('kq2'); } catch (x) {} go('done'); return; }
         go('calendar');
       });
     });
@@ -1724,9 +1786,13 @@
     var el = e.target.closest ? e.target.closest('[data-act]') : null;
     if (!el || !root.contains(el)) return;
     var a = el.dataset.act, v = el.dataset.v;
-    if (a === 'flow') { S.flow = v; track('quote_flow', { flow: v }); go(S.vehicle && !S.manual ? 'build' : 'car'); }
+    if (a === 'flow') { S.flow = v; track('quote_flow', { flow: v }); go('build'); }
     else if (a === 'manual') { S.manual = true; S.vehicle = S.vehicle || {}; render(); }
     else if (a === 'back') { if (S.step === 'build') readBuild(); if (S.step === 'car') readCar(); go(v); }
+    // Clear the held vehicle and go back to the plate. Also clears the flow, because a
+    // different car may well want a different job.
+    else if (a === 'recar') { resetCar(); S.reg = ''; S.flow = ''; save(); go('car'); }
+    else if (a === 'acc') { var kv = v.split(':'); S.acc[kv[0]] = kv[1]; save(); render(); }
     else if (a === 'rwhat') { S.rec.what = v; save(); render(); }
     else if (a === 'rwhere') { S.rec.where = v; S.rec.pc = null; save(); render(); }
     else if (a === 'rpc') { lookupPostcode(); }
@@ -1746,7 +1812,7 @@
       save(); render();
     }
     else if (a === 'flag-mot') { S.wantMot = true; track('quote_add_mot', { flow: S.flow }); save(); render(); }
-    else if (a === 'to-build') { readCar(); go('build'); }
+    else if (a === 'to-build') { readCar(); go(S.flow ? 'build' : 'flow'); }
     else if (a === 'to-estimate') {
       readBuild();
       // One page between the job card and the price, and only where it has something to ask:
@@ -1843,8 +1909,8 @@
     var f = t.dataset.quote;
     if (!C) { PENDING = { flow: f }; root.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (S.sent) { S.sent = false; S.lines = []; S.mech = []; S.body = {}; S.mark = {}; S.wheels = {}; S.expires = 0; S.offerGone = false; S.day = S.time = null; }
-    if (FLOWS[f]) { S.flow = f; S.step = (S.vehicle && !S.manual) ? 'build' : 'car'; }
-    else if (!S.flow) S.step = 'flow';
+    if (FLOWS[f]) { S.suggest = f; S.flow = f; S.step = (S.vehicle || S.manual) ? 'build' : 'car'; }
+    else S.step = (S.vehicle || S.manual) ? 'flow' : 'car';
     save(); render();
     root.scrollIntoView({ behavior: 'smooth', block: 'start' });
     var p = $('#kq-plate'); if (p) setTimeout(function () { p.focus({ preventScroll: true }); }, 400);
@@ -1853,15 +1919,16 @@
   if (hero) hero.addEventListener('submit', function (e) {
     e.preventDefault();
     var reg = hero.querySelector('input').value.trim();
-    if (!C) { PENDING = { flow: 'mechanical', reg: reg.toUpperCase() }; root.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (!C) { PENDING = { reg: reg.toUpperCase() }; root.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     /* A new plate here has to clear the old car before we render, or the car step shows the
        confirmation for the car we already hold instead of the registration form - and with no
        form on the page there is nothing to submit, so the plate just typed is never looked up.
        That is the bug where a second registration appears to do nothing at all. */
     var typed = reg.toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (heldReg() && heldReg() !== typed) resetCar();
-    S.reg = reg.toUpperCase(); S.step = S.flow ? 'car' : 'flow';
-    if (!S.flow) { S.flow = 'mechanical'; S.step = 'car'; }
+    // Always the car step: the plate has just been typed and needs looking up. What they want
+    // doing is asked immediately afterwards, on the choice step, rather than assumed here.
+    S.reg = reg.toUpperCase(); S.step = 'car';
     render(); root.scrollIntoView({ behavior: 'smooth', block: 'start' });
     var f = $('.kq-reg'); if (f && reg) { f.requestSubmit ? f.requestSubmit() : f.querySelector('button[type=submit]').click(); }
   });
@@ -1869,13 +1936,21 @@
   fetch(root.dataset.catalogue || '/quote-catalogue.json').then(function (r) { return r.json(); }).then(function (c) {
     C = c; load();
     var pf = root.dataset.flow, pj = root.dataset.job;
-    if (FLOWS[pf] && !S.sent) { S.flow = pf; if (S.step === 'flow') S.step = 'car'; }
+    // The page's own flow is a suggestion, not a decision. It arrives pre-selected on the choice
+    // step so a bumper page still points at bodywork, but the customer is asked either way -
+    // they may have come for a bumper and want the service doing while it is in.
+    if (FLOWS[pf] && !S.sent) S.suggest = pf;
     if (pj && E.findJob(C, pj) && S.mech.indexOf(pj) === -1 && !S.sent) { S.mech.push(pj); S.lines = []; if (S.step === 'estimate') S.step = 'build'; }
     if (PENDING) {
-      if (FLOWS[PENDING.flow]) { S.flow = PENDING.flow; S.step = (S.vehicle && !S.manual) ? 'build' : 'car'; }
+      if (FLOWS[PENDING.flow]) { S.suggest = PENDING.flow; S.flow = PENDING.flow; }
       if (PENDING.reg) S.reg = PENDING.reg;
     }
-    if (!S.flow) S.step = 'flow';
+    // Reg first, then the choice. Anything already answered is kept, so someone returning
+    // mid-quote lands where they left off rather than back at the plate.
+    if (!S.sent) {
+      if (!S.vehicle && !S.manual) S.step = 'car';
+      else if (!S.flow) S.step = 'flow';
+    }
     if (S.step === 'estimate' && !S.lines.length) S.step = 'build';
     render();
     if (PENDING && PENDING.reg) { var rf = $('.kq-reg'); if (rf) { rf.requestSubmit ? rf.requestSubmit() : rf.querySelector('button[type=submit]').click(); } }
