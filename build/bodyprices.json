@@ -1,0 +1,681 @@
+{
+ "roof|smart|small": {
+  "low": 285,
+  "high": 385,
+  "part": false
+ },
+ "roof|scuff|small": {
+  "low": 360,
+  "high": 460,
+  "part": false
+ },
+ "roof|dent|small": {
+  "low": 440,
+  "high": 720,
+  "part": true
+ },
+ "roof|smart|medium": {
+  "low": 285,
+  "high": 385,
+  "part": false
+ },
+ "roof|scuff|medium": {
+  "low": 360,
+  "high": 460,
+  "part": false
+ },
+ "roof|dent|medium": {
+  "low": 440,
+  "high": 720,
+  "part": true
+ },
+ "roof|smart|large": {
+  "low": 325,
+  "high": 425,
+  "part": false
+ },
+ "roof|scuff|large": {
+  "low": 410,
+  "high": 510,
+  "part": false
+ },
+ "roof|dent|large": {
+  "low": 490,
+  "high": 770,
+  "part": true
+ },
+ "roof|smart|van": {
+  "low": 380,
+  "high": 480,
+  "part": false
+ },
+ "roof|scuff|van": {
+  "low": 480,
+  "high": 580,
+  "part": false
+ },
+ "roof|dent|van": {
+  "low": 560,
+  "high": 840,
+  "part": true
+ },
+ "roof|smart|prestige": {
+  "low": 285,
+  "high": 385,
+  "part": false
+ },
+ "roof|scuff|prestige": {
+  "low": 360,
+  "high": 460,
+  "part": false
+ },
+ "roof|dent|prestige": {
+  "low": 440,
+  "high": 720,
+  "part": true
+ },
+ "boot|smart|small": {
+  "low": 240,
+  "high": 340,
+  "part": false
+ },
+ "boot|scuff|small": {
+  "low": 300,
+  "high": 400,
+  "part": false
+ },
+ "boot|dent|small": {
+  "low": 380,
+  "high": 660,
+  "part": true
+ },
+ "boot|smart|medium": {
+  "low": 240,
+  "high": 340,
+  "part": false
+ },
+ "boot|scuff|medium": {
+  "low": 300,
+  "high": 400,
+  "part": false
+ },
+ "boot|dent|medium": {
+  "low": 380,
+  "high": 660,
+  "part": true
+ },
+ "boot|smart|large": {
+  "low": 275,
+  "high": 375,
+  "part": false
+ },
+ "boot|scuff|large": {
+  "low": 350,
+  "high": 450,
+  "part": false
+ },
+ "boot|dent|large": {
+  "low": 430,
+  "high": 710,
+  "part": true
+ },
+ "boot|smart|van": {
+  "low": 335,
+  "high": 435,
+  "part": false
+ },
+ "boot|scuff|van": {
+  "low": 420,
+  "high": 520,
+  "part": false
+ },
+ "boot|dent|van": {
+  "low": 500,
+  "high": 780,
+  "part": true
+ },
+ "boot|smart|prestige": {
+  "low": 240,
+  "high": 340,
+  "part": false
+ },
+ "boot|scuff|prestige": {
+  "low": 300,
+  "high": 400,
+  "part": false
+ },
+ "boot|dent|prestige": {
+  "low": 380,
+  "high": 660,
+  "part": true
+ },
+ "front-bumper|smart|small": {
+  "low": 230,
+  "high": 330,
+  "part": false
+ },
+ "front-bumper|scuff|small": {
+  "low": 290,
+  "high": 390,
+  "part": false
+ },
+ "front-bumper|dent|small": {
+  "low": 370,
+  "high": 650,
+  "part": true
+ },
+ "front-bumper|smart|medium": {
+  "low": 230,
+  "high": 330,
+  "part": false
+ },
+ "front-bumper|scuff|medium": {
+  "low": 290,
+  "high": 390,
+  "part": false
+ },
+ "front-bumper|dent|medium": {
+  "low": 370,
+  "high": 650,
+  "part": true
+ },
+ "front-bumper|smart|large": {
+  "low": 265,
+  "high": 365,
+  "part": false
+ },
+ "front-bumper|scuff|large": {
+  "low": 340,
+  "high": 440,
+  "part": false
+ },
+ "front-bumper|dent|large": {
+  "low": 420,
+  "high": 700,
+  "part": true
+ },
+ "front-bumper|smart|van": {
+  "low": 325,
+  "high": 425,
+  "part": false
+ },
+ "front-bumper|scuff|van": {
+  "low": 410,
+  "high": 510,
+  "part": false
+ },
+ "front-bumper|dent|van": {
+  "low": 490,
+  "high": 770,
+  "part": true
+ },
+ "front-bumper|smart|prestige": {
+  "low": 230,
+  "high": 330,
+  "part": false
+ },
+ "front-bumper|scuff|prestige": {
+  "low": 290,
+  "high": 390,
+  "part": false
+ },
+ "front-bumper|dent|prestige": {
+  "low": 370,
+  "high": 650,
+  "part": true
+ },
+ "bonnet|smart|small": {
+  "low": 140,
+  "high": 210,
+  "part": false
+ },
+ "bonnet|scuff|small": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "bonnet|dent|small": {
+  "low": 260,
+  "high": 540,
+  "part": true
+ },
+ "bonnet|smart|medium": {
+  "low": 140,
+  "high": 210,
+  "part": false
+ },
+ "bonnet|scuff|medium": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "bonnet|dent|medium": {
+  "low": 260,
+  "high": 540,
+  "part": true
+ },
+ "bonnet|smart|large": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "bonnet|scuff|large": {
+  "low": 230,
+  "high": 330,
+  "part": false
+ },
+ "bonnet|dent|large": {
+  "low": 310,
+  "high": 590,
+  "part": true
+ },
+ "bonnet|smart|van": {
+  "low": 240,
+  "high": 340,
+  "part": false
+ },
+ "bonnet|scuff|van": {
+  "low": 300,
+  "high": 400,
+  "part": false
+ },
+ "bonnet|dent|van": {
+  "low": 380,
+  "high": 660,
+  "part": true
+ },
+ "bonnet|smart|prestige": {
+  "low": 140,
+  "high": 210,
+  "part": false
+ },
+ "bonnet|scuff|prestige": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "bonnet|dent|prestige": {
+  "low": 260,
+  "high": 540,
+  "part": true
+ },
+ "door|smart|small": {
+  "low": 190,
+  "high": 285,
+  "part": false
+ },
+ "door|scuff|small": {
+  "low": 240,
+  "high": 340,
+  "part": false
+ },
+ "door|dent|small": {
+  "low": 320,
+  "high": 600,
+  "part": true
+ },
+ "door|smart|medium": {
+  "low": 190,
+  "high": 285,
+  "part": false
+ },
+ "door|scuff|medium": {
+  "low": 240,
+  "high": 340,
+  "part": false
+ },
+ "door|dent|medium": {
+  "low": 320,
+  "high": 600,
+  "part": true
+ },
+ "door|smart|large": {
+  "low": 230,
+  "high": 330,
+  "part": false
+ },
+ "door|scuff|large": {
+  "low": 290,
+  "high": 390,
+  "part": false
+ },
+ "door|dent|large": {
+  "low": 370,
+  "high": 650,
+  "part": true
+ },
+ "door|smart|van": {
+  "low": 285,
+  "high": 385,
+  "part": false
+ },
+ "door|scuff|van": {
+  "low": 360,
+  "high": 460,
+  "part": false
+ },
+ "door|dent|van": {
+  "low": 440,
+  "high": 720,
+  "part": true
+ },
+ "door|smart|prestige": {
+  "low": 190,
+  "high": 285,
+  "part": false
+ },
+ "door|scuff|prestige": {
+  "low": 240,
+  "high": 340,
+  "part": false
+ },
+ "door|dent|prestige": {
+  "low": 320,
+  "high": 600,
+  "part": true
+ },
+ "rear-bumper|smart|small": {
+  "low": 140,
+  "high": 210,
+  "part": false
+ },
+ "rear-bumper|scuff|small": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "rear-bumper|dent|small": {
+  "low": 260,
+  "high": 540,
+  "part": true
+ },
+ "rear-bumper|smart|medium": {
+  "low": 140,
+  "high": 210,
+  "part": false
+ },
+ "rear-bumper|scuff|medium": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "rear-bumper|dent|medium": {
+  "low": 260,
+  "high": 540,
+  "part": true
+ },
+ "rear-bumper|smart|large": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "rear-bumper|scuff|large": {
+  "low": 230,
+  "high": 330,
+  "part": false
+ },
+ "rear-bumper|dent|large": {
+  "low": 310,
+  "high": 590,
+  "part": true
+ },
+ "rear-bumper|smart|van": {
+  "low": 240,
+  "high": 340,
+  "part": false
+ },
+ "rear-bumper|scuff|van": {
+  "low": 300,
+  "high": 400,
+  "part": false
+ },
+ "rear-bumper|dent|van": {
+  "low": 380,
+  "high": 660,
+  "part": true
+ },
+ "rear-bumper|smart|prestige": {
+  "low": 140,
+  "high": 210,
+  "part": false
+ },
+ "rear-bumper|scuff|prestige": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "rear-bumper|dent|prestige": {
+  "low": 260,
+  "high": 540,
+  "part": true
+ },
+ "front-wing|smart|small": {
+  "low": 140,
+  "high": 210,
+  "part": false
+ },
+ "front-wing|scuff|small": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "front-wing|dent|small": {
+  "low": 260,
+  "high": 540,
+  "part": true
+ },
+ "front-wing|smart|medium": {
+  "low": 140,
+  "high": 210,
+  "part": false
+ },
+ "front-wing|scuff|medium": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "front-wing|dent|medium": {
+  "low": 260,
+  "high": 540,
+  "part": true
+ },
+ "front-wing|smart|large": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "front-wing|scuff|large": {
+  "low": 230,
+  "high": 330,
+  "part": false
+ },
+ "front-wing|dent|large": {
+  "low": 310,
+  "high": 590,
+  "part": true
+ },
+ "front-wing|smart|van": {
+  "low": 240,
+  "high": 340,
+  "part": false
+ },
+ "front-wing|scuff|van": {
+  "low": 300,
+  "high": 400,
+  "part": false
+ },
+ "front-wing|dent|van": {
+  "low": 380,
+  "high": 660,
+  "part": true
+ },
+ "front-wing|smart|prestige": {
+  "low": 140,
+  "high": 210,
+  "part": false
+ },
+ "front-wing|scuff|prestige": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "front-wing|dent|prestige": {
+  "low": 260,
+  "high": 540,
+  "part": true
+ },
+ "rear-quarter|smart|small": {
+  "low": 140,
+  "high": 210,
+  "part": false
+ },
+ "rear-quarter|scuff|small": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "rear-quarter|dent|small": {
+  "low": 260,
+  "high": 540,
+  "part": true
+ },
+ "rear-quarter|smart|medium": {
+  "low": 140,
+  "high": 210,
+  "part": false
+ },
+ "rear-quarter|scuff|medium": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "rear-quarter|dent|medium": {
+  "low": 260,
+  "high": 540,
+  "part": true
+ },
+ "rear-quarter|smart|large": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "rear-quarter|scuff|large": {
+  "low": 230,
+  "high": 330,
+  "part": false
+ },
+ "rear-quarter|dent|large": {
+  "low": 310,
+  "high": 590,
+  "part": true
+ },
+ "rear-quarter|smart|van": {
+  "low": 240,
+  "high": 340,
+  "part": false
+ },
+ "rear-quarter|scuff|van": {
+  "low": 300,
+  "high": 400,
+  "part": false
+ },
+ "rear-quarter|dent|van": {
+  "low": 380,
+  "high": 660,
+  "part": true
+ },
+ "rear-quarter|smart|prestige": {
+  "low": 140,
+  "high": 210,
+  "part": false
+ },
+ "rear-quarter|scuff|prestige": {
+  "low": 180,
+  "high": 270,
+  "part": false
+ },
+ "rear-quarter|dent|prestige": {
+  "low": 260,
+  "high": 540,
+  "part": true
+ },
+ "trim|smart|small": {
+  "low": 95,
+  "high": 145,
+  "part": false
+ },
+ "trim|scuff|small": {
+  "low": 120,
+  "high": 180,
+  "part": false
+ },
+ "trim|dent|small": {
+  "low": 200,
+  "high": 480,
+  "part": true
+ },
+ "trim|smart|medium": {
+  "low": 95,
+  "high": 145,
+  "part": false
+ },
+ "trim|scuff|medium": {
+  "low": 120,
+  "high": 180,
+  "part": false
+ },
+ "trim|dent|medium": {
+  "low": 200,
+  "high": 480,
+  "part": true
+ },
+ "trim|smart|large": {
+  "low": 130,
+  "high": 195,
+  "part": false
+ },
+ "trim|scuff|large": {
+  "low": 170,
+  "high": 255,
+  "part": false
+ },
+ "trim|dent|large": {
+  "low": 250,
+  "high": 530,
+  "part": true
+ },
+ "trim|smart|van": {
+  "low": 190,
+  "high": 285,
+  "part": false
+ },
+ "trim|scuff|van": {
+  "low": 240,
+  "high": 340,
+  "part": false
+ },
+ "trim|dent|van": {
+  "low": 320,
+  "high": 600,
+  "part": true
+ },
+ "trim|smart|prestige": {
+  "low": 95,
+  "high": 145,
+  "part": false
+ },
+ "trim|scuff|prestige": {
+  "low": 120,
+  "high": 180,
+  "part": false
+ },
+ "trim|dent|prestige": {
+  "low": 200,
+  "high": 480,
+  "part": true
+ },
+ "_alloy_per_wheel_inc_vat": {
+  "low": 108,
+  "high": 144
+ }
+}
