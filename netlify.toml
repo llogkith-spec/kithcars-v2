@@ -71,3 +71,20 @@
   to = "/#quote"
   status = 301
   force = true
+
+# The seventeen dent-removal town pages were 97.4% identical to each other and named for a
+# service KITH does not offer - paintless dent removal. They were rebuilt as dent-repair-<town>,
+# which is both accurate and what the work actually is. These URLs have been crawled and linked
+# to, so they are kept alive and sent to the page that replaced them. 301, because the old ones
+# are not coming back.
+[[redirects]]
+  from = "/dent-removal-:town"
+  to = "/dent-repair-:town"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/dent-removal-:town.html"
+  to = "/dent-repair-:town"
+  status = 301
+  force = true

@@ -42,6 +42,7 @@ MODULES = [
     'bw_content_process',
     'bw_content_fill',
     'bw_content_rights',
+    'bw_dentrepair',
     'bw_hubs',
 ]
 
