@@ -185,3 +185,29 @@ FAQ = {
 
 # The panels each town actually damages, so the price table says something about the place.
 PANELS = {'croydon': [('rear-bumper', 'Rear bumper'), ('rear-quarter', 'Rear quarter'), ('boot', 'Boot lid')], 'thornton-heath': [('door', 'Door'), ('trim', 'Wing mirror'), ('front-wing', 'Front wing')], 'purley': [('door', 'Door'), ('trim', 'Sill cover'), ('front-bumper', 'Front bumper')], 'coulsdon': [('front-bumper', 'Front bumper'), ('front-wing', 'Front wing'), ('bonnet', 'Bonnet')], 'norbury': [('trim', 'Wing mirror'), ('front-wing', 'Front wing'), ('door', 'Door')], 'sutton': [('front-bumper', 'Front bumper'), ('rear-bumper', 'Rear bumper'), ('trim', 'Sill cover')], 'carshalton': [('door', 'Door'), ('trim', 'Wing mirror'), ('rear-quarter', 'Rear quarter')], 'cheam': [('front-wing', 'Front wing'), ('rear-bumper', 'Rear bumper'), ('door', 'Door')], 'wallington': [('door', 'Door'), ('front-bumper', 'Front bumper'), ('trim', 'Wing mirror')], 'beddington': [('door', 'Van side panel'), ('rear-quarter', 'Rear corner'), ('trim', 'Sill')], 'rosehill': [('door', 'Door'), ('rear-quarter', 'Rear quarter'), ('front-wing', 'Front wing')], 'worcester-park': [('front-wing', 'Front wing'), ('front-bumper', 'Front bumper'), ('door', 'Door')], 'mitcham': [('front-bumper', 'Front bumper'), ('front-wing', 'Front wing'), ('trim', 'Wing mirror')], 'morden': [('door', 'Door'), ('trim', 'Wing mirror'), ('rear-bumper', 'Rear bumper')], 'wimbledon': [('bonnet', 'Bonnet'), ('front-wing', 'Front wing'), ('door', 'Door')], 'streatham': [('trim', 'Wing mirror'), ('front-wing', 'Front wing'), ('door', 'Door')], 'tooting': [('front-bumper', 'Bumper corner'), ('rear-quarter', 'Rear quarter'), ('door', 'Door')]}
+
+EXTRA['hackbridge'] = (
+    'This is the one town page on the site where there is no journey to describe. The workshop is '
+    'on London Road, which for most of Hackbridge is a walk rather than a drive, and that changes '
+    'how people use us: cars get left and owners walk home, dents get looked at the same afternoon '
+    'rather than booked in for a fortnight on Thursday, and we would rather tell somebody a repair '
+    'is not worth doing than take the work, because we are going to see them in the Co-op. The '
+    'dents themselves are what a parked-up suburb produces \u2014 door edges, bumper corners, '
+    'creased panels where a van has squeezed past on a road narrowed to one lane by parking. Every '
+    'one of them is straightened and then painted and blended. We do not do paintless dent '
+    'removal, and on the dents PDR can fix a specialist will be cheaper. There is also a '
+    'steady supply of damage from the building work: the old Felnex estate was about a '
+    'million square feet of industry and was approved in 2016 for 725 homes plus a '
+    'supermarket, a surgery, a care home and a bus interchange, with New Mill Quarter '
+    'adding another 440. Over a decade that is an enormous number of contractor '
+    'pickups, skip lorries and delivery vans reversing in streets that were laid out '
+    'before anybody owned a car, and panels pay for it.')
+
+FAQ['hackbridge'] = (
+    'Can I just walk down with it?',
+    'Yes. We are on London Road, so for most of Hackbridge that is ten minutes on foot. Bring it '
+    'down and we will look at it and give you a figure, rather than you describing a dent over the '
+    'phone and us guessing at it.')
+
+PANELS['hackbridge'] = [('door', 'Door edge and door skin'), ('front-bumper', 'Bumper corner'),
+                        ('rear-quarter', 'Rear quarter')]

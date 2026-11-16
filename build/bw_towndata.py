@@ -32,6 +32,23 @@ BOROUGH = {
 }
 
 TOWNS = {
+    'hackbridge': dict(
+        name='Hackbridge', borough='Sutton',
+        pc='SM6', pc_n='2,543', shared='Wallington and Beddington, so the figure covers all three',
+        mins='0',
+        character='Hackbridge is where our workshop is. Unit 1 Soho Mills sits on London Road, a '
+                  'couple of minutes from the station, so the damage we see from here is not '
+                  'damage that travelled to us.',
+        damage='It is almost entirely low-speed and almost entirely parked. Sutton Council&rsquo;s '
+               'ward parking survey for Wandle ward, which is Hackbridge, found 67 per cent of '
+               'residents saying their street has a parking problem, 39 per cent parking on the '
+               'road and 74 per cent saying the trouble is on weekdays. Add the Felnex and New '
+               'Mill Quarter schemes putting over eleven hundred new homes into a suburb whose '
+               'central parade is Edwardian, and the result is streets parked solid and years of '
+               'delivery and contractor traffic squeezing through them.',
+        parking={'ward': 'Wandle', 'problem': '67', 'two_cars': '37',
+                 'on_street': '39',
+                 'streets': 'London Road, Hackbridge Road, Nightingale Road and Corbet Close'}),
     'croydon': dict(
         name='Croydon', borough='Croydon', pc='CR0', pc_n='11,524', shared=None, mins='15',
         character=(
