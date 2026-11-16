@@ -30,6 +30,18 @@ INSURANCE_GROUPS = [
     ('Particular situations', ['Specific situations']),
 ]
 
+GUIDE_GROUPS = [
+    ('How a repair actually works', ['The repair process', 'Assessment', 'Timescales',
+                                     'Choosing']),
+    ('Paint and colour', ['Paint']),
+    ('Sensors, aluminium and electric cars', ['Electronics', 'Sensors and calibration',
+                                              'Materials', 'Electric and hybrid']),
+    ('Damage with nobody to claim from', ['Untraced drivers', 'Uninsured drivers',
+                                          'Car park damage', 'Vandalism', 'Storm and flood']),
+    ('What it is worth doing', ['Claim decisions', 'Lease and company cars', 'Selling', 'Wheels',
+                                'Buying a used car']),
+]
+
 DAMAGE_GROUPS = [
     ('By panel', ['Front bumper', 'Rear bumper', 'Front wing', 'Rear quarter panel', 'Door',
                   'Bonnet', 'Roof', 'Boot lid', 'Trim']),
@@ -195,6 +207,54 @@ def build():
           '<strong>Blending is included</strong> in every price.'],
         hub=None, category='hub',
         service_type='Vehicle body repair', quote_heading='Price your panel now', note=None))
+
+    # ---- guides ----------------------------------------------------------------------------
+    # Everything that explains rather than prices. Without this hub these pages are reachable
+    # only from each other, which is how a page gets written and never crawled.
+    gd_groups = _grouped(pages, GUIDE_GROUPS, {'process', 'tech', 'value', 'scenario'})
+    gd_count = sum(len(r) for _, r in gd_groups)
+    hubs.append(page(
+        'bodywork-guides',
+        f'Car Bodywork Guides: {gd_count} Questions Answered | KITH Cars',
+        f'{gd_count} guides on how bodywork actually works &mdash; paint matching, sensor '
+        f'calibration, aluminium and electric cars, lease handback charges, and what to do when '
+        f'there is nobody to claim from.',
+        'Bodywork, Explained Properly',
+        'Bodywork &middot; Guides',
+        'Everything here answers a question rather than selling a job. If you want prices '
+        'instead, the panel guides have our whole rate card.',
+        [('What this is', [
+            'These are the questions we get asked across the counter, written out properly. Some '
+            'of them have exact answers that are worth knowing before you spend any money '
+            '&mdash; the millimetre thresholds on a lease handback, for instance, or the fact '
+            'that the national untraced drivers scheme does not pay for your car unless somebody '
+            'was significantly injured.',
+            'Where an answer depends on something we cannot know from here, the page says so '
+            'rather than guessing. Where we do not do the work ourselves, it says that too.',
+          ])] + _listing(gd_groups),
+        [('Do I have to use my insurer&rsquo;s repairer?',
+          'No. The repairer is your choice on any claim. We are on no insurer panel and no '
+          'manufacturer scheme, so nothing here is steered by an arrangement.'),
+         ('Can I get a price from these pages?',
+          'The panel guides carry the rate card, and the box on every page gives you a band from '
+          'your registration. These pages explain the why rather than the how much.'),
+         ('Do you do paintless dent removal?',
+          'No. Every dent we repair is straightened and then painted and blended. On the dents '
+          'PDR can fix, a PDR specialist will be cheaper, and we would rather tell you.'),
+         ('Something here is out of date.',
+          'Tell us and we will fix it. The figures on these pages come from published sources and '
+          'our own rate card, and both move.')],
+        [('body-panel-repairs', 'Every panel, and what it costs'),
+         ('car-insurance-claims', 'Insurance claims explained'),
+         ('bodywork-repair-process', 'The repair process, step by step'),
+         ('bodywork', 'Bodywork and accident repair')],
+        key_points=[
+          f'<strong>{gd_count} guides</strong> on how bodywork and claims actually work.',
+          'Published <strong>sources and figures</strong>, not generalities.',
+          'We are on <strong>no insurer panel</strong> and no manufacturer scheme.',
+          'Where we do not do the work, the page <strong>says so</strong>.'],
+        hub=None, category='hub',
+        service_type='Vehicle body repair', quote_heading='Price your repair now', note=None))
 
     return hubs
 

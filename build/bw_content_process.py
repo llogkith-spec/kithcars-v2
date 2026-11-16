@@ -435,6 +435,47 @@ PAGES = [
            'recalibration is part of the job you will be told at the estimate rather than at '
            'collection.',
           ]),
+          ('Static and dynamic, and why weather can delay your car', [
+           'There are two methods, set by the manufacturer rather than by us, and some cars need '
+           'both.',
+           ('table', (['', 'Static', 'Dynamic'], [
+             ['Where', 'In the workshop', 'On the road'],
+             ['How', 'Printed targets set at measured positions in front of the car',
+              'Driven on a route while the system relearns'],
+             ['Needs', 'A level floor, clear space ahead, controlled lighting',
+              'Clear lane markings, suitable weather, a safe route'],
+             ['Held up by', 'Very little', 'Heavy rain, fog, low sun, worn road markings'],
+           ])),
+           'That last row is a real reason a car can be finished in every other respect and still '
+           'not ready. Nobody can make lane markings appear in fog, and a dynamic calibration '
+           'signed off in conditions that were not suitable is worth nothing.',
+          ]),
+          ('Two more triggers people miss', [
+           ['<strong>Four-wheel alignment on its own.</strong> Setting the tracking changes the '
+            'relationship between the steering and the road, and on many cars that alone requires '
+            'the systems to be recalibrated. So a bodywork job that ends at the alignment is not '
+            'necessarily finished at the alignment.',
+            '<strong>A different wheel or tyre size.</strong> Changing rolling radius or ride '
+            'height moves every sensor&rsquo;s view of the road. Fitting mixed or uneven pairs '
+            'does the same thing unevenly.'],
+          ]),
+          ('Ask for the report, and keep it', [
+           'There is a paperwork consequence to this as well as a safety one. Repair records get '
+           'examined after a later accident, and a missing calibration record on a car whose '
+           'repair required one is a difficult thing to explain to anybody.',
+           ('steps', [
+             '<strong>&ldquo;Does this repair trigger a calibration on my car?&rdquo;</strong> '
+             '<span>A yes or a no with a reason, not a shrug.</span>',
+             '<strong>&ldquo;Static, dynamic, or both?&rdquo;</strong> <span>It tells you whether '
+             'the weather can hold your car up.</span>',
+             '<strong>&ldquo;Is it in the estimate?&rdquo;</strong> <span>Before the work starts. '
+             'It is a real cost and it should be visible.</span>',
+             '<strong>&ldquo;Will I get the calibration report?&rdquo;</strong> <span>Keep it '
+             'with the invoice. It is the proof the job was finished properly.</span>',
+           ]),
+           'Those four questions are worth asking wherever you take the car, and the quality of '
+           'the answers will tell you most of what you need to know about the shop.',
+          ]),
          ],
          [('How do I know if my car has these systems?',
            'If it has adaptive cruise, lane assist, automatic emergency braking or blind spot '

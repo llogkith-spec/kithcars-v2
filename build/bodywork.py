@@ -43,6 +43,9 @@ MODULES = [
     'bw_content_fill',
     'bw_content_rights',
     'bw_content_choosing',
+    'bw_content_value',
+    'bw_content_tech',
+    'bw_content_scenario',
     'bw_dentrepair',
     'bw_hubs',
 ]
