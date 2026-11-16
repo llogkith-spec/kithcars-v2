@@ -26,6 +26,7 @@ INSURANCE_GROUPS = [
     ('Getting your car back', ['Replacement vehicles', 'The process']),
     ('Choosing who repairs it', ['Choice of repairer']),
     ('If they write it off', ['Write-offs']),
+    ('When the repair goes wrong', ['When it goes wrong']),
     ('Particular situations', ['Specific situations']),
 ]
 
@@ -36,15 +37,17 @@ DAMAGE_GROUPS = [
                            'Kerbing', 'Vandalism']),
 ]
 
-CONTENT_MODULES = [
-    'bw_content_insurance', 'bw_content_ins2', 'bw_content_ins3', 'bw_content_writeoff',
-    'bw_content_claim', 'bw_content_process', 'bw_content_fill', 'bw_panels', 'bw_damage',
-]
+# Taken from the build's own module list rather than repeated here. Keeping a second copy is
+# how a page gets written, linked from its siblings, and silently left off its hub - which is
+# exactly what happened to the four "when it goes wrong" pages the first time round.
+def CONTENT_MODULES():
+    import bodywork
+    return [m for m in bodywork.MODULES if m != 'bw_hubs']
 
 
 def _all_pages():
     out = []
-    for name in CONTENT_MODULES:
+    for name in CONTENT_MODULES():
         mod = importlib.import_module(name)
         importlib.reload(mod)
         out.extend(mod.PAGES)

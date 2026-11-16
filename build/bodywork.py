@@ -41,6 +41,7 @@ MODULES = [
     'bw_content_claim',
     'bw_content_process',
     'bw_content_fill',
+    'bw_content_rights',
     'bw_hubs',
 ]
 
