@@ -48,6 +48,11 @@ def chrome():
 
 CH = chrome()
 
+# Taken from the donor's own business node so it cannot drift from the rest of the site.
+BUSINESS_NAME = json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>',
+                                     DONOR.read_text(), re.S).group(1))['@graph'][0].get(
+                                         'name', 'KITH Cars Garage & Bodyworks')
+
 
 def esc(s):
     return html.escape(s, quote=True)
@@ -149,6 +154,52 @@ def _schema(page):
                 {'@type': 'Question', 'name': re.sub(r'<[^>]+>', '', q),
                  'acceptedAnswer': {'@type': 'Answer', 'text': re.sub(r'<[^>]+>', '', a)}}
                 for q, a in page['faqs']],
+        })
+
+    # An Article node carrying authorship, publisher and dates. The pages already answer a
+    # question directly and carry FAQ markup; what they had no way of saying was who wrote them,
+    # on whose authority, and when they were last checked. For a page about what an insurer owes
+    # you, that is the difference between being read and being quoted.
+    import datetime
+    today = datetime.date.today().isoformat()
+    graph.append({
+        '@type': 'Article',
+        '@id': url + '#article',
+        'headline': re.sub(r'<[^>]+>', '', page['h1']),
+        'description': page['desc'],
+        'mainEntityOfPage': {'@type': 'WebPage', '@id': url},
+        'datePublished': page.get('published', today),
+        'dateModified': today,
+        'author': {'@type': 'Organization', '@id': f'{BASE}/#business', 'name': BUSINESS_NAME},
+        'publisher': {'@id': f'{BASE}/#business'},
+        'about': {'@id': url + '#service'},
+        'isAccessibleForFree': True,
+        # The short-answer card is the part of the page that answers the question outright.
+        'speakable': {'@type': 'SpeakableSpecification',
+                      'cssSelector': ['.kx-keycard', '.page-hero .lead']},
+    })
+
+    # Pages built around an ordered procedure say so, which is what distinguishes a set of steps
+    # from a list of bullet points to anything reading the markup rather than the prose.
+    steps = []
+    for heading, blocks in page['sections']:
+        for b in blocks:
+            if isinstance(b, tuple) and b and b[0] == 'steps':
+                for i, s in enumerate(b[1], start=1):
+                    txt = re.sub(r'<[^>]+>', ' ', s)
+                    txt = re.sub(r'\s+', ' ', txt).strip()
+                    steps.append({'@type': 'HowToStep', 'position': i,
+                                  'name': txt.split('.')[0][:110], 'text': txt})
+                break
+        if steps:
+            break
+    if steps:
+        graph.append({
+            '@type': 'HowTo',
+            '@id': url + '#howto',
+            'name': re.sub(r'<[^>]+>', '', page['h1']),
+            'description': page['desc'],
+            'step': steps,
         })
 
     crumbs = [{'@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': BASE + '/'}]
