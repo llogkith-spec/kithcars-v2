@@ -40,6 +40,7 @@ GUIDE_GROUPS = [
                                           'Car park damage', 'Vandalism', 'Storm and flood']),
     ('What it is worth doing', ['Claim decisions', 'Lease and company cars', 'Selling', 'Wheels',
                                 'Buying a used car']),
+    ('Prices and comparisons', ['Prices', 'Comparison', 'MOT']),
 ]
 
 DAMAGE_GROUPS = [
@@ -211,7 +212,7 @@ def build():
     # ---- guides ----------------------------------------------------------------------------
     # Everything that explains rather than prices. Without this hub these pages are reachable
     # only from each other, which is how a page gets written and never crawled.
-    gd_groups = _grouped(pages, GUIDE_GROUPS, {'process', 'tech', 'value', 'scenario'})
+    gd_groups = _grouped(pages, GUIDE_GROUPS, {'process', 'tech', 'value', 'scenario', 'money'})
     gd_count = sum(len(r) for _, r in gd_groups)
     hubs.append(page(
         'bodywork-guides',

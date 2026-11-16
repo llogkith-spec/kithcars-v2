@@ -46,6 +46,7 @@ MODULES = [
     'bw_content_value',
     'bw_content_tech',
     'bw_content_scenario',
+    'bw_content_money',
     'bw_dentrepair',
     'bw_hubs',
 ]
