@@ -20,8 +20,10 @@ HUB_PROCESS = ('The repair process', 'bodywork-repair-process')
 HUB_DAMAGE = ('Damage &amp; panels', 'body-panel-repairs')
 HUB_MAKES = ('By make', 'bodywork-by-make')
 
+# No self-reported star rating here. Google does not use a rating a business publishes about
+# itself, and in structured data it is self-serving review content. The real reviews are on the
+# Business Profile.
 TRUST_DEFAULT = [
-    '★★★★★ 4.9/5 from 193 Google reviews',
     'Hackbridge SM6 7HN',
     'Any insurer &middot; your choice of repairer',
 ]

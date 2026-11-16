@@ -1707,6 +1707,33 @@
     S.lines = []; S.totals = null;
   }
 
+  /* Everything the customer chose for the PREVIOUS car.
+
+     resetCar above throws away the vehicle and the pricing but deliberately kept the job
+     selections, on the reasoning that correcting a typo in a plate should not lose your choices.
+     That reasoning was wrong in practice, because the registration is the FIRST step: at the
+     moment someone types a plate they have not chosen anything yet unless they went forward and
+     came back, and if they went forward, came back and changed the plate, it is a different car
+     and a different job.
+
+     What it produced was the reported fault - put in a reg, pick MOT, come back, put in another
+     reg, and the new car is still on MOT. Same for a dent marked on the diagram, a tyre size, a
+     remap, an accident intake. All of it belonged to a car that is no longer being quoted.
+
+     Contact details are kept. The person is usually the same person even when the car is not,
+     and making them retype a name and number is a separate annoyance with no safety argument. */
+  function resetJob() {
+    S.flow = ''; S.suggest = ''; S.wantMot = false;
+    S.mech = []; S.body = {}; S.mark = {}; S.wheels = {};
+    S.tyre = { w: 205, p: 55, r: 16, qty: 4, tier: 'mid', rf: false };
+    S.tune = { fuel: 'tp', bhp: '', stage: 's1', addons: [] };
+    S.rec = { what: '', where: '', when: 'book' };
+    S.acc = { fault: '', drivable: '', replacement: '', reported: '' };
+    S.addons = []; S.collectBand = ''; S.oil = null; S.parts = null;
+    S.power = null; S.expires = 0; S.offerGone = false;
+    S.day = null; S.time = null; S.sent = false;
+  }
+
   function bindCar() {
     var f = $('.kq-reg');
     if (f) f.addEventListener('submit', function (e) {
@@ -1724,7 +1751,7 @@
       /* Compared against the car we are actually holding, not S.reg. The hero box on the homepage
          sets S.reg itself before handing over to this form, so a guard on S.reg compares the new
          plate with itself and never fires - which is the path most people take. */
-      if (heldReg() && heldReg() !== reg) resetCar();
+      if (heldReg() && heldReg() !== reg) { resetCar(); resetJob(); }
       S.reg = reg; track('quote_start', { flow: S.flow });
       var b = f.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Finding your car…';
       post('/api/vehicle', { reg: reg }, 8000).then(function (r) {
@@ -1845,7 +1872,7 @@
     else if (a === 'back') { if (S.step === 'build') readBuild(); if (S.step === 'car') readCar(); go(v); }
     // Clear the held vehicle and go back to the plate. Also clears the flow, because a
     // different car may well want a different job.
-    else if (a === 'recar') { resetCar(); S.reg = ''; S.flow = ''; save(); go('car'); }
+    else if (a === 'recar') { resetCar(); resetJob(); S.reg = ''; save(); go('car'); }
     else if (a === 'acc') { var kv = v.split(':'); S.acc[kv[0]] = kv[1]; save(); render(); }
     else if (a === 'rwhat') { S.rec.what = v; save(); render(); }
     else if (a === 'rwhere') { S.rec.where = v; S.rec.pc = null; save(); render(); }
@@ -1979,7 +2006,10 @@
        form on the page there is nothing to submit, so the plate just typed is never looked up.
        That is the bug where a second registration appears to do nothing at all. */
     var typed = reg.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (heldReg() && heldReg() !== typed) resetCar();
+    // A different plate here is a different enquiry, so the previous car's job selections go with
+    // the car. Otherwise someone who priced an MOT, left the page and came back with another
+    // registration gets the new car already sitting on the old car's job.
+    if (heldReg() && heldReg() !== typed) { resetCar(); resetJob(); }
     // Always the car step: the plate has just been typed and needs looking up. What they want
     // doing is asked immediately afterwards, on the choice step, rather than assumed here.
     S.reg = reg.toUpperCase(); S.step = 'car';

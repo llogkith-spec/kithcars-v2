@@ -260,11 +260,10 @@ def rewrite(path):
     title = (f'Dent Repair {area} | Straightened and Repainted | KITH Cars'
              if area else f'Dent Repair South London | From {PRICE_FROM} | KITH Cars')
     desc = (f'Dent repair for {area} drivers at our Hackbridge bodyshop. We do not do paintless: '
-            f'the dent is straightened and the panel repainted, {PRICE_FROM}–{PRICE_TO} inc VAT. '
-            f'4.9 from 193 Google reviews.'
+            f'the dent is straightened and the panel repainted, {PRICE_FROM}–{PRICE_TO} inc VAT.'
             if area else
             f'Dent repair in Hackbridge SM6. We do not do paintless: the dent is straightened and the '
-            f'panel repainted and blended, {PRICE_FROM}–{PRICE_TO} inc VAT. 4.9 from 193 reviews.')
+            f'panel repainted and blended, {PRICE_FROM}–{PRICE_TO} inc VAT.')
 
     head = s[:s.index('<main>')]
     tail = s[s.index('</main>') + len('</main>'):]

@@ -216,8 +216,8 @@ def _schema(page):
 
 def render(page):
     url = f'{BASE}/{page["slug"]}'
+    # No self-reported star rating - see TRUST_DEFAULT in bw_lib for why.
     trust = page.get('trust', [
-        '★★★★★ 4.9/5 from 193 Google reviews',
         'Hackbridge SM6 7HN',
         'Any insurer &middot; your choice of repairer',
     ])
