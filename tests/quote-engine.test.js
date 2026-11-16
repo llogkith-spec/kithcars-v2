@@ -304,3 +304,31 @@ for (const id of ['service-interim','service-full','brake-discs-front','clutch',
 
   console.log('MOT bundle guard tests passed');
 }
+
+/* ---- OEM applies to repair parts, not only to servicing ---------------------------------- */
+{
+  // The grade used to be read only by svcPrice, so someone ticking OEM got an OEM service and
+  // aftermarket brake pads with nothing on the page saying so.
+  const after = E.priceJob(cat, 'brake-pads-front', 'medium', { parts: 'aftermarket' });
+  const oem = E.priceJob(cat, 'brake-pads-front', 'medium', { parts: 'oem' });
+  assert.ok(oem.low > after.low, 'OEM must raise a repair job above aftermarket');
+
+  // Labour is the same work whichever box the part came in: only the parts move. The uplift on
+  // the low figure must therefore be smaller than the multiplier applied to the whole price.
+  const m = E.repairPartsMultiplier(cat, 'oem');
+  assert.ok(m > 1, 'oem repair multiplier should exceed 1');
+  assert.ok(oem.low < after.low * m, 'the uplift must apply to parts only, not to labour');
+
+  // A job with no parts has nothing to uplift.
+  const mot = E.priceJob(cat, 'mot', 'medium', { parts: 'oem' });
+  assert.strictEqual(mot.low, E.priceJob(cat, 'mot', 'medium', { parts: 'aftermarket' }).low,
+    'a fixed-price job with no parts must not move with the grade');
+
+  // Aftermarket is the baseline and must change nothing.
+  assert.strictEqual(E.repairPartsMultiplier(cat, 'aftermarket'), 1,
+    'aftermarket must be the unmultiplied baseline');
+
+  // An unknown grade falls back to the default rather than throwing or silently zeroing.
+  assert.ok(E.repairPartsMultiplier(cat, 'nonsense') > 0, 'unknown grade must fall back safely');
+  console.log('repair parts grade tests passed');
+}

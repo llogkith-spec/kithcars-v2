@@ -695,17 +695,16 @@
   }
 
   function partsUI() {
-    if (!svcBandKnown()) return '';
     var grades = C.servicing.parts_grade.grades;
-    var band = E.svcBandById(C, svcBandId());
-    var lvl = basisLevel();
-    var base = E.svcPrice(C, lvl, band.id, S.oil || 'standard', false, 'aftermarket');
-    var oem = E.svcPrice(C, lvl, band.id, S.oil || 'standard', false, 'oem');
-    var diff = Math.round(oem - base);
+    // The uplift quoted is what OEM adds to everything ticked, not just to the service. It used
+    // to be the servicing difference alone, which understated it on any basket with a repair in
+    // it - and the repair parts did not actually change anyway.
+    var diff = partsUplift();
+    if (!diff) return '';
     var h = '<div class="kq-parts"><label class="kq-label">Which parts?</label>' +
       '<div class="kq-pills kq-choice">' + grades.map(function (g) {
         var best = g.id === 'oem';
-        var extra = best && diff > 0 ? '<i>+' + money(diff) + (basisIsGuess() ? ' on a full service' : '') + '</i>' : '';
+        var extra = best && diff > 0 ? '<i>+' + money(diff) + ' on this job' + (S.mech.length > 1 ? ' card' : '') + '</i>' : '';
         return '<button type="button" class="kq-pill kq-ccopt' + (S.parts === g.id ? ' on' : '') +
           '" data-act="parts" data-v="' + g.id + '">' +
           '<b>' + esc(g.label) + (best ? ' <span class="kq-rec">what we’d fit</span>' : '') + '</b>' +
@@ -732,7 +731,8 @@
      case for the specialist grade — so the advice appears on that choice, not as a nag before
      they have chosen anything. */
   function oilUI() {
-    if (!svcBandKnown()) return '';
+    // No service in the basket means no oil change, so the question has nothing to change.
+    if (!hasService() || !svcBandKnown()) return '';
     var O = C.servicing.oil, band = E.svcBandById(C, svcBandId());
     var lvlId = basisLevel();
     var pg = S.parts || 'aftermarket';
@@ -823,9 +823,36 @@
      On its own page, after Next, each question gets asked once and the job list stays clean. */
   /* Only servicing prices move on oil, parts and engine size, so only a service earns this page.
      Someone here for brake pads goes straight from the job card to their price. */
+  /* True when there is a service in the basket. The oil question only makes sense then. */
+  function hasService() {
+    return S.mech.some(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
+  }
+
+  /* What picking OEM actually adds across everything currently ticked - the service and the
+     repairs together. Priced by running the basket twice rather than by quoting the servicing
+     difference and hoping it covers the rest, which is what it used to do. */
+  function partsUplift() {
+    var lo = 0;
+    ['aftermarket', 'oem'].forEach(function (grade, i) {
+      var sum = 0;
+      S.mech.forEach(function (id) {
+        try {
+          var l = E.priceJob(C, id, svcBandId() || S.band,
+            { parts: grade, oil: S.oil || 'standard', ai: (S.ai || {})[id] });
+          sum += l.low || 0;
+        } catch (e) { /* an unknown job must not take the whole page down */ }
+      });
+      if (i === 0) lo = sum; else lo = sum - lo;
+    });
+    return Math.max(0, Math.round(lo));
+  }
+
   function optionsNeeded() {
-    return S.flow === 'mechanical' &&
-      S.mech.some(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
+    if (S.flow !== 'mechanical' || !S.mech.length) return false;
+    // Ask whenever either question has something to change: a service for the oil, or any job
+    // carrying parts for the grade. A repair-only basket used to skip this page entirely, so
+    // there was no way to ask for OEM brake pads.
+    return hasService() || partsUplift() > 0;
   }
 
   function viewOptions() {
@@ -834,20 +861,18 @@
     // The page used to ask "Which parts?" with no scope at all, which on a basket holding a
     // service and a repair reads as though it covered both - someone choosing OEM would
     // reasonably expect OEM brake pads and not get them.
-    var svcJobs = S.mech.filter(function (id) { return SERVICE_IDS.indexOf(id) !== -1; });
-    var others = S.mech.filter(function (id) { return SERVICE_IDS.indexOf(id) === -1 && id !== 'mot'; });
-    var svcName = svcJobs.length === 1 ? jobName(svcJobs[0]) : 'your service';
+    // The parts choice now covers the whole job card rather than the service alone, so the page
+    // no longer has to carve out an exception for repairs. The oil question still only appears
+    // where there is a service, because nothing else on the card takes oil.
+    var n = S.mech.length;
+    var scope = hasService()
+      ? '<p class="kq-help">' + (oilUI() ? 'Two quick choices' : 'One quick choice') +
+        ', then your price.</p>'
+      : '<p class="kq-help">One quick choice about the parts we fit' +
+        (n > 1 ? ' on all ' + n + ' jobs' : '') + ', then your price.</p>';
 
-    var scope = '<p class="kq-help">Two quick choices about <b>' + esc(svcName) + '</b>, then your price.</p>';
-    var tail = '';
-    if (others.length) {
-      tail = '<p class="kq-note">These two change the price of <b>' + esc(svcName) + '</b> only. ' +
-        'The parts for ' + esc(listNames(others)) + ' are already in the price you have been shown. ' +
-        'If you want a particular brand on those, say so on the call or in the notes and we will ' +
-        'price it for you.</p>';
-    }
     return '<h2 class="kq-h">How would you like it done?</h2>' + scope +
-      '<div class="kq-basis">' + engineSizeUI() + partsUI() + oilUI() + '</div>' + tail +
+      '<div class="kq-basis">' + engineSizeUI() + partsUI() + oilUI() + '</div>' +
       nav('build', 'to-estimate', 'Show my price');
   }
 
@@ -1020,8 +1045,12 @@
         if (id === 'mot') return null;                       // second pass
         var isSvc = SERVICE_IDS.indexOf(id) !== -1;
         if (isSvc && !svcBandKnown()) return null;
+        // Oil stays service-only, because nothing else on the card takes any. Parts do not:
+        // the grade applies to a brake job's pads as much as to a service's filters, and
+        // withholding it here was why ticking OEM changed the service price and left every
+        // repair exactly where it was.
         return E.priceJob(C, id, isSvc ? svcBandId() : S.band,
-                          { ai: S.ai[id], oil: isSvc ? S.oil : undefined, parts: isSvc ? S.parts : undefined });
+                          { ai: S.ai[id], oil: isSvc ? S.oil : undefined, parts: S.parts });
       }).filter(Boolean);
 
       var svcLevels = priced.map(function (l) {

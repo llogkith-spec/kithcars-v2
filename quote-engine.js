@@ -183,6 +183,15 @@
     var aiH = ai && pair(ai.hours), aiP = ai && pair(ai.parts);
     var h = aiH || job.hours[band];
     var p = job.labour_only ? [0, 0] : (aiP || job.parts[band]);
+    /* The OEM/aftermarket choice applies to repair parts, not only to servicing. It used to be
+       read solely by svcPrice, so someone ticking OEM got an OEM service and aftermarket brake
+       pads - and no indication that was what had happened.
+
+       Only the parts move. Labour is the same work whichever box the part came in, and a
+       labour-only job has nothing to uplift. The multiplier is per grade and lives in the
+       catalogue, so the uplift is one number rather than a figure buried in here. */
+    var pm = repairPartsMultiplier(cat, opts.parts);
+    if (pm !== 1 && (p[0] || p[1])) p = [p[0] * pm, p[1] * pm];
     // The range the customer sees: the bottom is the rate-card figure for a typical job on their car,
     // the top sits mech_headroom above it. That gap is what lets the site say the final price lands
     // inside the range. Without a headroom set, fall back to the low-to-high book-time spread.
@@ -557,6 +566,17 @@
     return l.length ? l[0] : null;
   }
 
+  /* The multiplier applied to a repair job's parts for the chosen grade. Falls back to the
+     servicing multiplier when no repair-specific one is set, so a catalogue that only knows
+     about servicing still behaves sensibly rather than silently applying 1. */
+  function repairPartsMultiplier(cat, gradeId) {
+    if (!cat.servicing || !cat.servicing.parts_grade) return 1;
+    var g = partsGrade(cat, gradeId || cat.servicing.parts_grade.default);
+    var m = Number(g.repair_parts_multiplier);
+    if (!isFinite(m) || m <= 0) m = Number(g.parts_multiplier);
+    return isFinite(m) && m > 0 ? m : 1;
+  }
+
   function partsGrade(cat, id) {
     var g = (cat.servicing.parts_grade.grades || []).filter(function (x) { return x.id === id; });
     return g.length ? g[0] : cat.servicing.parts_grade.grades[0];
@@ -754,7 +774,7 @@
            ulezLikely: ulezLikely,
            priceJob: priceJob, totals: totals, bodyBand: bodyBand, clampAi: clampAi, findJob: findJob, tyrePrice: tyrePrice,
            tyreLine: tyreLine, bodyLine: bodyLine, alloyLine: alloyLine, tuneLines: tuneLines, recoveryLine: recoveryLine, milesFrom: milesFrom,
-           svcLine: svcLine, svcPrice: svcPrice, partsGrade: partsGrade, svcAddon: svcAddon, addonLine: addonLine, addonsFor: addonsFor, svcBand: svcBand, svcBandById: svcBandById, svcLevel: svcLevel, motWithService: motWithService,
+           svcLine: svcLine, svcPrice: svcPrice, partsGrade: partsGrade, repairPartsMultiplier: repairPartsMultiplier, svcAddon: svcAddon, addonLine: addonLine, addonsFor: addonsFor, svcBand: svcBand, svcBandById: svcBandById, svcLevel: svcLevel, motWithService: motWithService,
            ccFromCarSize: ccFromCarSize,
            couponEligible: couponEligible, bookableDays: bookableDays, safeNote: safeNote };
 });
