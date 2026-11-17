@@ -363,3 +363,44 @@ h3{font-size:1.2rem;font-weight:700}
 /* Each eyebrow item stays whole, so the line can only break at a separator. Without this it
    broke as "... SAT / 8AM-5PM", which reads as a mistake rather than a wrap. */
 .hero .eyebrow > span{white-space:nowrap}
+
+/* ---------------------------------------------------------------------------------------------
+   Hero: a slow drift on the background image.
+
+   transform on .hero-bg rather than background-size or background-position. Transform is
+   composited on the GPU, so it costs nothing per frame; animating background-size forces a
+   repaint of a full-bleed image every frame and janks badly on a phone.
+
+   The scale never goes below 1.04. At scale 1 the element exactly fills its box, so any drift
+   at that end would expose a hard edge down the side of the hero. Keeping a floor of 1.04
+   leaves roughly 8px of overhead each side at phone width and 25px at desktop, which is the
+   headroom the movement happens inside. .hero already has overflow:hidden, so nothing spills.
+
+   28s and ease-in-out, starting zoomed in and pulling back. Slow enough that it reads as the
+   page being alive rather than as something moving; at a shorter duration it competes with the
+   reg plate, which is the one thing on this screen that should hold attention.
+
+   The gradient overlay is .hero-bg:after and scales with its parent. That is intentional - it
+   keeps the dark-to-light falloff locked to the image rather than sliding across it.
+
+   The prefers-reduced-motion rule above kills this entirely for anyone who has asked for that,
+   and the floor scale means the still frame it leaves behind is a correctly filled hero.
+   --------------------------------------------------------------------------------------------- */
+@keyframes kithHeroDrift{
+  from{transform:scale(1.12)}
+  to{transform:scale(1.04)}
+}
+.hero-bg{
+  transform:scale(1.04);
+  transform-origin:50% 50%;
+  animation:kithHeroDrift 28s ease-in-out infinite alternate;
+  will-change:transform;
+}
+/* Phones: a touch less travel, since the tall crop is already closer in. */
+@media (max-width:720px){
+  @keyframes kithHeroDrift{
+    from{transform:scale(1.09)}
+    to{transform:scale(1.03)}
+  }
+  .hero-bg{transform:scale(1.03);animation-duration:32s}
+}
