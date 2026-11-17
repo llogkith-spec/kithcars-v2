@@ -317,3 +317,49 @@ h3{font-size:1.2rem;font-weight:700}
 .svc-foot a{color:#111;font-weight:700;text-decoration:none;border-bottom:2px solid #c9a227;padding-bottom:1px;white-space:nowrap}
 .svc-foot a:hover{border-bottom-color:#111}
 @media (max-width:560px){.svc-foot{font-size:14px;text-align:left}}
+
+/* ---------------------------------------------------------------------------------------------
+   Phone hero: breathing room.
+
+   Three layers of rules above this one each tightened the hero to get the reg plate above the
+   fold on a small screen - .hero-in padding fell to 16px with an 18px gap, and the card to
+   16px/14px. Taken together they worked, and the result read as clogged: every element touching
+   the next one with nothing between them.
+
+   The plate does not need that much help. On a 390x844 screen the card sat at y=200 to y=479,
+   which is 365px of clear space below it. Giving back roughly sixty pixels of padding and gap
+   still leaves the whole card, the button and the footnote well inside the fold.
+
+   Homepage only - home.css, .offerbar and .hero-in exist on index.html and nowhere else.
+   --------------------------------------------------------------------------------------------- */
+@media (max-width:720px){
+  /* The offer bar is the first thing on the screen and was taking 128px of it on two lines. */
+  .offerbar{font-size:12.5px;line-height:1.4;padding:8px 16px}
+
+  .hero-in{padding:26px 18px 40px;gap:26px}
+
+  /* The card: room around the heading, the plate and the button rather than against them. */
+  .hero .qcard{padding:22px 18px 20px;border-radius:16px}
+  .hero .qcard h2{margin-bottom:.35rem}
+  .hero .qcard > p{margin-bottom:1.05rem;line-height:1.45}
+  .hero .qcard form{gap:14px}
+  .hero .qcard-foot{margin-top:1rem;line-height:1.5}
+
+  /* The eyebrow runs to two lines at this width. Let it look deliberate rather than wrapped. */
+  .hero .eyebrow{line-height:1.75;letter-spacing:.1em;margin-bottom:.7rem}
+
+  .hero h1{margin-bottom:.6rem}
+  .hero p.sub{margin-bottom:1rem}
+  .hero p.sub + p.sub{margin-top:.1rem}
+  .pillars-mini{margin-top:.25rem;gap:8px}
+}
+
+/* The narrowest phones kept their own tighter block above; bring them up too, by a little less. */
+@media (max-width:420px){
+  .hero-in{padding:22px 16px 34px;gap:22px}
+  .hero .qcard{padding:20px 16px 18px}
+}
+
+/* Each eyebrow item stays whole, so the line can only break at a separator. Without this it
+   broke as "... SAT / 8AM-5PM", which reads as a mistake rather than a wrap. */
+.hero .eyebrow > span{white-space:nowrap}
