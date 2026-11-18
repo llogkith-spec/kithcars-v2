@@ -129,7 +129,25 @@
   /* ---------- helpers ---------- */
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function money(n) { return '£' + Number(n).toLocaleString('en-GB', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
-  function range(lo, hi) { return lo === hi ? money(lo) : money(lo) + ' – ' + money(hi); }
+  /* Prices are shown in whole pounds.
+
+     The catalogue holds no pence - every figure in it is a round number - but the servicing
+     prices are built by multiplying an ex-VAT rate by 1.2, and that lands on pence. The result
+     was a job list where "Full service £210 - £270" sat directly above "Major service £248.30 -
+     £312.11". Pence on a price read as a spreadsheet leaking onto the page rather than a price
+     somebody set, and it only happened to three lines, so it looked like a fault rather than a
+     convention.
+
+     Rounded UP at both ends, not to nearest. The house rule everywhere else is that a quoted
+     figure is a floor we will honour, so the displayed number must never sit under what the
+     arithmetic actually produced. 48p is immaterial either way; the principle is not.
+
+     Only range() does this. money() is left alone because it also prints per-litre oil rates,
+     where the pence are the point. */
+  function range(lo, hi) {
+    var l = isFinite(lo) ? Math.ceil(lo) : lo, h = isFinite(hi) ? Math.ceil(hi) : hi;
+    return l === h ? money(l) : money(l) + ' – ' + money(h);
+  }
 
   /* An estimate shown as a range, which is what the small print under it has always promised.
      Once engine size, oil and parts are all answered the rate card produces one exact figure and
@@ -140,9 +158,34 @@
      once the car is on the ramp - an engine that takes more oil than its band allows, a
      non-standard filter, a bolt that has seized. Padding downwards would advertise a number no
      customer ever actually pays, which is the one thing a price range must not do. */
-  function spread(t) {
+  /* True when every priced line is a genuinely fixed price rather than a figure that could move.
+     An MOT is a statutory test at a fixed fee, a code read is a fixed fee, wheel fitting is a
+     fixed fee. Nothing in those jobs varies with what we find. */
+  function allLinesFixed(lines) {
+    var priced = (lines || []).filter(function (l) {
+      return l && typeof l.low === 'number' && isFinite(l.low) && isFinite(l.high);
+    });
+    return priced.length > 0 && priced.every(function (l) {
+      return l.kind === 'fixed' && l.high === l.low;
+    });
+  }
+
+  function spread(t, lines) {
     if (!t || typeof t.low !== 'number' || typeof t.high !== 'number') return t;
     if (t.high > t.low) return t;                       // a genuine range already
+    /* A fixed price is not an estimate and must not be padded into one.
+
+       The spread exists to cover "an engine that takes more oil than its band, a non-standard
+       filter, or a seized bolt", which is sound for labour. It is nonsense on a fixed fee, and on
+       the MOT it was actively damaging: the line note says "MOT is outside VAT, so £50 is the
+       whole price. The DVSA maximum is £54.85", and the total directly beneath it read
+       "£50 - £65". Three problems at the moment a customer decides whether to trust the price -
+       it contradicts the sentence above it, it quotes a top end above the legal maximum the same
+       sentence cites, and it does it on the commonest reason anyone rings a garage.
+
+       The other three fixed jobs were doing the same quietly: a £36 code read shown as £36-£55,
+       £146 diagnostics as £146-£165, £80 wheel fitting as £80-£95. */
+    if (allLinesFixed(lines)) return t;
     var s = C.estimate_spread;
     if (!s) return t;
     var step = s.round_to || 5;
@@ -152,7 +195,7 @@
     if (s.max) pad = Math.min(pad, s.max);
     return { low: t.low, high: Math.ceil((t.low + pad) / step) * step };
   }
-  function rangeOf(t) { var r = spread(t); return range(r.low, r.high); }
+  function rangeOf(t, lines) { var r = spread(t, lines); return range(r.low, r.high); }
   function $(s) { return root.querySelector(s); }
   function $$(s) { return [].slice.call(root.querySelectorAll(s)); }
   function title(s) { s = String(s || ''); if (s.length <= 3) return s.toUpperCase(); return s.toLowerCase().replace(/\b[\w']/g, function (c) { return c.toUpperCase(); }); }
@@ -1406,7 +1449,7 @@
          rather than a generic book time. So it keeps the total there, and keeps its badge. */
       var firmLocally = t.count > 0 && !t.unpriced;
       var bRange = (!firmLocally && S.brainRange && S.brainRange.hi > 0) ? S.brainRange : null;
-      var shown = bRange ? { low: bRange.lo, high: bRange.hi } : spread(t);
+      var shown = bRange ? { low: bRange.lo, high: bRange.hi } : spread(t, S.lines);
       var hLabel = 'Your estimate' + (!bRange && t.unpriced ? ' so far' : '');
       var hTag = bRange ? '<small class="kq-brain-tag">Priced using KITH’s live pricing system' + (bRange.allFirm ? ' (all lines firm from our history)' : '') + '</small>' : '';
       h += '<div class="kq-total"><span>' + hLabel + '</span><b>' + range(shown.low, shown.high) + '</b>' + hTag + '</div>';
@@ -1523,7 +1566,7 @@
   function summaryStrip() {
     var t = S.totals;
     return '<div class="kq-strip"><div><b>' + esc(FLOWS[S.flow].label) + '</b><span>' + esc(vehicleName()) + '</span></div>' +
-      (t && t.count ? '<div class="kq-strip-p"><b>' + rangeOf(t) + '</b>' + (!S.offerGone && E.couponEligible(C, t, t.unpriced > 0) ? '<span>less ' + money(coupon().amount) + ' if booked now <i id="kq-timer">' + fmtLeft() + '</i></span>' : '') + '</div>' : '') + '</div>';
+      (t && t.count ? '<div class="kq-strip-p"><b>' + rangeOf(t, S.lines) + '</b>' + (!S.offerGone && E.couponEligible(C, t, t.unpriced > 0) ? '<span>less ' + money(coupon().amount) + ' if booked now <i id="kq-timer">' + fmtLeft() + '</i></span>' : '') + '</div>' : '') + '</div>';
   }
 
   /* ---------- step: calendar ---------- */
