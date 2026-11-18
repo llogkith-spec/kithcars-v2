@@ -471,3 +471,8 @@ h3{font-size:1.2rem;font-weight:700}
 a.offerbar{display:block;text-decoration:none;transition:background .15s ease}
 a.offerbar:hover{background:#1b1d22}
 a.offerbar b{text-decoration:underline;text-underline-offset:2px}
+
+/* Sticky bar is WhatsApp alone now. The reg plate is the first thing on the page on a phone, so
+   an "Instant quote" button at the bottom was a second route to something already on screen;
+   WhatsApp is the one thing the page cannot do by itself. */
+.mbar .m-wa-only{flex:1;font-size:16px;font-weight:800;padding:16px 8px}
