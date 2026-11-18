@@ -1775,6 +1775,25 @@
     return 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
   }
 
+  /* Did the lead actually reach anybody?
+
+     This replaces "if (!res.emailed && res.crm !== 'sent')", which could never fire. res.emailed
+     is the STRING 'disabled' since the email send was dropped, and a non-empty string is truthy,
+     so !res.emailed was permanently false and the whole check was dead. res.inbox - the only
+     channel still live - was not looked at.
+
+     The result: every booking walked through to "You're booked in" whether or not a single thing
+     had been delivered, and nobody found out. The customer thinks they have a slot, the workshop
+     never hears, and the first anyone knows is a car arriving that nobody expected, or more
+     likely a customer who never arrives at all.
+
+     Only 'sent' counts. 'disabled', 'not connected' and 'failed 500' are all failures to
+     deliver, whatever they say about why. */
+  function leadDelivered(res) {
+    if (!res) return false;
+    return res.emailed === 'sent' || res.crm === 'sent' || res.inbox === 'sent';
+  }
+
   function sendLead() {
     var d = leadPayload(), id = S.lead.id || (S.lead.id = 'web-' + Date.now().toString(36));
     // Email send was removed Nov 2026 — the triage AI's ping (WhatsApp /
@@ -2019,7 +2038,7 @@
       var b = f.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Saving…';
       sendLead().then(function (res) {
         track('generate_lead', { value: S.totals ? S.totals.low : 0, currency: 'GBP', flow: S.flow });
-        if (!res.emailed && res.crm !== 'sent') { b.disabled = false; b.textContent = callbackFlow() ? 'Send this and call me back' : 'Next: pick my slot'; err.innerHTML = 'That didn’t send. Please <a href="tel:' + PHONE_TEL + '">call ' + PHONE + '</a> or <a href="' + waLink() + '" target="_blank" rel="noopener">WhatsApp us</a>.'; err.hidden = false; return; }
+        if (!leadDelivered(res)) { b.disabled = false; b.textContent = callbackFlow() ? 'Send this and call me back' : 'Next: pick my slot'; err.innerHTML = 'That didn’t send. Please <a href="tel:' + PHONE_TEL + '">call ' + PHONE + '</a> or <a href="' + waLink() + '" target="_blank" rel="noopener">WhatsApp us</a>.'; err.hidden = false; return; }
         if (callbackFlow()) { S.sent = true; track('quote_urgent'); try { sessionStorage.removeItem('kq2'); } catch (x) {} go('done'); return; }
         go('calendar');
       });
@@ -2087,7 +2106,34 @@
     else if (a === 'skip-slot') { S.day = null; S.time = null; S.sent = true; save(); go('done'); }
     else if (a === 'confirm') {
       el.disabled = true; el.textContent = 'Booking…';
-      sendLead().then(function () { S.sent = true; track('quote_booked', { value: S.totals ? S.totals.low : 0, currency: 'GBP' }); try { sessionStorage.removeItem('kq2'); } catch (x) {} go('done'); });
+      /* The booking confirm checked nothing at all: it declared success and moved on. If
+         delivery fails here the customer must not be shown "You're booked in" for a booking the
+         workshop has never heard of - they get told to WhatsApp instead, and the state is kept
+         so nothing they entered is lost. */
+      sendLead().then(function (res) {
+        if (!leadDelivered(res)) {
+          var cb = root.querySelector('[data-act="confirm"]');
+          if (cb) { cb.disabled = false; cb.textContent = 'Confirm my booking'; }
+          var ce = root.querySelector('.kq-err');
+          if (!ce) {
+            ce = document.createElement('p');
+            ce.className = 'kq-err';
+            var nav = root.querySelector('.kq-nav');
+            if (nav && nav.parentNode) nav.parentNode.insertBefore(ce, nav);
+          }
+          ce.innerHTML = 'That did not reach us &mdash; your slot is <b>not</b> booked yet. ' +
+            'Please <a href="' + waLink() + '" target="_blank" rel="noopener">message us on ' +
+            'WhatsApp</a> or <a href="tel:' + PHONE_TEL + '">call ' + PHONE + '</a> and we will ' +
+            'put it in for you.';
+          ce.hidden = false;
+          track('quote_booking_failed');
+          return;
+        }
+        S.sent = true;
+        track('quote_booked', { value: S.totals ? S.totals.low : 0, currency: 'GBP' });
+        try { sessionStorage.removeItem('kq2'); } catch (x) {}
+        go('done');
+      });
     }
     else if (a === 'panel') { if (S.body[v]) delete S.body[v]; else S.body[v] = C.bodywork_damage[0].id; save(); render(); }
     else if (a === 'unpanel') { delete S.body[v]; delete S.mark[v]; save(); render(); }
