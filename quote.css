@@ -464,3 +464,49 @@
 .kq-car-sm .kq-car-plate{font-size:14px;padding:.2rem .5rem}
 .kq-car-sm strong{font-size:14.5px}
 .kq-car-sm span{font-size:12.5px}
+
+/* ---------------------------------------------------------------------------------------------
+   WhatsApp boxes, the Black Friday strip, and booked-out slots.
+   --------------------------------------------------------------------------------------------- */
+
+/* The WhatsApp route, given real weight. It was a line of grey text under the buttons; the
+   people who reach a price and do not book are mostly the ones with a question, and they want a
+   person rather than another form. Black box so it reads as a deliberate second option rather
+   than a third button competing with Confirm. */
+#kq .kq-wa-box{display:flex;align-items:center;gap:14px;margin-top:16px;padding:16px 18px;
+  background:#111318;color:#fff;border-radius:14px;text-decoration:none;
+  border:1px solid #111318;transition:background .15s ease}
+#kq .kq-wa-box:hover{background:#1d2027}
+#kq .kq-wa-ico{display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px;
+  border-radius:50%;background:#25d366;color:#fff}
+#kq .kq-wa-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+#kq .kq-wa-txt b{font-size:1.05rem;font-weight:800;line-height:1.25}
+#kq .kq-wa-txt em{font-style:normal;font-size:.92rem;color:#c6cad2;line-height:1.35}
+#kq .kq-wa-urgent .kq-wa-txt b{font-size:1.15rem}
+
+/* Black Friday, in the half of the booking strip that used to repeat the service name and the
+   car - the two things the customer had just chosen and already knew. */
+#kq .kq-strip-promo{align-items:center}
+#kq .kq-bf{display:flex;flex-direction:column;gap:2px}
+#kq .kq-bf b{font-size:1.05rem;font-weight:800;color:var(--red)}
+#kq .kq-bf span{font-size:.86rem;color:var(--text-2)}
+
+/* A booked slot reads as unavailable at a glance and cannot be tapped. Struck through rather
+   than merely dimmed, because dimming alone is the thing people tap anyway and then wonder why
+   nothing happened. */
+#kq .kq-pill-gone{background:var(--paper-2);color:var(--muted);border-color:var(--line);
+  cursor:not-allowed;text-decoration:line-through;position:relative;opacity:.7}
+#kq .kq-pill-gone i{display:block;font-style:normal;font-size:.68rem;letter-spacing:.04em;
+  text-transform:uppercase;text-decoration:none;color:var(--muted);margin-top:2px}
+#kq .kq-pill-gone:hover{background:var(--paper-2);border-color:var(--line)}
+
+@media (max-width:620px){
+  #kq .kq-wa-box{padding:14px;gap:12px}
+  #kq .kq-wa-ico{width:38px;height:38px;flex-basis:38px}
+  #kq .kq-wa-txt b,#kq .kq-wa-urgent .kq-wa-txt b{font-size:1rem}
+  #kq .kq-wa-txt em{font-size:.86rem}
+}
+/* With the promo on the left, the figure on the right needs saying what it is - beside
+   "30% off all bodywork" an unlabelled £50 reads as the price of the offer. */
+#kq .kq-strip-p i{display:block;font-style:normal;font-size:.72rem;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:1px}

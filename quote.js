@@ -276,7 +276,24 @@
       .then(function (r) { clearTimeout(t); return r.json().then(function (j) { j._status = r.status; return j; }); })
       .catch(function () { clearTimeout(t); return { _status: 0, error: 'network' }; });
   }
-  function go(step) { S.step = step; save(); render(); var t = root.getBoundingClientRect().top; if (t < -40 || t > window.innerHeight * 0.6) root.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  /* Keep the widget in one place.
+
+     This used to scroll only when the widget had drifted outside a window - top above -40px or
+     below 60% of the viewport - and leave it alone otherwise. The effect was that the funnel
+     moved for some steps and not others, and since each step is a different height, the card
+     appeared to walk down the page as you went through it. Reported as "step two is moving
+     down".
+
+     Now every step lands the top of the widget in the same place, so the funnel sits still and
+     the next question is always where the last one was. Instant rather than smooth: a smooth
+     scroll on each step is the movement being complained about. */
+  function go(step) {
+    S.step = step; save(); render();
+    var top = root.getBoundingClientRect().top + window.pageYOffset;
+    var header = document.querySelector('header');
+    var offset = (header ? header.getBoundingClientRect().height : 0) + 12;
+    window.scrollTo({ top: Math.max(0, top - offset), behavior: 'auto' });
+  }
   function chips(items, current, act) {
     return items.map(function (i) {
       return '<button type="button" class="kq-pill' + (String(i.id) === String(current) ? ' on' : '') + '" data-act="' + act + '" data-v="' + esc(i.id) + '">' + esc(i.label) + '</button>';
@@ -1491,7 +1508,14 @@
       '</div>' +
       '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="build">Change the job</button>' +
       '<button type="button" class="kq-btn kq-btn-main" data-act="to-details">' + (eligible ? 'Book and save ' + money(offer.amount) : 'Book this in') + '</button></div>' +
-      '<p class="kq-or">or <a href="' + waLink() + '" target="_blank" rel="noopener" data-act="wa">send it to us on WhatsApp</a> · <a href="tel:' + PHONE_TEL + '">call ' + PHONE + '</a></p>';
+      /* Was a thin line of grey text under the buttons. The people who reach a price and
+         do not book are overwhelmingly the ones with a question the page has not answered, and
+         they want a human now rather than a form. Given the weight it deserves. */
+      '<a class="kq-wa-box kq-wa-urgent" href="' + waLink() + '" target="_blank" rel="noopener" '
+      + 'data-act="wa"><span class="kq-wa-ico" aria-hidden="true">' + WA_ICON + '</span>'
+      + '<span class="kq-wa-txt"><b>Or WhatsApp us now</b>'
+      + '<em>If it&rsquo;s urgent &mdash; instant response, 24/7.</em></span></a>'
+      + '<p class="kq-or">or <a href="tel:' + PHONE_TEL + '">call ' + PHONE + '</a></p>';
     return h;
   }
   function fmtLeft() {
@@ -1563,10 +1587,17 @@
       '<p class="kq-small">We only use your details to arrange this job.</p></form>' +
       '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="estimate">Back to the price</button></div>';
   }
-  function summaryStrip() {
+  /* On the booking step the service name and the car are the two things the customer is least
+     unsure about - they have just chosen both - so that half of the strip was spending the best
+     position on the page telling them what they already knew. The price stays; the left half
+     carries the current offer instead. */
+  function summaryStrip(promo) {
     var t = S.totals;
-    return '<div class="kq-strip"><div><b>' + esc(FLOWS[S.flow].label) + '</b><span>' + esc(vehicleName()) + '</span></div>' +
-      (t && t.count ? '<div class="kq-strip-p"><b>' + rangeOf(t, S.lines) + '</b>' + (!S.offerGone && E.couponEligible(C, t, t.unpriced > 0) ? '<span>less ' + money(coupon().amount) + ' if booked now <i id="kq-timer">' + fmtLeft() + '</i></span>' : '') + '</div>' : '') + '</div>';
+    return '<div class="kq-strip' + (promo ? ' kq-strip-promo' : '') + '">' +
+      (promo ? '<div class="kq-bf"><b>30% off all bodywork</b><span>Black Friday &mdash; book it in '
+             + 'before the end of the month</span></div>'
+             : '<div><b>' + esc(FLOWS[S.flow].label) + '</b><span>' + esc(vehicleName()) + '</span></div>') +
+      (t && t.count ? '<div class="kq-strip-p">' + (promo ? '<i>Your price</i>' : '') + '<b>' + rangeOf(t, S.lines) + '</b>' + (!S.offerGone && E.couponEligible(C, t, t.unpriced > 0) ? '<span>less ' + money(coupon().amount) + ' if booked now <i id="kq-timer">' + fmtLeft() + '</i></span>' : '') + '</div>' : '') + '</div>';
   }
 
   /* ---------- step: calendar ---------- */
@@ -1578,26 +1609,33 @@
     // that marking slots "full" would — without telling anyone something that isn't so.
     var first = days[0];
     var next = '';
-    if (first && first.slots.length) {
+    if (first && (first.free || first.slots).length) {
       var today = new Date(); today.setHours(0, 0, 0, 0);
       var when = new Date(first.key + 'T00:00:00');
       var gap = Math.round((when - today) / 86400000);
       var label = gap === 1 ? 'tomorrow' : first.long.replace(/,.*$/, '');
       next = '<p class="kq-next"><b>Next free ' + (cal === 'bodywork' ? 'drop-off' : 'slot') +
-        ':</b> ' + esc(label) + ' at ' + esc(first.slots[0]) +
+        ':</b> ' + esc(label) + ' at ' + esc((first.free || first.slots)[0]) +
         (gap > 2 ? ' &mdash; we are booked up until then' : '') + '</p>';
     }
     return '<h2 class="kq-h">Pick your ' + (cal === 'bodywork' ? 'drop-off' : 'slot') + '</h2>' +
       '<p class="kq-help">' + (cal === 'bodywork' ? 'Bodywork stays with us, so this is when you drop it off.' : 'Most mechanical jobs are done the same day.') + '</p>' +
       next +
-      summaryStrip() +
+      summaryStrip(true) +
       '<div class="kq-days">' + days.map(function (d) {
         return '<button type="button" class="kq-day' + (S.day === d.key ? ' on' : '') + '" data-act="day" data-v="' + d.key + '"><i>' + d.dow + '</i><b>' + d.dom + '</b><span>' + d.mon + '</span></button>';
       }).join('') + '</div>' +
       (day ? '<label class="kq-label">' + esc(day.long) + '</label><div class="kq-pills">' +
-        day.slots.map(function (s) { return '<button type="button" class="kq-pill' + (S.time === s ? ' on' : '') + '" data-act="time" data-v="' + s + '">' + s + '</button>'; }).join('') + '</div>' : '') +
-      '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="skip-slot">I&rsquo;ll sort the time later</button>' +
-      '<button type="button" class="kq-btn kq-btn-main" data-act="confirm"' + (S.day && S.time ? '' : ' disabled') + '>Confirm my booking</button></div>' +
+        day.slots.map(function (s) { var gone = (day.taken || []).indexOf(s) !== -1; return '<button type="button" class="kq-pill' + (gone ? ' kq-pill-gone' : (S.time === s ? ' on' : '')) + '" data-act="time" data-v="' + s + '"' + (gone ? ' disabled aria-label="' + s + ' - already booked"' : '') + '>' + s + (gone ? '<i>Booked</i>' : '') + '</button>'; }).join('') + '</div>' : '') +
+      '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-main" data-act="confirm"' +
+      (S.day && S.time ? '' : ' disabled') + '>Confirm my booking</button></div>' +
+      /* "I'll sort the time later" was a dead end: it took the booking without a slot and left
+         the customer with nothing to do next. The people who tap it are the ones who cannot
+         commit to a time from their phone, which is exactly who WhatsApp is for. */
+      '<a class="kq-wa-box" href="' + waLink() + '" target="_blank" rel="noopener">' +
+      '<span class="kq-wa-ico" aria-hidden="true">' + WA_ICON + '</span>' +
+      '<span class="kq-wa-txt"><b>Don&rsquo;t know what time suits yet?</b>' +
+      '<em>Message us on WhatsApp and we&rsquo;ll sort the slot with you.</em></span></a>' +
       // Last step before booking, and the one where people remember the panel they forgot.
       // Without this the only way back is the browser button, which drops the whole widget.
       '<div class="kq-nav kq-nav-amend"><button type="button" class="kq-btn kq-btn-link" data-act="back" data-v="' +
@@ -1640,6 +1678,21 @@
       'Photo attached.';
     return 'https://wa.me/' + WA + '?text=' + encodeURIComponent(msg);
   }
+
+  /* Inline so the box renders with no network round trip - it sits on the booking step and a
+     late-loading icon there reads as a broken button. */
+  var WA_ICON = '<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" ' +
+    'aria-hidden="true"><path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15' +
+    '-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75' +
+    '-1.65-2.05-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02' +
+    '-.52-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04' +
+    '1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.22' +
+    '1.36.19 1.87.12.57-.09 1.75-.72 2-1.41.25-.69.25-1.28.17-1.41-.07-.13-.27-.2-.57-.35z"/>' +
+    '<path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38a9.9 ' +
+    '9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm0 18.15h-.01' +
+    'a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.22 8.22 0 0 1-1.26-4.38c0-4.54 ' +
+    '3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.83 2.42a8.19 8.19 0 0 1 2.41 5.82c0 4.54-3.7 8.23-8.24 ' +
+    '8.23z"/></svg>';
 
   function waLink() {
     var msg = 'Hi KITH, I got an online estimate for ' + vehicleName() + (S.vehicle && S.vehicle.registrationNumber ? ' (' + S.vehicle.registrationNumber + ')' : '') + ':\n' +

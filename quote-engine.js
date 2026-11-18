@@ -533,9 +533,20 @@
       var slots = (x.getDay() === 6 ? B.slots[calendar].saturday : B.slots[calendar].weekday) || [];
       if (!slots.length) continue;
       var key = x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); // local date, not UTC
+      /* Times already taken on this date. Read from booking.booked, a plain {date: [times]}
+         map, so a real booking greys a real slot.
+
+         Deliberately NOT generated. Scattering grey across the calendar to look busy is a lie
+         the customer can catch the moment they ring up and are offered the slot the page just
+         showed as gone, and it is the kind of lie that loses the booking it was meant to win.
+         Empty map, every slot bookable - which is the truth until the CRM is connected and can
+         say otherwise. */
+      var taken = (B.booked && B.booked[key]) || [];
+      var free = slots.filter(function (s) { return taken.indexOf(s) === -1; });
       out.push({ key: key, dow: x.toLocaleDateString('en-GB', { weekday: 'short' }),
                  dom: x.getDate(), mon: x.toLocaleDateString('en-GB', { month: 'short' }),
-                 long: x.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }), slots: slots });
+                 long: x.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
+                 slots: slots, taken: taken, free: free });
     }
     return out;
   }

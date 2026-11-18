@@ -404,3 +404,10 @@ h3{font-size:1.2rem;font-weight:700}
   }
   .hero-bg{transform:scale(1.03);animation-duration:32s}
 }
+
+/* Sticky bar is WhatsApp + Instant quote now; the Call button came out because the number is in
+   the header, in the footer and on every estimate, and a third option at the decision point was
+   splitting the tap rather than adding a route. Two buttons, both wider than the old three. */
+.mbar .m-wa{flex:1.1}
+.mbar .m-q{flex:1}
+.mbar a{font-size:15px;padding:14px 8px}
