@@ -471,3 +471,10 @@ h3{font-size:1.2rem;font-weight:700}
 a.offerbar{display:block;text-decoration:none;transition:background .15s ease}
 a.offerbar:hover{background:#1b1d22}
 a.offerbar b{text-decoration:underline;text-underline-offset:2px}
+/* The reg plate inside the dark Black Friday hero. Same card as the homepage, sized to sit in
+   the left column under the headline rather than beside it. */
+.bf-qcard{margin:0 0 16px;max-width:460px}
+.bf-hero .bf-cta{margin-top:4px}
+.bf-hero .bf-cta .btn-wa{background:transparent;border:1.5px solid #3a3f49;color:#e8eaee}
+.bf-hero .bf-cta .btn-wa:hover{border-color:#25d366;color:#fff}
+@media (max-width:860px){.bf-qcard{max-width:none}}

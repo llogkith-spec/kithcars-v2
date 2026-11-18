@@ -60,9 +60,17 @@
     <div>
       <span class="bf-eyebrow">Black Friday &middot; ends 30 November</span>
       <h1>30% off <em>all</em> bodywork.</h1>
-      <p class="bf-lead">Every panel, every dent, every scratch, every alloy. At our own bodyshop
-        on London Road in Hackbridge &mdash; not sent out to a third party.</p>
-      <p class="bf-sub">Put your registration in and you will have the rate-card price in about thirty seconds. The 30% comes off that figure on the written quote, before you agree to anything.</p>
+      <p class="bf-lead">Every panel, every dent, every scratch, every alloy &mdash; at our own
+        bodyshop on London Road in Hackbridge.</p>
+      <div class="qcard bf-qcard">
+        <h2>What will your bodywork cost?</h2>
+        <p>Enter your reg. We&rsquo;ll find your car and price the job.</p>
+        <form id="hero-reg" novalidate>
+          <label class="plate"><span>UK</span><input name="reg" aria-label="Vehicle registration" placeholder="AB12 CDE" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false"/></label>
+          <button class="btn btn-red" type="submit">Get my instant price</button>
+        </form>
+        <div class="qcard-foot"><span>Free &middot; no sign-up &middot; about 30 seconds</span><a href="#quote" data-quote>No reg? Start here</a></div>
+      </div>
       <ul class="bf-ticks">
         <li>Our own booth and our own paint &mdash; nothing is subcontracted</li>
         <li>Colour matched to your car, blended into the panels either side</li>
@@ -70,9 +78,8 @@
         <li>On no insurer panel, so the repairer is always your choice</li>
       </ul>
       <div class="bf-cta">
-        <a class="btn btn-primary" href="#quote">Price my bodywork</a>
         <a class="btn btn-wa" href="https://wa.me/447923688259?text=Hi%20KITH%2C%20I%20saw%20the%20Black%20Friday%2030%25%20off%20and%20would%20like%20a%20price%20for%20bodywork."
-           target="_blank" rel="noopener">Send photos on WhatsApp</a>
+           target="_blank" rel="noopener">Or send photos on WhatsApp</a>
       </div>
     </div>
     <div class="bf-pricecard">
