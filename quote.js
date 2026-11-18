@@ -1657,11 +1657,12 @@
     return '<div class="kq-done"><h2 class="kq-h">' + (booked ? 'You&rsquo;re booked in.' : 'Your estimate is on its way.') + '</h2>' +
       (booked ? '<p class="kq-big-when">' + esc(when) + '</p><p>' + (cal === 'bodywork' ? 'Drop the car to us at Unit 1, Soho Mills, Hackbridge SM6 7HN.' : 'Bring it to Unit 1, Soho Mills, Hackbridge SM6 7HN.') + ' We&rsquo;ll call to confirm and send the written price first.</p>'
         : '<p>We&rsquo;ve got your details and will be in touch, usually within 30 minutes during opening hours (Mon–Sat 8am–8pm).</p>') +
-      (booked && !S.offerGone ? '<p class="kq-saved"><b>' + money(coupon().amount) + ' off your final bill</b> · code ' + esc(coupon().code) + ' · applied when we invoice, whatever the job comes to</p>' : '') +
+      (couponOn() ? '<p class="kq-saved"><b>' + money(coupon().amount) + ' off your final bill</b> · code ' + esc(coupon().code) + ' · applied when we invoice, whatever the job comes to</p>' : '') +
       // They came for a repair; the MOT date is something we happen to know and they often don't.
       // Worth one line on the way out, whichever flow they used.
       motReminder() +
       (S.flow === 'bodywork' ? '<p>Send us photos of the damage and we can have the parts ready:</p>' : '') +
+      (booked ? '<p class="kq-small">We&rsquo;ve sent this to you on WhatsApp so you have it in writing.</p>' + '<div class="kq-nav-wrap"><a class="kq-btn kq-btn-ghost" href="' + icsHref() + '" download="kith-cars-booking.ics">Add to my calendar</a></div>' : '') +
       '<div class="kq-nav-wrap"><a class="kq-btn kq-btn-wa" href="' + waLink() + '" target="_blank" rel="noopener">' + (S.flow === 'bodywork' ? 'Send photos on WhatsApp' : 'Message us on WhatsApp') + '</a> ' +
       '<a class="kq-btn kq-btn-ghost" href="tel:' + PHONE_TEL + '">Call ' + PHONE + '</a></div></div>';
   }
@@ -1723,6 +1724,57 @@
       log: [{ at: new Date().toISOString(), by: 'Website', text: (S.flow === 'accident' ? ('ACCIDENT: ' + (S.acc.fault === 'theirs' ? 'non-fault' : S.acc.fault === 'mine' ? 'at fault' : 'liability unclear') + ', car ' + (S.acc.drivable === 'no' ? 'NOT drivable' : 'drivable') + ', ' + (S.acc.replacement === 'yes' ? 'needs a car' : 'no car needed') + ' - call back') : (S.flow === 'recovery' && S.rec.when === 'now') ? 'URGENT: needs recovery now, call straight back' : S.day && S.time ? 'HOT: accepted the range and booked ' + S.day + ' ' + S.time : 'Estimate sent, no slot picked') }]
     };
   }
+  /* The offer has a minimum spend. The estimate screen checked it; the done screen did not,
+     and neither did the confirmation, so a £50 MOT was being promised £50 off - in writing, to
+     the customer, on a job with a £150 minimum. That is either money given away or an argument
+     at the counter, and the counter always loses it. */
+  function couponOn() {
+    return !!(S.day && S.time) && !S.offerGone && S.totals &&
+      E.couponEligible(C, S.totals, S.totals.unpriced > 0);
+  }
+
+  /* The booking confirmation, written once and used for the WhatsApp message, the calendar
+     file and nothing else. Whatever the customer is told on screen, this is what they keep. */
+  function confirmationText() {
+    if (!(S.day && S.time)) return '';
+    var when = new Date(S.day).toLocaleDateString('en-GB',
+      { weekday: 'long', day: 'numeric', month: 'long' });
+    var t = S.totals;
+    return 'Your booking with KITH Cars is confirmed.\n\n'
+      + when + ' at ' + S.time + '\n'
+      + (FLOWS[S.flow].cal === 'bodywork' ? 'Drop off at: ' : 'Bring it to: ')
+      + 'Unit 1, Soho Mills, London Road, Hackbridge SM6 7HN\n'
+      + 'Vehicle: ' + vehicleName()
+      + (S.vehicle && S.vehicle.registrationNumber ? ' (' + S.vehicle.registrationNumber + ')' : '')
+      + '\nWork: ' + S.lines.map(function (l) { return l.name; }).join(', ')
+      + (t && t.count ? '\nEstimate: ' + rangeOf(t, S.lines) : '')
+      + (couponOn() ? '\nDiscount: ' + money(coupon().amount)
+          + ' off your final bill, code ' + coupon().code : '')
+      + '\n\nWe will call to confirm and send the written price before any work starts. '
+      + 'Reply here if you need to change the time.\n'
+      + 'KITH Cars ' + PHONE;
+  }
+
+  /* A calendar file so the booking survives the tab being closed. Built in the browser from
+     state we already hold - no server, nothing to configure, works offline. */
+  function icsHref() {
+    if (!(S.day && S.time)) return '';
+    var p = S.time.split(':');
+    var start = S.day.replace(/-/g, '') + 'T' + p[0] + p[1] + '00';
+    var endH = String(Math.min(23, Number(p[0]) + 1)).padStart(2, '0');
+    var end = S.day.replace(/-/g, '') + 'T' + endH + p[1] + '00';
+    var fold = function (t) { return String(t).replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;'); };
+    var ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//KITH Cars//Booking//EN',
+      'BEGIN:VEVENT', 'UID:' + (S.lead.id || 'kith-' + Date.now()) + '@kithcars.com',
+      'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, ''),
+      'DTSTART;TZID=Europe/London:' + start, 'DTEND;TZID=Europe/London:' + end,
+      'SUMMARY:' + fold('KITH Cars - ' + FLOWS[S.flow].label),
+      'LOCATION:' + fold('Unit 1, Soho Mills, London Road, Hackbridge, SM6 7HN'),
+      'DESCRIPTION:' + fold(confirmationText()),
+      'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+    return 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+  }
+
   function sendLead() {
     var d = leadPayload(), id = S.lead.id || (S.lead.id = 'web-' + Date.now().toString(36));
     // Email send was removed Nov 2026 — the triage AI's ping (WhatsApp /
@@ -1762,8 +1814,23 @@
         year: d.vehicle.year || null,
         make: d.vehicle.make || '',
         model: d.vehicle.model || '',
-        message_text: combinedText,
-        context_hints: 'Customer has already seen a website estimate of ' + (d.webEstimate ? range(d.webEstimate.lo, d.webEstimate.hi) : '(not yet calculated)') + '. Rapid-fire a brain-based range on WhatsApp to confirm.'
+        message_text: combinedText + (d.requestedSlot ? '\n\n' + confirmationText() : ''),
+        /* When a slot has actually been taken the customer needs a CONFIRMATION, not a quote.
+           They have seen the date, the time and the address on screen and then closed the tab,
+           and until this they were left with no record of any of it. The exact wording to send
+           is written out here rather than described, so the triage step has nothing to compose
+           and nothing to get wrong. */
+        intent: d.requestedSlot ? 'booking_confirmation' : 'estimate_follow_up',
+        confirmation_text: d.requestedSlot ? confirmationText() : '',
+        context_hints: d.requestedSlot
+          ? 'BOOKING TAKEN. Send the confirmation_text to the customer on WhatsApp now, as a '
+            + 'confirmation of the slot they just booked. Do not open with a price range - they '
+            + 'have already accepted the estimate of '
+            + (d.webEstimate ? range(d.webEstimate.lo, d.webEstimate.hi) : '(none)')
+            + ' and the written price follows separately.'
+          : 'Customer has already seen a website estimate of '
+            + (d.webEstimate ? range(d.webEstimate.lo, d.webEstimate.hi) : '(not yet calculated)')
+            + '. Rapid-fire a brain-based range on WhatsApp to confirm.'
       })
     }).then(function (r) { return r.ok ? 'sent' : 'failed ' + r.status; }).catch(function () { return 'failed'; });
 
