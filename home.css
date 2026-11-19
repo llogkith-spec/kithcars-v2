@@ -575,3 +575,27 @@ a.offerbar b{text-decoration:underline;text-underline-offset:2px}
 /* The place-and-hours line reads as a footnote to the three services rather than a label above
    the headline, so it sits under them now and is spaced as its own line. */
 .pillars-mini + .eyebrow { display: block; margin: 18px 0 2px; }
+
+/* Service cards on a phone.
+   ------------------------------------------------------------------------------------------
+   The scrim was built for a wide card where the words occupy the bottom fifth. Narrow the card
+   and the same words wrap to four or five lines, climbing into the part of the gradient that is
+   still almost clear - so "Bumpers from £288, doors from £240" ends up sitting on a photograph
+   of a workshop. The ramp starts earlier and darker here, which costs a little of the picture
+   and buys back the text. */
+@media (max-width:900px){
+  .card:after{
+    background:linear-gradient(180deg,
+      rgba(12,13,16,.30) 0%,
+      rgba(12,13,16,.62) 38%,
+      rgba(12,13,16,.95) 100%);
+  }
+  .card-lead:after{
+    background:linear-gradient(180deg,
+      rgba(12,13,16,.42) 0%,
+      rgba(12,13,16,.78) 32%,
+      rgba(12,13,16,.96) 100%);
+  }
+  .card p,
+  .card-lead ul{color:#e8eaee}
+}
