@@ -6,7 +6,11 @@
   'use strict';
   if (!window.matchMedia || !window.matchMedia('(max-width:720px)').matches) return;
 
-  // Skip the homepage — it has its own reg card in the hero now.
+  // Skip any page that already puts a reg card in its hero. That used to be the homepage alone,
+  // hence the path check below; every service and location page now carries the same card, so
+  // the test is for the card itself rather than for one URL. Two reg plates stacked on a 390px
+  // screen is the clutter this bar was meant to solve.
+  if (document.getElementById('hero-reg')) return;
   var path = (location.pathname || '').toLowerCase();
   if (path === '/' || path === '/index.html' || path === '/index') return;
 

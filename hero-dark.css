@@ -1,0 +1,207 @@
+/* Inner-page heroes, matched to the homepage.
+   ------------------------------------------------------------------
+   The homepage hero is a darkened workshop photograph with the copy in white over it and the
+   reg-plate box sitting on the right. Every other page had a white hero with the photo in a
+   rounded card beside the text, so the site read as two different sites.
+
+   The photo each page already carries is promoted to the background rather than one generic
+   image being dropped on all of them, so the bodywork page still shows bodywork. The ~110 pages
+   with no photo of their own fall back to the homepage workshop shot.
+
+   Stacking inside .page-hero, which is already position:relative:
+     background image on .page-hero   fallback photo,  z auto
+     .page-hero-img                   the page's own photo, z-index 0
+     .page-hero::before               the dark scrim,       z-index 1
+     .page-hero-grid                  the copy and card,    z-index 2
+   ------------------------------------------------------------------ */
+
+.page-hero {
+  background: #0c0d10 url(/img/home-hero.jpg) 50% 50%/cover no-repeat;
+  border-bottom: none;
+}
+@supports (background: url(x.webp)) {
+  .page-hero {
+    background-image: image-set(url(/img/home-hero.webp) type("image/webp"),
+                                url(/img/home-hero.jpg)  type("image/jpeg"));
+  }
+}
+
+/* The photo was a rounded card in the second grid column. The build script lifts it out of the
+   grid into .kx-hero-bg, a direct child of .page-hero, because .page-hero-grid is itself
+   position:relative - left inside it, an absolutely placed image is measured against the grid
+   and paints over the words instead of behind them. */
+.page-hero .kx-hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+  aspect-ratio: auto;
+  display: block;
+}
+.page-hero .kx-hero-bg img,
+.page-hero .kx-hero-bg picture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+/* Was a faint red radial wash on white. It is now the scrim that makes white text legible:
+   heaviest on the left where the words are, lightest on the right where the picture should
+   still read as a picture. */
+.page-hero::before {
+  z-index: 1;
+  background: linear-gradient(90deg,
+              rgba(12, 13, 16, .93) 0%,
+              rgba(12, 13, 16, .86) 40%,
+              rgba(12, 13, 16, .58) 100%);
+}
+.page-hero-grid {
+  z-index: 2;
+}
+
+/* Copy on dark. */
+.page-hero h1,
+.page-hero h2,
+.page-hero .lead,
+.page-hero p {
+  color: #fff;
+}
+.page-hero .lead,
+.page-hero p {
+  color: var(--on-ink-2, #c9ccd4);
+}
+.page-hero .section-label {
+  color: #f87171;
+}
+.page-hero .kx-crumbs,
+.page-hero .kx-crumbs span {
+  color: rgba(255, 255, 255, .62);
+}
+.page-hero .kx-crumbs a {
+  color: rgba(255, 255, 255, .82);
+}
+.page-hero .kx-trust,
+.page-hero .kx-trust li {
+  color: rgba(255, 255, 255, .78);
+}
+.page-hero .kx-trust b,
+.page-hero .kx-trust strong {
+  color: #fff;
+}
+/* The outline button was a dark hairline on white; on the photo it needs to be the reverse. */
+.page-hero .btn-outline {
+  color: #fff;
+  border-color: rgba(255, 255, 255, .45);
+  background: rgba(255, 255, 255, .06);
+}
+.page-hero .btn-outline:hover {
+  background: rgba(255, 255, 255, .14);
+  border-color: rgba(255, 255, 255, .7);
+}
+
+/* ---------- the reg card, second grid column ---------- */
+.kx-qcard {
+  background: #fff;
+  color: #111318;
+  border-radius: 22px;
+  padding: 1.5rem 1.5rem 1.25rem;
+  box-shadow: 0 24px 60px rgba(12, 13, 16, .35);
+  align-self: center;
+}
+.kx-qcard h2 {
+  font-size: 1.25rem;
+  margin: 0 0 .35rem;
+  color: #111318 !important;
+  line-height: 1.2;
+}
+.kx-qcard > p {
+  font-size: .9rem;
+  margin: 0 0 1rem;
+  color: #6b7280 !important;
+}
+.kx-qcard .kx-plate {
+  display: flex;
+  align-items: stretch;
+  border: 2px solid #111318;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f7ca00;
+  margin-bottom: .75rem;
+}
+.kx-qcard .kx-plate span {
+  background: #0a3d91;
+  color: #fff;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  display: flex;
+  align-items: center;
+  padding: 0 .55rem;
+}
+.kx-qcard .kx-plate input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: #f7ca00;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-align: center;
+  text-transform: uppercase;
+  padding: .55rem .4rem;
+  color: #111318;
+  font-family: var(--font);
+}
+.kx-qcard .kx-plate input:focus {
+  outline: 3px solid rgba(220, 38, 38, .35);
+  outline-offset: 1px;
+}
+.kx-qcard .kx-qbtn {
+  width: 100%;
+  justify-content: center;
+}
+.kx-qcard-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: .5rem;
+  font-size: .78rem;
+  color: #6b7280;
+  margin-top: .8rem;
+}
+.kx-qcard-foot a {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* On a phone the hero stacks. The card goes first, directly under the header, because that is
+   where the homepage puts it and it is the only thing in the hero anyone acts on. */
+@media (max-width: 900px) {
+  .page-hero-grid {
+    grid-template-columns: 1fr;
+  }
+  .kx-qcard {
+    order: -1;
+    margin-bottom: 1.5rem;
+  }
+  .page-hero::before {
+    background: linear-gradient(180deg,
+                rgba(12, 13, 16, .88) 0%,
+                rgba(12, 13, 16, .92) 100%);
+  }
+}
+
+/* A grid item defaults to min-width:auto, so "1fr" is really minmax(auto,1fr) and the column
+   refuses to go below its content's min-content width. The reg input's intrinsic width pushed
+   the single phone column to 489px inside a 358px grid, and .page-hero's overflow:hidden then
+   clipped the headline and the card rather than scrolling, which hides the fault instead of
+   showing it. Let both columns shrink. */
+.page-hero-grid > * { min-width: 0; }
+.kx-qcard { min-width: 0; max-width: 100%; }
+.kx-qcard .kx-plate input { width: 100%; }
