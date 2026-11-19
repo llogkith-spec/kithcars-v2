@@ -50,8 +50,13 @@ h1{
 }
 .cta:active{transform:translateY(1px)}
 .cta svg{width:26px;height:26px;flex:none}
-.or{margin:.9rem 0 0;text-align:center;font-size:.95rem;color:var(--muted)}
-.or a{color:var(--ink);font-weight:700}
+/* The WhatsApp logo floats bottom right, as it does on the rest of the site. Nothing in the
+   page body competes with the reg box. */
+.wa-fab{position:fixed;right:max(14px,env(safe-area-inset-right,0px));
+  bottom:calc(14px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;background:var(--wa);color:#fff;
+  box-shadow:0 8px 24px rgba(0,0,0,.28);z-index:60}
+.wa-fab svg{width:28px;height:28px}
 #kq-hero-host{margin:6px 0 0}
 #kq-hero-host #kq{background:#fff;border:1px solid var(--line);border-radius:16px}
 .cta{background:var(--red);box-shadow:0 10px 26px rgba(220,38,38,.28)}
@@ -115,10 +120,6 @@ ol.steps span{color:var(--muted);font-size:.95rem}
        thread that has to be worked out by hand. -->
   <div id="kq-hero-host"><div id="kq" data-flow="bodywork" aria-live="polite"><div class="kq-loading"><span class="kq-spin"></span>Loading instant quote&hellip;</div></div></div>
 
-  <p class="or">Rather just send a photo?
-    <a id="wa-top" href="https://wa.me/447923688259?text=Hi%20KITH%2C%20I%27d%20like%20a%20price%20for%20a%20scuff.%20Here%27s%20a%20photo%3A" target="_blank" rel="noopener">Message us on WhatsApp</a>
-  </p>
-
   <!-- The Google rating is deliberately not printed here. See the note at the foot of this file. -->
   <p class="proof">Open till 8pm weekdays &middot; Saturdays till 5pm &middot; Hackbridge SM6</p>
 
@@ -158,7 +159,6 @@ ol.steps span{color:var(--muted);font-size:.95rem}
     </ol>
 
     <a class="cta" href="#kq-hero-host">Get my price &mdash; put your reg in</a>
-    <p class="or">Or <a id="wa-bottom" href="https://wa.me/447923688259?text=Hi%20KITH%2C%20I%27d%20like%20a%20price%20for%20a%20scuff.%20Here%27s%20a%20photo%3A" target="_blank" rel="noopener">send a photo on WhatsApp</a></p>
   </section>
 
 </main>
@@ -197,5 +197,7 @@ ol.steps span{color:var(--muted);font-size:.95rem}
   4. THE REVIEW is real and already published on the site, but it is a general review, not a
      bodywork one. The brief asked for a bodywork review. Send one and I will swap it.
 -->
+
+<a class="wa-fab" href="https://wa.me/447923688259?text=Hi%20KITH%2C%20I%27d%20like%20a%20price%20for%20a%20scuff.%20Here%27s%20a%20photo%3A" target="_blank" rel="noopener" data-track="whatsapp" aria-label="Message us on WhatsApp"><svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" width="26" height="26"><path d="M16 0C7.163 0 0 7.163 0 16c0 2.822.736 5.473 2.027 7.776L0 32l8.437-2.007A15.93 15.93 0 0 0 16 32c8.837 0 16-7.163 16-16S24.837 0 16 0zm8.293 22.293c-.344.969-1.703 1.775-2.797 2.009-.747.159-1.722.286-5.003-1.075-4.197-1.713-6.9-5.972-7.107-6.249-.198-.278-1.666-2.216-1.666-4.225 0-2.009 1.053-2.994 1.426-3.406.344-.373.746-.466.994-.466.248 0 .497.002.714.013.229.012.537-.087.841.641.315.748 1.07 2.595 1.163 2.783.094.188.157.407.031.653-.125.248-.188.404-.375.622-.188.218-.396.488-.566.656-.188.188-.384.391-.165.766.219.375.974 1.607 2.091 2.604 1.438 1.282 2.65 1.679 3.025 1.867.375.188.594.157.813-.094.219-.25.938-1.094 1.188-1.469.249-.375.499-.313.841-.188.344.125 2.188 1.031 2.563 1.219.375.188.625.281.719.438.093.156.093.906-.25 1.876z"/></svg></a>
 </body>
 </html>
