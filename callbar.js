@@ -28,8 +28,10 @@
   bar.className = 'kc-bar';
   bar.setAttribute('aria-label', 'Contact KITH Cars');
   bar.innerHTML =
-    '<a href="tel:' + TEL + '" data-track="call" class="kc-bar-call">' + icon.phone + '<span>Call us</span></a>' +
-    '<a href="' + WA + '" target="_blank" rel="noopener" data-track="whatsapp" class="kc-bar-wa">' + icon.wa + '<span>WhatsApp</span></a>' +
+    // One button, bottom right, WhatsApp only. A full-width bar of two or three actions was
+    // competing with the funnel that now sits at the top of every page; this sits out of the
+    // way until it is wanted. The phone number is still in the header and the footer.
+    '<a href="' + WA + '" target="_blank" rel="noopener" data-track="whatsapp" class="kc-bar-wa" aria-label="Message us on WhatsApp">' + icon.wa + '</a>' +
     '';
   // "Get a price" came off the bar: the reg card now sits at the top of every page, so the
   // bar was a third button competing with the thing it pointed at.

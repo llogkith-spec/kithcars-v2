@@ -138,3 +138,23 @@
   .kith-regbar-plate input{font-size:16px;padding:9px 6px}
   .kith-regbar-go{padding:0 11px;font-size:13px}
 }
+
+/* One WhatsApp button, bottom right. Replaces the full-width bar of two or three actions, which
+   competed with the quote funnel now sitting at the top of every page. The original rules below
+   set a three-column grid and a 58px min-height on the anchor, so these have to undo both rather
+   than only reposition the bar. */
+@media (max-width:760px){
+  .kc-bar{
+    display:block; grid-template-columns:none; gap:0;
+    left:auto; right:max(14px, env(safe-area-inset-right,0px));
+    bottom:calc(14px + env(safe-area-inset-bottom,0px));
+    width:56px; background:none; box-shadow:none; padding:0;
+  }
+  .kc-bar a.kc-bar-wa{
+    width:56px; height:56px; min-height:0; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; gap:0;
+    background:#25d366; color:#fff; box-shadow:0 8px 24px rgba(0,0,0,.28);
+  }
+  .kc-bar a.kc-bar-wa svg{width:28px;height:28px}
+  .kc-bar a.kc-bar-wa span{display:none}
+}

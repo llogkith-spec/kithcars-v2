@@ -602,3 +602,36 @@ a.offerbar b{text-decoration:underline;text-underline-offset:2px}
   .card p,
   .card-lead ul{color:#e8eaee}
 }
+
+/* Matching single WhatsApp button on the homepage. */
+@media (max-width:860px){
+  .mbar{
+    display:flex; left:auto; right:max(14px, env(safe-area-inset-right,0px));
+    bottom:calc(14px + env(safe-area-inset-bottom,0px));
+    background:none; border:0; box-shadow:none; padding:0;
+  }
+  .mbar .m-wa{
+    flex:none; width:56px; height:56px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--wa); color:#fff; box-shadow:0 8px 24px rgba(0,0,0,.28); padding:0;
+  }
+}
+body{padding-bottom:0}
+
+/* Black Friday card, now that it routes into the funnel rather than printing a parallel price
+   list that would go stale the moment the rate card moved. */
+.bf-ticks{list-style:none;padding:0;margin:0 0 1.25rem;display:grid;gap:.55rem}
+.bf-ticks li{position:relative;padding-left:1.6rem;font-size:.95rem;line-height:1.45}
+.bf-ticks li::before{content:"✓";position:absolute;left:0;top:0;color:#ffd166;font-weight:800}
+.bf-cta{width:100%;justify-content:center}
+
+/* Black Friday hero on a phone: the offer has to be read before the reg box means anything, so
+   the headline and the lead come first and the funnel follows them. On the laptop they sit side
+   by side and the order does not arise. */
+@media (max-width:900px){
+  .bf-hero-in{display:flex;flex-direction:column}
+  .bf-hero-in > div:first-child{order:1}
+  .bf-hero-in #kq-hero-host{order:2;margin-top:1.5rem}
+}
+/* Any stray label inside the floating button stays hidden - the circle is the icon. */
+.mbar .m-wa span{display:none}

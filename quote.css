@@ -513,3 +513,6 @@
    "30% off all bodywork" an unlabelled £50 reads as the price of the offer. */
 #kq .kq-strip-p i{display:block;font-style:normal;font-size:.72rem;letter-spacing:.04em;
   text-transform:uppercase;color:var(--muted);margin-bottom:1px}
+
+/* The pre-campaign price, struck through beside what they will actually pay. */
+#kq .kq-was{opacity:.62;font-weight:600;margin-right:.45rem;text-decoration-thickness:2px}

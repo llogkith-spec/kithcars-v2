@@ -1197,10 +1197,46 @@
       var t = E.tuneLines(C, S.tune.fuel, Number(S.tune.bhp) || 0, S.tune.stage, S.tune.addons);
       lines = t.lines; S.power = t.power;
     }
+    lines = applyPromo(lines);
     S.lines = lines;
     // Bodywork carries a confirmed band around the total: the same scrape is a different job once it's
     // been looked at, so we show the span we stand behind rather than a figure that will move.
     S.totals = S.flow === 'bodywork' ? E.bodyBand(C, E.totals(lines), lines) : E.totals(lines);
+  }
+
+  /* The campaign discount, taken off the price rather than announced next to it.
+     ------------------------------------------------------------------------------------------
+     The funnel has been showing a "30% off all bodywork" banner over undiscounted figures: the
+     customer read the banner, saw £288 for a front bumper, and nothing anywhere took the 30%
+     off. A price that contradicts the offer beside it is worse than no offer.
+
+     The campaign lives in quote-catalogue.json under "promo", so it ends by editing one date and
+     comes off by deleting one block. Each discounted line keeps its original in .was, which is
+     what the summary strikes through, so the saving is checkable rather than asserted. */
+  function promoOn() {
+    var p = C && C.promo;
+    if (!p || !p.percent) return null;
+    if (p.ends && new Date(p.ends).getTime() < Date.now()) return null;
+    if (p.flows && p.flows.indexOf(S.flow) === -1) return null;
+    // The insurer pays the rate card on a claim, so a retail discount does not belong on it.
+    if (p.insurance_work === false && S.flow === 'accident') return null;
+    return p;
+  }
+
+  function applyPromo(lines) {
+    var p = promoOn();
+    if (!p || !lines || !lines.length) return lines || [];
+    var k = (100 - p.percent) / 100;
+    return lines.map(function (l) {
+      if (!l || typeof l.low !== 'number' || !isFinite(l.low) || !isFinite(l.high)) return l;
+      var out = {};
+      for (var key in l) out[key] = l[key];
+      out.was = { low: l.low, high: l.high };
+      out.low = Math.round(l.low * k);
+      out.high = Math.round(l.high * k);
+      out.promo = p.name;
+      return out;
+    });
   }
   function fetchAi() {
     if (S.flow !== 'mechanical') return Promise.resolve();
@@ -1621,13 +1657,32 @@
      unsure about - they have just chosen both - so that half of the strip was spending the best
      position on the page telling them what they already knew. The price stays; the left half
      carries the current offer instead. */
+  /* What the job cost before the campaign came off, struck through beside the new figure. Built
+     from the lines' own .was values rather than by dividing the total back up, so it always adds
+     up to what the customer was actually quoted. */
+  function wasStrike() {
+    var p = promoOn();
+    if (!p || !S.lines || !S.lines.length) return '';
+    var lo = 0, hi = 0, any = false;
+    S.lines.forEach(function (l) {
+      if (l && l.was) { lo += l.was.low; hi += l.was.high; any = true; }
+      else if (l && typeof l.low === 'number' && isFinite(l.low)) { lo += l.low; hi += l.high; }
+    });
+    if (!any) return '';
+    return '<s class="kq-was">' + range(Math.round(lo), Math.round(hi)) + '</s> ';
+  }
+
   function summaryStrip(promo) {
     var t = S.totals;
     return '<div class="kq-strip' + (promo ? ' kq-strip-promo' : '') + '">' +
       (promo ? '<div class="kq-bf"><b>30% off all bodywork</b><span>Black Friday &mdash; book it in '
              + 'before the end of the month</span></div>'
              : '<div><b>' + esc(FLOWS[S.flow].label) + '</b><span>' + esc(vehicleName()) + '</span></div>') +
-      (t && t.count ? '<div class="kq-strip-p">' + (promo ? '<i>Your price</i>' : '') + '<b>' + rangeOf(t, S.lines) + '</b>' + (!S.offerGone && E.couponEligible(C, t, t.unpriced > 0) ? '<span>less ' + money(coupon().amount) + ' if booked now <i id="kq-timer">' + fmtLeft() + '</i></span>' : '') + '</div>' : '') + '</div>';
+      (t && t.count ? '<div class="kq-strip-p">' + (promo ? '<i>Your price</i>' : '') +
+        wasStrike() + '<b>' + rangeOf(t, S.lines) + '</b>' +
+        (couponOn() || (!S.offerGone && !promoOn() && E.couponEligible(C, t, t.unpriced > 0))
+          ? '<span>less ' + money(coupon().amount) + ' if booked now <i id="kq-timer">' + fmtLeft() + '</i></span>'
+          : '') + '</div>' : '') + '</div>';
   }
 
   /* ---------- step: calendar ---------- */
@@ -1759,6 +1814,11 @@
      the customer, on a job with a £150 minimum. That is either money given away or an argument
      at the counter, and the counter always loses it. */
   function couponOn() {
+    // The campaign discount replaces the online-booking £50 rather than stacking on top of it,
+    // unless the catalogue says otherwise. Offering both would take 30% and then another £50 off
+    // the same job, which is not what the campaign was priced at.
+    var p = promoOn();
+    if (p && !p.stacks_with_coupon) return false;
     return !!(S.day && S.time) && !S.offerGone && S.totals &&
       E.couponEligible(C, S.totals, S.totals.unpriced > 0);
   }

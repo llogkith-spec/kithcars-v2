@@ -2383,5 +2383,17 @@
     "round_to": 5,
     "_note": "The estimate runs from the exact rate-card price UPWARDS. The low end is the figure we would charge for the job as quoted; the high end covers an engine that takes more oil than its band, a non-standard filter, or a seized bolt. Never pad downwards: a low end below our real price is a number no customer ever actually pays. Capped at £50 wide: a range broader than that stops being an estimate and starts being a refusal to quote.",
     "max": 50
+  },
+  "promo": {
+    "name": "Black Friday",
+    "percent": 30,
+    "flows": [
+      "bodywork"
+    ],
+    "ends": "2026-11-30T23:59:59+00:00",
+    "code": "KITHBF30",
+    "_note": "30% off bodywork for the Black Friday campaign. Two terms are set to the safer reading and need Logan's sign-off: it REPLACES the GBP50 online-booking discount rather than stacking with it, and it does not apply to insurance claim work, where the insurer pays the rate card. Set stacks or insurance to true to change either. Take the promo out by deleting this block - nothing else needs editing.",
+    "stacks_with_coupon": false,
+    "insurance_work": false
   }
 }
