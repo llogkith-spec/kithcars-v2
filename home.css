@@ -227,9 +227,11 @@ h3{font-size:1.2rem;font-weight:700}
   .hero-in{display:flex;flex-direction:column;gap:22px}
   .hero-in>div:first-child{display:contents}
   .hero-in h1{order:1;margin-bottom:0}
+  /* The sub-headline sits under the headline, not under the funnel. It is the line that says
+     what we do, and a reg box above it asks someone to act before they have been told. */
+  .hero-in .sub{order:2}
   .hero-in .qcard,
-  .hero-in #kq-hero-host{order:2}
-  .hero-in .sub{order:3}
+  .hero-in #kq-hero-host{order:3}
   .hero-in .pillars-mini{order:4;margin:0}
   /* The place-and-hours line reads as a footnote to the three services, so it follows them here
      too. These orders override DOM position, so moving it in the markup alone left it back on
