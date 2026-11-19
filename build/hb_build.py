@@ -229,10 +229,22 @@ def build_page(slug):
     html = re.sub(r'(property="og:description" content=")(.*?)(")',
                   lambda m: m.group(1) + desc + m.group(3), html, count=1, flags=re.S)
 
+    # The footer's "Serving ..." list names every town we cover, Carshalton among them, and it is
+    # the same list on all 1,069 pages. The rename below is a blunt string swap over the whole
+    # document, so without lifting this paragraph out first it turns that Carshalton link into a
+    # second Hackbridge one and drops a real town off the footer of 49 pages. Lift it out, rename
+    # everything else, put it back untouched.
+    footer = re.search(r'<p style="font-size:12px;line-height:1\.9;margin-top:\.5rem">Serving .*?</p>',
+                       html, re.S)
+    if not footer:
+        raise RuntimeError(f'{slug}: footer serving list not found - the rename would eat it')
+    html = html.replace(footer.group(0), '@@FOOTER@@')
+
     # Slugs first, then prose mentions, so URLs do not get half-rewritten.
     html = html.replace(f'{slug}-{SRC_SLUG}', f'{slug}-{HB.SLUG}')
     html = html.replace(f'/{SRC_SLUG}"', f'/{HB.SLUG}"')
     html = html.replace(SRC_TOWN, HB.NAME).replace(SRC_SLUG, HB.SLUG)
+    html = html.replace('@@FOOTER@@', footer.group(0))
     html = re.sub(r'\bSM5\b', HB.PC, html)
     # "five minutes from Hackbridge" and friends are nonsense on a Hackbridge page.
     html = re.sub(r',?\s*(just )?(five|5|ten|10) minutes from Hackbridge', '', html,
@@ -262,7 +274,11 @@ def main():
 
     # --- no stray source-town references -----------------------------------------------------
     for slug, html in pages.items():
-        if re.search(rf'\b{SRC_TOWN}\b', html) or f'{SRC_SLUG}' in html:
+        # The footer's coverage list names Carshalton on purpose - it is a town we serve, and
+        # dropping it from these 49 pages is what used to happen. Check the page without it.
+        body = re.sub(r'<p style="font-size:12px;line-height:1\.9;margin-top:\.5rem">Serving .*?</p>',
+                      '', html, flags=re.S)
+        if re.search(rf'\b{SRC_TOWN}\b', body) or f'{SRC_SLUG}' in body:
             problems.append(f'{slug}: still mentions {SRC_TOWN}')
         # "a couple of minutes from Hackbridge station" is true and wanted. What must not
         # survive is the travel-to-Hackbridge phrasing the source pages open with.
