@@ -125,6 +125,18 @@
     if (/google\.[a-z.]+\/maps/i.test(href)) return ev('directions_click', { page: page });
     if (a.hasAttribute('data-quote') || href === '#quote' || href.indexOf('#get-a-quote') > -1)
       return ev('quote_cta_click', { page: page, label: label(a) });
+    /* Everything else worth naming carries data-track. The rules above return before this, so a
+       phone number or a WhatsApp link is never counted twice.
+
+       This is the half that was missing. Call, WhatsApp and quote clicks were all tracked, so we
+       knew someone converted but not what they had clicked to get there - which service page,
+       which card, whether the Black Friday bar did anything. The destination goes in with it, so
+       the report reads "service_card -> /bodywork" rather than just "a card was clicked".
+
+       These are deliberately NOT mapped to Meta standard events: a nav click is not a conversion,
+       and feeding it to Meta as one would teach the campaign to buy browsing. */
+    var t = a.getAttribute('data-track');
+    if (t) return ev(t + '_click', { page: page, label: label(a), to: href || '(none)' });
   }, true);
 
   var hit = {};
