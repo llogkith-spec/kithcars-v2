@@ -196,7 +196,10 @@ h3{font-size:1.2rem;font-weight:700}
    stretched the full width of the column with the logo stranded at one end. Matching the
    anchor directly wins it back, and max-content makes the plate fit the logo rather than
    the other way round. Sized to match the header mark. */
-.ft a.ft-logo{background:#fff;border-radius:10px;padding:10px 14px;display:inline-block;width:max-content;margin-bottom:14px}
+/* The white plate existed because the logo was black artwork on a dark footer. The footer
+   now uses the white version of the mark, so the plate made it white-on-white - a blank
+   rounded box where the logo should be. */
+.ft a.ft-logo{display:inline-block;width:max-content;margin-bottom:14px}
 .ft-logo img{height:52px;width:auto;display:block}
 .ft-bottom{border-top:1px solid var(--line-d);margin-top:36px;padding-top:20px;font-size:12.5px}
 
