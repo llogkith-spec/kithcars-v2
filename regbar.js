@@ -11,6 +11,9 @@
   // the test is for the card itself rather than for one URL. Two reg plates stacked on a 390px
   // screen is the clutter this bar was meant to solve.
   if (document.getElementById('hero-reg')) return;
+  // The homepage now carries the whole funnel in its hero rather than a small reg card,
+  // so the reg box is already the first thing on the page and this bar would repeat it.
+  if (document.querySelector('#kq-hero-host #kq')) return;
   var path = (location.pathname || '').toLowerCase();
   if (path === '/' || path === '/index.html' || path === '/index') return;
 
