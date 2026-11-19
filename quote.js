@@ -2079,7 +2079,21 @@
     var el = e.target.closest ? e.target.closest('[data-act]') : null;
     if (!el || !root.contains(el)) return;
     var a = el.dataset.act, v = el.dataset.v;
-    if (a === 'flow') { S.flow = v; track('quote_flow', { flow: v }); go('build'); }
+    if (a === 'flow') {
+      /* Switching service starts that service's funnel clean.
+         ------------------------------------------------------------------------------------
+         It used to only swap S.flow and leave every answer in place, so somebody who picked
+         bodywork, tapped two panels, then went back and chose Servicing arrived at the service
+         job card still carrying the panels - and they came through on the quote. The car is
+         kept, because it is the same car; only the job goes. */
+      if (S.flow && S.flow !== v) {
+        var car = S.vehicle, manual = S.manual, model = S.model, band = S.band, reg = S.reg;
+        resetJob();
+        S.vehicle = car; S.manual = manual; S.model = model; S.band = band; S.reg = reg;
+        S.lines = [];
+      }
+      S.flow = v; track('quote_flow', { flow: v }); go('build');
+    }
     else if (a === 'manual') { S.manual = true; S.vehicle = S.vehicle || {}; render(); }
     else if (a === 'back') { if (S.step === 'build') readBuild(); if (S.step === 'car') readCar(); go(v); }
     // Clear the held vehicle and go back to the plate. Also clears the flow, because a

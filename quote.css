@@ -244,8 +244,11 @@
 /* Alloy wheels on the diagram. Outside the body outline on purpose: a kerbed rim is a different
    job from a damaged panel, and making them look alike would invite the wrong tap. */
 #kq .kq-wheel{fill:#e7eaf0;stroke:#c3cad6;stroke-width:2;cursor:pointer;transition:fill .12s,stroke .12s}
-#kq .kq-wheel:hover{fill:#d9dee7}
-#kq .kq-wheel.on{fill:#d62828;stroke:#a81f1f}
+/* The wheels pick up the same highlight as the panels: a kerbed alloy is damage like any
+   other, and a grey hover on the wheels next to a pink one on the doors reads as though
+   the wheels are not selectable. */
+#kq .kq-wheel:hover{fill:#ffe4e6;stroke:var(--red)}
+#kq .kq-wheel.on{fill:var(--red);stroke:var(--red-d)}
 #kq .kq-wheel:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 #kq .kq-dmg-wheel{border-left:3px solid #d62828}
 

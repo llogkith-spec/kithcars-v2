@@ -5,6 +5,9 @@
   'use strict';
   if (window.matchMedia && !window.matchMedia('(max-width:760px)').matches) return;
   if (document.querySelector('.kc-bar')) return;
+  // The homepage writes its own sticky bar (.mbar). Without this check both appear, stacked, and
+  // the phone ends up with three bottom buttons again - the thing the single WhatsApp bar fixed.
+  if (document.querySelector('.mbar')) return;
 
   var PHONE = '020 4629 9469';
   var TEL = '+442046299469';
@@ -27,7 +30,9 @@
   bar.innerHTML =
     '<a href="tel:' + TEL + '" data-track="call" class="kc-bar-call">' + icon.phone + '<span>Call us</span></a>' +
     '<a href="' + WA + '" target="_blank" rel="noopener" data-track="whatsapp" class="kc-bar-wa">' + icon.wa + '<span>WhatsApp</span></a>' +
-    '<a href="' + quoteHref + '" data-track="quote" class="kc-bar-quote">' + icon.quote + '<span>Get a price</span></a>';
+    '';
+  // "Get a price" came off the bar: the reg card now sits at the top of every page, so the
+  // bar was a third button competing with the thing it pointed at.
   document.body.appendChild(bar);
 
   // Show it once the reader has committed to the page. 2026-11-11: dropped

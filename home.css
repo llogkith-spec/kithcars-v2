@@ -223,11 +223,15 @@ h3{font-size:1.2rem;font-weight:700}
 @media (max-width:1080px){
   .hero-in{display:flex;flex-direction:column;gap:22px}
   .hero-in>div:first-child{display:contents}
-  .hero-in .eyebrow{order:1}
-  .hero-in h1{order:2;margin-bottom:0}
-  .hero-in .qcard{order:3}
-  .hero-in .sub{order:4}
-  .hero-in .pillars-mini{order:5;margin:0}
+  .hero-in h1{order:1;margin-bottom:0}
+  .hero-in .qcard,
+  .hero-in #kq-hero-host{order:2}
+  .hero-in .sub{order:3}
+  .hero-in .pillars-mini{order:4;margin:0}
+  /* The place-and-hours line reads as a footnote to the three services, so it follows them here
+     too. These orders override DOM position, so moving it in the markup alone left it back on
+     top of the page on a phone while the laptop showed it in the right place. */
+  .hero-in .eyebrow{order:5}
   .hero-in .trust{order:6}
 }
 @media (max-width:720px){
@@ -567,3 +571,7 @@ a.offerbar b{text-decoration:underline;text-underline-offset:2px}
 @media (prefers-reduced-motion: reduce) {
   .hero-bg::before { animation: none; transform: none; }
 }
+
+/* The place-and-hours line reads as a footnote to the three services rather than a label above
+   the headline, so it sits under them now and is spaced as its own line. */
+.pillars-mini + .eyebrow { display: block; margin: 18px 0 2px; }
