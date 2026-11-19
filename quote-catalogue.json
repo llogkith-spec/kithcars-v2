@@ -2388,12 +2388,13 @@
     "name": "Black Friday",
     "percent": 30,
     "flows": [
-      "bodywork"
+      "bodywork",
+      "accident"
     ],
     "ends": "2026-11-30T23:59:59+00:00",
     "code": "KITHBF30",
-    "_note": "30% off bodywork for the Black Friday campaign. Two terms are set to the safer reading and need Logan's sign-off: it REPLACES the GBP50 online-booking discount rather than stacking with it, and it does not apply to insurance claim work, where the insurer pays the rate card. Set stacks or insurance to true to change either. Take the promo out by deleting this block - nothing else needs editing.",
-    "stacks_with_coupon": false,
-    "insurance_work": false
+    "_note": "30% off bodywork and accident work for the Black Friday campaign. Logan confirmed 19 Nov: the 30% STACKS with the £50 online-booking discount, which stays as the incentive to actually book, and it applies to accident work as well as bodywork. Worked example: a £285 door becomes £200 at 30%, then £150 once booked - 47% off the rate card. Take the promo out by deleting this block; nothing else needs editing.",
+    "stacks_with_coupon": true,
+    "insurance_work": true
   }
 }

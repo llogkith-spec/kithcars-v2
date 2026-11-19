@@ -86,6 +86,31 @@
     window.fbq('track', 'PageView');
   }
 
+  /* One Lead per visitor, whichever of the three routes they take.
+     ------------------------------------------------------------------------------------------
+     Before this, Meta saw Lead only when the quote funnel's details step was submitted. A
+     booking fired Purchase and Schedule but never Lead, and a WhatsApp tap fired Contact, which
+     no campaign can optimise against. So two of the three ways a customer actually gets in
+     touch were invisible to the thing deciding who sees the ads.
+
+     The guard matters as much as the event. Someone who submits the funnel, books a slot and
+     then messages on WhatsApp is one lead, not three; counting them three times would make the
+     cost per lead look a third of what it is and teach the campaign the wrong thing. Held in
+     sessionStorage, so a visit counts once and a genuine return visit counts again. */
+  var LEAD_KEY = 'kith_lead_sent';
+  var LEAD_FROM = { generate_lead: 'quote', quote_booked: 'booking', whatsapp_click: 'whatsapp',
+                    quote_whatsapp: 'whatsapp' };
+  function leadOnce(name, params) {
+    var why = LEAD_FROM[name];
+    if (!why || !FB_ID || !window.fbq) return;
+    try { if (sessionStorage.getItem(LEAD_KEY)) return; } catch (e) {}
+    try { sessionStorage.setItem(LEAD_KEY, why); } catch (e) {}
+    var p = params || {}, value = Number(p.value);
+    var payload = { content_name: why };
+    if (value > 0) { payload.value = Math.round(value * 100) / 100; payload.currency = p.currency || 'GBP'; }
+    try { window.fbq('track', 'Lead', payload); } catch (e) {}
+  }
+
   function ev(name, params) {
     try {
       if (window.gtag && GA_ID) window.gtag('event', name, params || {});
@@ -104,6 +129,7 @@
       // One of ours can be two of theirs: a booking is a Purchase and a Schedule at once.
       var names = (typeof mapped === 'string') ? [mapped] : mapped;
       for (var i = 0; i < names.length; i++) window.fbq('track', names[i], payload);
+      leadOnce(name, params);
     } catch (e) {}
   }
   window.kithTrack = ev;                // quote.js falls back to dataLayer on its own; this is for anything else
