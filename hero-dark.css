@@ -225,3 +225,9 @@
   #kq-hero-host { order: -1; margin-bottom: 1.5rem; }
   #kq-hero-host #kq { max-height: none; overflow: visible; }
 }
+
+/* Pages whose hero has no second column (the blog posts, the gallery, Black Friday) put the
+   funnel in its own band immediately under the hero instead. Still the first thing after the
+   headline, which is what matters. */
+.kq-band { padding-block: 0; margin-top: -28px; position: relative; z-index: 3; }
+.kq-band #kq-hero-host #kq { max-height: none; overflow: visible; }
