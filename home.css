@@ -476,3 +476,13 @@ a.offerbar b{text-decoration:underline;text-underline-offset:2px}
    an "Instant quote" button at the bottom was a second route to something already on screen;
    WhatsApp is the one thing the page cannot do by itself. */
 .mbar .m-wa-only{flex:1;font-size:16px;font-weight:800;padding:16px 8px}
+
+/* Hero subheadline is written twice: a 75-character line for the phone, where it sits under
+   the reg card and has to be read at a glance, and the full line with the towns and the
+   price-range promise on anything wider. Only one is ever in the layout, so neither is
+   announced twice by a screen reader. */
+.m-only{display:none}
+@media (max-width:720px){
+  .d-only{display:none}
+  .m-only{display:inline}
+}
