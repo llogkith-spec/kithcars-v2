@@ -45,13 +45,13 @@
 </header>
 
 <main>
-<section class="hero">
+<section class="hero" id="quote-top">
   <div class="hero-bg" role="img" aria-label="Inside the KITH workshop in Hackbridge"></div>
   <div class="wrap hero-in">
     <div>
       <span class="eyebrow"><span>Hackbridge</span> · <span>South London</span> · <span>Mon–Fri 8am–8pm</span> · <span>Sat 8am–5pm</span></span>
-      <h1>Bodywork, accident repair and servicing. <em>Priced in seconds.</em></h1>
-        <p class="sub sub-plain"><span class="m-only">Bodywork, accident repair &amp; servicing in Hackbridge. Fixed quote before work.</span><span class="d-only">Bodywork, accident repair and servicing in Hackbridge, serving Sutton, Croydon and Mitcham. Get a price range online in seconds, then a fixed written quote before we start.</span></p>
+      <h1>Bodywork and servicing, <em>priced in seconds.</em></h1>
+        <p class="sub sub-plain"><span class="m-only">Bodywork, servicing, MOT, tyres &amp; tuning in Hackbridge. Fixed quote before work.</span><span class="d-only">Bodywork, servicing, MOT, tyres and tuning in Hackbridge, serving Sutton, Croydon and Mitcham. Price most jobs online in seconds, then a fixed written quote before we start. Had an accident? We handle the claim end to end.</span></p>
       <ul class="pillars-mini">
         <li class="lead"><a href="#quote" data-quote="bodywork">Bodywork &amp; paint</a></li>
         <li><a href="#quote" data-quote="accident">Accident management</a></li>
@@ -63,7 +63,7 @@
         <li><b>Collection</b> &amp; delivery</li>
       </ul>
     </div>
-    <div class="qcard">
+    <div id="kq-hero-host" hidden></div><div class="qcard">
       <h2>What will it cost?</h2>
       <p>Enter your reg. We&rsquo;ll find your car and price the job.</p>
       <form id="hero-reg" novalidate>
@@ -110,11 +110,11 @@
       </a>
       <a class="card" id="alloys" href="/alloy-wheel-refurbishment">
         <picture><source srcset="/img/home-wheels.webp" type="image/webp"/><img src="/img/home-wheels.jpg" alt="Refinished wheels on the paint stand in our booth" loading="lazy" width="800" height="445"/></picture>
-        <div class="card-body"><h3>Alloy wheel refurbishment</h3><p>Kerbed, scuffed or corroded rims stripped, repaired and refinished in our own booth.</p><span class="from">From &pound;105 a wheel</span></div>
+        <div class="card-body"><h3>Alloy wheel refurbishment</h3><span class="from">From &pound;105 a wheel</span></div>
       </a>
       <a class="card" id="tuning" href="/ecu-remap">
         <picture><source srcset="/img/home-tuning.webp" type="image/webp"/><img src="/img/home-tuning.jpg" alt="White BMW with black alloys on the ramp" loading="lazy" width="800" height="577"/></picture>
-        <div class="card-body"><h3>Tuning</h3><p>Stage 1 &amp; 2 ECU remaps, lowering springs, coilovers and wheels.</p><span class="from">Lowering springs fitted from £335</span></div>
+        <div class="card-body"><h3>Tuning</h3><p>Stage 1 &amp; 2 ECU remaps, lowering springs and coilovers.</p><span class="from">Lowering springs fitted from £335</span></div>
       </a>
       <a class="card" href="/recovery" style="background:linear-gradient(135deg,#1b1e24,#0c0d10)">
         <div class="card-body"><h3>Recovery &amp; hire</h3><p>Broken down or not safe to drive? We recover it to our workshop and can keep you mobile while it&rsquo;s fixed.</p><span class="go">Recovery &amp; hire →</span></div>
@@ -137,7 +137,7 @@
         <li><div><b>Book it in</b><span>We confirm a fixed written price and a time that suits you.</span></div></li>
       </ol>
     </div>
-    <div id="kq" aria-live="polite"><div class="kq-loading"><span class="kq-spin"></span>Loading instant quote…</div></div>
+    <p id="kq-moved" class="kq-moved" hidden>Your quote is open at the top of the page. <a href="#quote-top">Take me to it</a></p><div id="kq" aria-live="polite"><div class="kq-loading"><span class="kq-spin"></span>Loading instant quote…</div></div>
   </div>
 </section>
 
@@ -157,11 +157,7 @@
         <li>Door<b>from £240</b></li><li>Front wing<b>from £180</b></li>
         <li>Bonnet<b>from £180</b></li><li>Dent repair<b>from £260</b></li>
       </ul>
-      <ul class="ticks">
-        <li>Insurance claim? You choose the repairer. We&rsquo;ll deal with your insurer.</li>
-        <li>Minor damage? We&rsquo;ll price it privately too, so you can compare it with your excess.</li>
-        <li>Send photos on WhatsApp for a proper quote the same day.</li>
-      </ul>
+      <p class="vs-dealer"><b>Around 40% cheaper than a main dealer</b> on bodywork labour, for the same paint and the same finish.</p>
       <div class="btn-row">
         <a class="btn btn-red" href="#quote" data-quote="bodywork">Price my bodywork</a>
         <a class="btn btn-wa" href="https://wa.me/447923688259?text=Hi%20KITH%2C%20I%27d%20like%20a%20bodywork%20quote.%20Photos%20attached." target="_blank" rel="noopener">Send photos on WhatsApp</a>
@@ -169,6 +165,7 @@
     </div>
   </div>
 </section>
+<section class="section section-alt"><div class="container kx-prose"><h2>Bodywork and accident repair</h2><p>Panel work, paint and accident repair from our own bodyshop in Hackbridge. We are on no insurer&rsquo;s panel, which means you choose who repairs your car &mdash; not them. Prices below come from the same rate card the quote box uses.</p><ul class="kx-hublist"><li><a href="/body-panel-repairs"><strong>Every panel, and what it costs</strong></a><span>Bumpers, wings, doors, quarters, bonnets and roofs, with real prices and what the repair actually involves.</span></li><li><a href="/car-insurance-claims"><strong>Insurance claims, explained</strong></a><span>Your right to choose a repairer, excess, write-off categories, courtesy cars and how a claim actually runs.</span></li><li><a href="/bodywork-repair-process"><strong>What actually happens to your car</strong></a><span>Ten stages from estimate to collection, and the corners that get cut where you cannot see them.</span></li><li><a href="/bodywork-guides"><strong>Bodywork, explained properly</strong></a><span>Paint matching, sensor calibration, aluminium and electric cars, lease handback thresholds, and what to do when there is nobody to claim from.</span></li><li><a href="/accident-repairs"><strong>Accident repair</strong></a><span>Any insurer, any car. We deal with the estimate, the engineer and the supplementary.</span></li><li><a href="/car-respray"><strong>Respray and paint</strong></a><span>Colour matched to your paint code and blended into the neighbouring panels, which is what makes a repair invisible.</span></li></ul></div></section>
 
 <section class="sec sec-alt">
   <div class="wrap">
@@ -188,7 +185,7 @@
         <picture><source srcset="/img/home-tuning.webp" type="image/webp"/><img src="/img/home-tuning.jpg" alt="Lowered BMW with black alloys on the ramp" loading="lazy" width="800" height="577"/></picture>
         <div>
           <h3>Tuning</h3>
-          <ul><li><b>Stage 1 &amp; Stage 2 ECU remaps</b> after a full health check</li><li><b>Lowering springs</b> fitted from £335</li><li><b>Coilovers</b> fitted and set up from £420</li><li><b>Alloy wheels</b> fitted and balanced</li></ul>
+          <ul><li><b>Stage 1 &amp; Stage 2 ECU remaps</b> after a full health check</li><li><b>Lowering springs</b> fitted from £335</li><li><b>Coilovers</b> fitted and set up from £420</li></ul>
           <p>Every remap is road-legal. We never remove DPF, EGR or AdBlue systems.</p>
           <a class="btn btn-red" href="#quote" data-quote="tuning">Price my tuning</a>
         </div>
@@ -302,12 +299,7 @@
   </div>
 </section>
 
-<section class="cta-band">
-  <h2>Know the price before you book</h2>
-  <p>Bodywork, repairs, servicing, tyres and tuning. Priced in about 30 seconds.</p>
-  <a class="btn btn-white" href="#quote" data-quote>Get my instant price</a>
-</section>
-<section class="section section-alt"><div class="container kx-prose"><h2>Bodywork and accident repair</h2><p>Panel work, paint and accident repair from our own bodyshop in Hackbridge. We are on no insurer&rsquo;s panel, which means you choose who repairs your car &mdash; not them. Prices below come from the same rate card the quote box uses.</p><ul class="kx-hublist"><li><a href="/body-panel-repairs"><strong>Every panel, and what it costs</strong></a><span>Bumpers, wings, doors, quarters, bonnets and roofs, with real prices and what the repair actually involves.</span></li><li><a href="/car-insurance-claims"><strong>Insurance claims, explained</strong></a><span>Your right to choose a repairer, excess, write-off categories, courtesy cars and how a claim actually runs.</span></li><li><a href="/bodywork-repair-process"><strong>What actually happens to your car</strong></a><span>Ten stages from estimate to collection, and the corners that get cut where you cannot see them.</span></li><li><a href="/bodywork-guides"><strong>Bodywork, explained properly</strong></a><span>Paint matching, sensor calibration, aluminium and electric cars, lease handback thresholds, and what to do when there is nobody to claim from.</span></li><li><a href="/accident-repairs"><strong>Accident repair</strong></a><span>Any insurer, any car. We deal with the estimate, the engineer and the supplementary.</span></li><li><a href="/car-respray"><strong>Respray and paint</strong></a><span>Colour matched to your paint code and blended into the neighbouring panels, which is what makes a repair invisible.</span></li></ul></div></section></main>
+</main>
 
 <footer class="ft">
   <div class="wrap">

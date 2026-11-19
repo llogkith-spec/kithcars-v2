@@ -415,8 +415,21 @@ h3{font-size:1.2rem;font-weight:700}
 /* ---------------------------------------------------------------------------------------------
    Black Friday landing page (/black-friday).
    --------------------------------------------------------------------------------------------- */
-.bf-bar{background:#000;font-size:14px;padding:11px 16px}
-.bf-bar b{color:#ffd166}
+/* Black Friday bar. The offer is the whole reason the bar is there, so the 30% carries the
+   weight: bigger than the sentence around it, on its own amber block, not just coloured text. */
+.bf-bar{background:#000;font-size:15px;padding:13px 16px;letter-spacing:.01em}
+.bf-bar b{
+  color:#111318;
+  background:#ffd166;
+  font-size:1.35em;
+  font-weight:900;
+  letter-spacing:-.01em;
+  padding:.1em .5em;
+  margin:0 .18em;
+  border-radius:7px;
+  display:inline-block;
+  line-height:1.25;
+}
 .bf-bar a{color:inherit}
 
 .bf-hero{background:#0c0d10;color:#fff;padding:56px 0 64px}
@@ -485,4 +498,72 @@ a.offerbar b{text-decoration:underline;text-underline-offset:2px}
 @media (max-width:720px){
   .d-only{display:none}
   .m-only{display:inline}
+}
+
+/* The funnel docks into the hero rather than the reader being thrown down the page to it.
+   The slot inherits the quote card's shape so nothing jumps when the card is swapped out. */
+#kq-hero-host { align-self: center; min-width: 0; }
+#kq-hero-host #kq {
+  background: #fff;
+  border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(12, 13, 16, .35);
+  max-height: min(78vh, 760px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.kq-moved {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  padding: .9rem 1.1rem;
+  font-weight: 600;
+  color: #9a3412;
+}
+.kq-moved a { color: #dc2626; }
+@media (max-width: 900px) {
+  #kq-hero-host { order: -1; margin-bottom: 1.5rem; }
+  #kq-hero-host #kq { max-height: none; overflow: visible; }
+}
+
+/* Hero motion: the photograph settles slowly outwards.
+   ------------------------------------------------------------------------------------------
+   Scaling .hero-bg itself would drag its ::after overlay with it, and the overlay is what keeps
+   the headline readable - stretched, it slides its gradient off the text. So the movement goes
+   on a ::before layer that carries only the image, and the overlay stays still.
+   It runs once and stops, rather than looping, because a hero that never settles is tiring to
+   read against. Anyone who has asked their device for less motion gets none. */
+.hero-bg { overflow: hidden; background-image: none !important; }
+.hero-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  background-image: url(/img/home-hero.jpg);
+  background-position: 50% 50%;
+  background-size: cover;
+  background-repeat: no-repeat;
+  transform: scale(1.14);
+  animation: heroSettle 9s cubic-bezier(.16, .62, .24, 1) .15s both;
+  will-change: transform;
+}
+@supports (background:url(x.webp)) {
+  .hero-bg::before {
+    background-image: image-set(url(/img/home-hero.webp) type("image/webp"),
+                                url(/img/home-hero.jpg) type("image/jpeg"));
+  }
+}
+@media (max-width:760px) {
+  .hero-bg::before { background-image: url(/img/home-hero-tall.jpg); }
+}
+@supports (background:url(x.webp)) {
+  @media (max-width:760px) {
+    .hero-bg::before {
+      background-image: image-set(url(/img/home-hero-tall.webp) type("image/webp"),
+                                  url(/img/home-hero-tall.jpg) type("image/jpeg"));
+    }
+  }
+}
+@keyframes heroSettle { from { transform: scale(1.14); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .hero-bg::before { animation: none; transform: none; }
 }

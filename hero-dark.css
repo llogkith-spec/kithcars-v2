@@ -205,3 +205,23 @@
 .page-hero-grid > * { min-width: 0; }
 .kx-qcard { min-width: 0; max-width: 100%; }
 .kx-qcard .kx-plate input { width: 100%; }
+
+/* The funnel docks into the hero instead of the reader being thrown down the page to it. */
+#kq-hero-host { align-self: center; min-width: 0; }
+#kq-hero-host #kq {
+  background: #fff;
+  border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(12, 13, 16, .35);
+  max-height: min(78vh, 760px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.kq-moved {
+  background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px;
+  padding: .9rem 1.1rem; font-weight: 600; color: #9a3412;
+}
+.kq-moved a { color: #dc2626; }
+@media (max-width: 900px) {
+  #kq-hero-host { order: -1; margin-bottom: 1.5rem; }
+  #kq-hero-host #kq { max-height: none; overflow: visible; }
+}

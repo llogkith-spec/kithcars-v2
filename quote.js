@@ -287,8 +287,38 @@
      Now every step lands the top of the widget in the same place, so the funnel sits still and
      the next question is always where the last one was. Instant rather than smooth: a smooth
      scroll on each step is the movement being complained about. */
+  /* Where the funnel runs.
+     ----------------------------------------------------------------------------------------
+     The funnel lives in its own section well down the page, so starting it from the hero used
+     to mean throwing the reader down there, and then nudging the page on every step after. If
+     the page offers a hero slot, the funnel is moved into it the first time it is opened and
+     runs in the spot the reader is already looking at - and once it is docked there, nothing
+     scrolls at all. Pages with no slot keep the old behaviour. */
+  var HOST = document.getElementById('kq-hero-host');
+
+  function docked() { return !!(HOST && HOST.contains(root)); }
+
+  function dock() {
+    if (!HOST || docked()) return;
+    HOST.appendChild(root);
+    HOST.hidden = false;
+    var card = document.querySelector('.qcard, .kx-qcard');
+    if (card) card.hidden = true;
+    var note = document.getElementById('kq-moved');
+    if (note) note.hidden = false;
+    document.documentElement.classList.add('kq-docked');
+  }
+
+  /* Put the funnel where it can be seen. Docking counts as showing it, so there is no scroll. */
+  function reveal() {
+    dock();
+    if (docked()) return;
+    reveal();
+  }
+
   function go(step) {
     S.step = step; save(); render();
+    if (docked()) return;
     var top = root.getBoundingClientRect().top + window.pageYOffset;
     var header = document.querySelector('header');
     var offset = (header ? header.getBoundingClientRect().height : 0) + 12;
@@ -2197,19 +2227,19 @@
     if (!t) return;
     e.preventDefault();
     var f = t.dataset.quote;
-    if (!C) { PENDING = { flow: f }; root.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (!C) { PENDING = { flow: f }; reveal(); return; }
     if (S.sent) { S.sent = false; S.lines = []; S.mech = []; S.body = {}; S.mark = {}; S.wheels = {}; S.expires = 0; S.offerGone = false; S.day = S.time = null; }
     if (FLOWS[f]) { S.suggest = f; S.flow = f; S.step = (S.vehicle || S.manual) ? 'build' : 'car'; }
     else S.step = (S.vehicle || S.manual) ? 'flow' : 'car';
     save(); render();
-    root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    reveal();
     var p = $('#kq-plate'); if (p) setTimeout(function () { p.focus({ preventScroll: true }); }, 400);
   });
   var hero = document.getElementById('hero-reg');
   if (hero) hero.addEventListener('submit', function (e) {
     e.preventDefault();
     var reg = hero.querySelector('input').value.trim();
-    if (!C) { PENDING = { reg: reg.toUpperCase() }; root.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (!C) { PENDING = { reg: reg.toUpperCase() }; reveal(); return; }
     /* A new plate here has to clear the old car before we render, or the car step shows the
        confirmation for the car we already hold instead of the registration form - and with no
        form on the page there is nothing to submit, so the plate just typed is never looked up.
@@ -2222,17 +2252,26 @@
     // Always the car step: the plate has just been typed and needs looking up. What they want
     // doing is asked immediately afterwards, on the choice step, rather than assumed here.
     S.reg = reg.toUpperCase(); S.step = 'car';
-    render(); root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    render(); reveal();
     var f = $('.kq-reg'); if (f && reg) { f.requestSubmit ? f.requestSubmit() : f.querySelector('button[type=submit]').click(); }
   });
 
   fetch(root.dataset.catalogue || '/quote-catalogue.json').then(function (r) { return r.json(); }).then(function (c) {
     C = c; load();
     var pf = root.dataset.flow, pj = root.dataset.job;
-    // The page's own flow is a suggestion, not a decision. It arrives pre-selected on the choice
-    // step so a bumper page still points at bodywork, but the customer is asked either way -
-    // they may have come for a bumper and want the service doing while it is in.
-    if (FLOWS[pf] && !S.sent) S.suggest = pf;
+    /* A page that declares a flow starts that flow.
+       --------------------------------------------------------------------------------------
+       This used to only pre-select the flow on the generic "What does it need?" chooser, so
+       somebody who had just read the accident-repairs page, understood what we do, and typed
+       their registration was then asked what they wanted - having already said so by being on
+       that page. Each service asks different questions (the accident flow asks fault, drivable,
+       replacement vehicle and whether it is reported; bodywork asks which panels; servicing
+       asks which jobs), and none of them were being reached without that extra tap.
+
+       It sets the flow only when none is already held, so somebody returning mid-quote stays
+       on the job they were building. The build step's Back button still goes to the chooser,
+       so anyone who wants something else can switch. */
+    if (FLOWS[pf] && !S.sent) { S.suggest = pf; if (!S.flow) S.flow = pf; }
     if (pj && E.findJob(C, pj) && S.mech.indexOf(pj) === -1 && !S.sent) { S.mech.push(pj); S.lines = []; if (S.step === 'estimate') S.step = 'build'; }
     if (PENDING) {
       if (FLOWS[PENDING.flow]) { S.suggest = PENDING.flow; S.flow = PENDING.flow; }
