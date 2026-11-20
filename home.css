@@ -72,7 +72,12 @@ h3{font-size:1.2rem;font-weight:700}
   .hero-bg:after{background:linear-gradient(180deg,rgba(12,13,16,.34) 0%,rgba(12,13,16,.62) 38%,rgba(12,13,16,.88) 100%)}
 }
 .hero-in{position:relative;display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;padding:84px 20px 76px}
-.hero h1{font-size:clamp(2.3rem,5.2vw,4rem);font-weight:900;margin-bottom:.35em}
+/* The headline and the line beneath it are one statement, so they are wrapped together and
+   spaced by their own margin. Left loose in the phone flex column they were separated by the
+   hero's 26px gap - the same gap that separates the funnel and the service pills - and read
+   as two unrelated claims rather than a sentence and its explanation. */
+.hero-say{display:flex;flex-direction:column}
+.hero h1{font-size:clamp(2.3rem,5.2vw,4rem);font-weight:900;margin-bottom:.22em}
 .hero h1 em{font-style:normal;color:var(--red)}
 .hero p.sub{font-size:1.15rem;color:var(--on-ink-2);max-width:560px;margin:0 0 1.6rem}
 .pillars-mini{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 1.8rem;padding:0;list-style:none}
@@ -226,10 +231,13 @@ h3{font-size:1.2rem;font-weight:700}
 @media (max-width:1080px){
   .hero-in{display:flex;flex-direction:column;gap:22px}
   .hero-in>div:first-child{display:contents}
-  .hero-in h1{order:1;margin-bottom:0}
   /* The sub-headline sits under the headline, not under the funnel. It is the line that says
-     what we do, and a reg box above it asks someone to act before they have been told. */
-  .hero-in .sub{order:2}
+     what we do, and a reg box above it asks someone to act before they have been told. The
+     two move as one block, so the gap below is the only gap the reader sees. */
+  .hero-in .hero-say{order:1}
+  /* Its bottom margin was sized for the grid layout, where it had to hold the pillars off.
+     In the flex column the gap does that, so the margin only doubled it. */
+  .hero-in .hero-say .sub{margin-bottom:0}
   .hero-in .qcard,
   .hero-in #kq-hero-host{order:3}
   .hero-in .pillars-mini{order:4;margin:0}
@@ -357,8 +365,8 @@ h3{font-size:1.2rem;font-weight:700}
   /* The eyebrow runs to two lines at this width. Let it look deliberate rather than wrapped. */
   .hero .eyebrow{line-height:1.75;letter-spacing:.1em;margin-bottom:.7rem}
 
-  .hero h1{margin-bottom:.6rem}
-  .hero p.sub{margin-bottom:1rem}
+  .hero h1{margin-bottom:.3rem}
+  .hero p.sub{margin-bottom:0}
   .hero p.sub + p.sub{margin-top:.1rem}
   .pillars-mini{margin-top:.25rem;gap:8px}
 }
