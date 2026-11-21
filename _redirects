@@ -1,0 +1,6 @@
+# Cloudflare Pages redirects (same rules as netlify.toml).
+# The pricing page was removed; it was linked from 923 pages, so it goes to the instant quote.
+/pricing          /#quote           301
+/pricing.html     /#quote           301
+# The old paintless-dent-removal town pages were rebuilt as dent-repair-<town>.
+/dent-removal-*   /dent-repair-:splat  301

@@ -1,4 +1,5 @@
-// Shared helpers for the Netlify versions of the /api functions.
+// Shared helpers for the /api functions. Written for Netlify; Cloudflare Pages runs the same code through
+// the thin adapters in functions/api/ (they fill process.env and context.ip for it).
 // Netlify runs these on Node, not on Cloudflare's runtime, so the two things Cloudflare gave us for free —
 // caches.default and the env object — are done by hand here. Everything else behaves the same.
 
@@ -11,6 +12,9 @@ export function allowedOrigin(request, context) {
   if (ALLOWED.concat(extra).includes(origin)) return true;
   // Our own Netlify URLs: the site itself, and its branch and deploy previews. Not a bare *.netlify.app
   // wildcard, which would let any site on Netlify spend our DVLA and Anthropic quota.
+  // Cloudflare Pages: this project's own *.pages.dev address and its previews, named by PAGES_PROJECT.
+  const project = (process.env.PAGES_PROJECT || '').replace(/[^a-z0-9-]/gi, '');
+  if (project && new RegExp('^https://([a-z0-9-]+\\.)?' + project + '\\.pages\\.dev$').test(origin)) return true;
   const site = (context && context.site && context.site.name) || process.env.SITE_NAME || '';
   if (!site) return false;
   const safe = site.replace(/[^a-z0-9-]/gi, '');
