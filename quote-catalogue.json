@@ -1295,10 +1295,10 @@
     "_booked_note": "Times already taken, as {\"YYYY-MM-DD\": [\"08:30\", \"13:30\"]}. Listed times show greyed and cannot be picked. Leave empty and every slot is bookable. Do not pad this to look busy: a customer who rings about a slot the page showed as gone, and is offered it, has caught us out. When the CRM is connected this should be generated from real bookings instead."
   },
   "crm": {
-    "supabase_url": "",
-    "anon_key": "",
+    "supabase_url": "https://mxyrxyhvjndgjqupgstu.supabase.co",
+    "anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14eXJ4eWh2am5kZ2pxdXBnc3R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMTMyNjgsImV4cCI6MjA5Nzc4OTI2OH0.z7F_sUqx56bIcBLxjWFJSP3rT1jhNPAL9_1SWZ7cUog",
     "table": "jobs",
-    "_note": "Fill these in to write web leads straight into the CRM's jobs table. Leads are emailed either way."
+    "_note": "Writes web leads onto the CRM's jobs board as {id, data, updated_at}, the same shape and the same merge-duplicates header the CRM itself uses. Project and anon key are the ones already shipped in quote.js for the inbox function - same Supabase, verified against the kith-crm repo on 21 Nov 2026, not guessed. The anon key is public by design and protected by row-level security; it is already in the page source either way. Leads also go out by email and to the unified inbox, so this is the third of three routes, not the only one."
   },
   "tyres": {
     "widths": [

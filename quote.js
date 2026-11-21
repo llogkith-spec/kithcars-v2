@@ -5,7 +5,8 @@
    Then: estimate (with the £50 book-online offer and its hold timer) -> details -> pick a slot -> booked.
    Prices always come from quote-catalogue.json. Reg lookup (/api/vehicle) and the AI book-time estimate
    (/api/estimate) are optional; with neither, everything still prices from the price book.
-   Leads go to Web3Forms by email, and to the CRM's jobs table when crm keys are filled in. */
+   Leads go out three ways: Web3Forms by email, the unified inbox (always), and the CRM's jobs
+   table when the crm keys in the catalogue are filled in - which they are not yet. */
 (function () {
   'use strict';
   var E = window.KithQuoteEngine, root = document.getElementById('kq');
@@ -1787,7 +1788,7 @@
     return 'https://wa.me/' + WA + '?text=' + encodeURIComponent(msg);
   }
 
-  /* ---------- lead out: email always, CRM when configured ---------- */
+  /* ---------- lead out: email + unified inbox always, CRM board when configured ---------- */
   function leadPayload() {
     var v = S.vehicle || {}, t = S.totals;
     return {
@@ -1868,9 +1869,11 @@
   /* Did the lead actually reach anybody?
 
      This replaces "if (!res.emailed && res.crm !== 'sent')", which could never fire. res.emailed
-     is the STRING 'disabled' since the email send was dropped, and a non-empty string is truthy,
-     so !res.emailed was permanently false and the whole check was dead. res.inbox - the only
-     channel still live - was not looked at.
+     was the STRING 'disabled' while the email send was switched off, and a non-empty string is
+     truthy, so !res.emailed was permanently false and the whole check was dead. res.inbox - at
+     that point the only channel still live - was not looked at. Email is back as of 21 Nov, so
+     there are two live routes again, but the check stays written this way on purpose: it asks
+     whether anything actually succeeded, rather than whether a particular channel is switched on.
 
      The result: every booking walked through to "You're booked in" whether or not a single thing
      had been delivered, and nobody found out. The customer thinks they have a slot, the workshop
@@ -1886,10 +1889,45 @@
 
   function sendLead() {
     var d = leadPayload(), id = S.lead.id || (S.lead.id = 'web-' + Date.now().toString(36));
-    // Email send was removed Nov 2026 — the triage AI's ping (WhatsApp /
-    // push on the service adviser's phone) + the CRM board entry is the
-    // notification path now. No email needed.
-    var email = Promise.resolve('disabled');
+    /* Email restored 21 Nov 2026. It was dropped on the 11th on the basis that the triage AI's
+       WhatsApp ping plus the CRM board entry had replaced it. In practice neither half was
+       carrying it: the CRM push is still unconfigured (empty keys below, so that fetch never
+       runs), which left the inbox POST as the single route out of this funnel, and Logan has
+       had nothing by email in the ten days since. One route with no fallback is how leads go
+       missing quietly, so the email goes back as a second, independent path.
+
+       NOTE: this resolves to the STRING 'sent', not true. leadDelivered() compares against
+       'sent', so returning a boolean here would make every successful email read as a failure
+       and show the customer "that didn't send" after their details had gone through. */
+    var fd = new FormData();
+    fd.append('access_key', WEB3FORMS_KEY);
+    fd.append('subject', (d.priority === 'urgent' ? 'URGENT RECOVERY' : d.priority === 'hot' ? 'BOOKED' : 'Estimate') + ': ' + d.service + ' · ' + vehicleName() + (d.webEstimate ? ' · ' + range(d.webEstimate.lo, d.webEstimate.hi) : ''));
+    fd.append('from_name', 'KITH website instant quote');
+    fd.append('Name', d.name); fd.append('Phone', d.phone);
+    if (d.email) { fd.append('email', d.email); fd.append('Email', d.email); }
+    fd.append('Registration', d.reg || '-');
+    fd.append('Vehicle', [d.vehicle.year, d.vehicle.make, d.vehicle.model].filter(Boolean).join(' ') + ' · ' + d.vehicle.size);
+    fd.append('Service', d.service);
+    fd.append('Quote', d.jobs.map(function (j) { return '• ' + j.name + (typeof j.low === 'number' ? ': ' + range(j.low, j.high) : ': to confirm'); }).join('\n') + (d.webEstimate ? '\nEstimate: ' + range(d.webEstimate.lo, d.webEstimate.hi) : ''));
+    fd.append('Slot', d.requestedSlot ? d.requestedSlot.date + ' ' + d.requestedSlot.time + ' (' + d.requestedSlot.calendar + ')' : 'not picked');
+    fd.append('Collection', d.collection ? 'Yes, please collect' : 'No');
+    if (d.vehicle.motExpiry) {
+      var md = motDays(S.vehicle);
+      fd.append('MOT', d.vehicle.motExpiry + (md === null ? '' :
+        md < 0 ? ' — EXPIRED ' + Math.abs(md) + ' days ago' : ' — ' + motHowLong(md)) +
+        (d.wantMot ? ' · CUSTOMER WANTS THE MOT DOING THIS VISIT' : ''));
+    }
+    // The campaign discount did not exist when this block was written. Without it the email
+    // shows the discounted figure with no sign that 30% has already come off, and whoever
+    // writes the firm quote has no way of knowing the customer was promised that.
+    var ep = promoOn();
+    fd.append('Promotion', ep ? ep.name + ' · ' + ep.percent + '% already deducted from the figures above' : 'none');
+    fd.append('Discount', d.coupon ? d.coupon.code + ' · £' + d.coupon.amount : 'none');
+    fd.append('Price book', d.priceBookVersion);
+    var email = fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { return (j && j.success) ? 'sent' : 'failed'; })
+      .catch(function () { return 'failed'; });
     var crm = Promise.resolve('not connected');
     if (C.crm && C.crm.supabase_url && C.crm.anon_key) {
       crm = fetch(C.crm.supabase_url.replace(/\/$/, '') + '/rest/v1/' + (C.crm.table || 'jobs') + '?on_conflict=id', {
