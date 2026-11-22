@@ -1,0 +1,11 @@
+# Cloudflare Pages headers (same as netlify.toml).
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+
+/quote-catalogue.json
+  Cache-Control: public, max-age=3600
+
+/kpi
+  X-Robots-Tag: noindex, nofollow

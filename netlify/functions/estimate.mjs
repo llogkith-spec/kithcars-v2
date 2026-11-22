@@ -1,13 +1,11 @@
 // POST /api/estimate  {vehicle, model, band, jobs:[ids]}  ->  per-job labour hours and parts range from Claude,
 // clamped to the price book. The price itself is always worked out from quote-catalogue.json; the model never
 // sets a price. Netlify version. Needs ANTHROPIC_API_KEY; optional ANTHROPIC_MODEL (default claude-sonnet-5).
-import { createRequire } from 'module';
 import { allowedOrigin, json, throttled, readJson, cacheGet, cacheSet } from './_shared.mjs';
-
-// quote-engine.js is UMD and quote-catalogue.json is plain JSON: require handles both without build flags.
-const require = createRequire(import.meta.url);
-const catalogue = require('../../quote-catalogue.json');
-const Engine = require('../../quote-engine.js');
+// Static imports so both bundlers (Netlify's esbuild and Cloudflare's wrangler) can pack them in:
+// quote-engine.js is UMD (comes in as CommonJS) and the catalogue is plain JSON.
+import catalogue from '../../quote-catalogue.json';
+import Engine from '../../quote-engine.js';
 
 const SYSTEM = `You estimate workshop book times and retail parts prices for a UK independent garage (KITH Cars Garage & Bodyworks, South London).
 For each job you are given, estimate for THIS specific vehicle:
