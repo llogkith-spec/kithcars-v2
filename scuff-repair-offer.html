@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <!-- Ad traffic only: this page must never be indexed and never appear in search. -->
 <meta name="robots" content="noindex,nofollow"/>
-<title>Scuff repair, Hackbridge | KITH Cars</title>
-<meta name="description" content="Scuff repair in Hackbridge SM6. Put your reg in for a price range in about 30 seconds, then a fixed written quote before any work. 12-month bodywork guarantee."/>
+<title>30% off scuff repair, Hackbridge | Black Friday | KITH Cars</title>
+<meta name="description" content="Black Friday: 30% off all bodywork until 30 November. Scuff repair in Hackbridge SM6 — put your reg in for a price range in about 30 seconds, discount already applied, then a fixed written quote before any work."/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap"/>
@@ -96,9 +96,53 @@ ol.steps span{color:var(--muted);font-size:.95rem}
 
 .facts{font-size:.9rem;color:var(--muted);padding:26px 0 44px;border-top:1px solid var(--line)}
 .facts p{margin:.35rem 0}
+
+/* ---- Black Friday ----------------------------------------------------------------
+   The offer is real and it ends at a real time, so the urgency is real and the page can
+   say so plainly. The countdown is driven by that one timestamp and the whole treatment
+   removes itself the moment it passes - an expired offer still shouting on a paid landing
+   page is worse than never having run it. */
+.bf-bar{
+  position:sticky;top:0;z-index:70;background:var(--ink);color:#fff;
+  padding:.62rem max(18px,env(safe-area-inset-left,0px));
+  text-align:center;font-weight:800;font-size:.95rem;letter-spacing:-.01em;
+}
+.bf-bar b{background:#ffd43b;color:var(--ink);padding:.1rem .45rem;border-radius:5px}
+.bf-bar span{display:block;font-weight:600;font-size:.82rem;opacity:.82;margin-top:.15rem}
+
+.bf-hero{
+  margin:22px 0 16px;padding:20px 20px 18px;border-radius:18px;
+  background:linear-gradient(145deg,#111318 0%,#1d2029 100%);color:#fff;
+  box-shadow:0 14px 34px rgba(0,0,0,.22);
+}
+.bf-kicker{
+  display:inline-block;background:#ffd43b;color:var(--ink);font-weight:900;
+  font-size:.74rem;letter-spacing:.09em;text-transform:uppercase;
+  padding:.3rem .6rem;border-radius:999px;
+}
+.bf-big{
+  display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap;
+  margin:.55rem 0 .3rem;line-height:1;
+}
+.bf-big strong{font-size:clamp(3.1rem,15vw,4.6rem);font-weight:900;letter-spacing:-.045em;color:#ffd43b}
+.bf-big em{font-style:normal;font-size:clamp(1.1rem,4.4vw,1.5rem);font-weight:800}
+.bf-hero p{margin:.5rem 0 0;font-size:1rem;color:#d7dae2}
+.bf-deadline{
+  margin-top:.85rem;padding-top:.75rem;border-top:1px solid rgba(255,255,255,.16);
+  font-size:.93rem;font-weight:700;color:#fff;
+}
+.bf-deadline b{color:#ffd43b}
+
+.bf-note{
+  margin:.9rem 0 0;font-size:.9rem;font-weight:700;color:var(--ink);
+  background:#fff8e1;border:1px solid #ffe08a;border-radius:12px;padding:.7rem .85rem;
+}
 </style>
 </head>
 <body>
+
+<div class="bf-bar" id="bf-bar">Black Friday &mdash; <b>30% off all bodywork</b>
+  <span id="bf-bar-sub">until 30 November</span></div>
 
 <header><div class="wrap">
   <img src="/logokithcars.png" alt="KITH Cars Garage &amp; Bodyworks" width="200" height="120" fetchpriority="high"/>
@@ -111,6 +155,15 @@ ol.steps span{color:var(--muted);font-size:.95rem}
        clicked from is the single biggest leak in a paid funnel, and guessing the wording
        would build that leak in deliberately. -->
   <h1>Scuffed your bumper?</h1>
+
+  <div class="bf-hero" id="bf-hero">
+    <span class="bf-kicker">Black Friday</span>
+    <div class="bf-big"><strong>30%</strong><em>off all bodywork</em></div>
+    <p>Every scuff, scratch, dent and panel respray, on any car. The discount is already
+       taken off the price the funnel shows you &mdash; you are not quoted full whack and
+       told about it later.</p>
+    <p class="bf-deadline">Ends <b>Monday 30 November</b><span id="bf-left"></span></p>
+  </div>
 
   <p class="sub">Put your reg in for a price range in about 30 seconds, then a fixed
      written quote before any work. Hackbridge bodyshop, 12-month bodywork guarantee.</p>
@@ -158,7 +211,10 @@ ol.steps span{color:var(--muted);font-size:.95rem}
       <li><b>Book it in</b><span>No deposit on bodywork &mdash; you pay on collection. Payment Assist available.</span></li>
     </ol>
 
-    <a class="cta" href="#kq-hero-host">Get my price &mdash; put your reg in</a>
+    <p class="bf-note" id="bf-note">The 30% is already off the figure you see. Book online and
+       the £50 booking discount comes off the final bill on top of it.</p>
+
+    <a class="cta" href="#kq-hero-host">Get my price &mdash; 30% off, put your reg in</a>
   </section>
 
 </main>
@@ -171,6 +227,32 @@ ol.steps span{color:var(--muted);font-size:.95rem}
      No deposit on bodywork &mdash; pay on collection. Payment Assist available.</p>
 </div>
 
+<script>
+/* One timestamp, matching promo.ends in quote-catalogue.json. Everything Black Friday on this
+   page hangs off it: the days remaining are counted from it, and once it passes the bar, the
+   panel, the note and the wording in the button all take themselves off. A paid landing page
+   still shouting about an offer that finished last week is worse than never having run it,
+   and nobody is going to remember to come and delete this by hand on the 1st. */
+(function () {
+  var ENDS = new Date('2026-11-30T23:59:59+00:00').getTime();
+  var left = ENDS - Date.now();
+  if (left <= 0) {
+    ['bf-bar', 'bf-hero', 'bf-note'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.parentNode.removeChild(el);
+    });
+    var cta = document.querySelector('.cta');
+    if (cta) cta.innerHTML = 'Get my price &mdash; put your reg in';
+    return;
+  }
+  var days = Math.ceil(left / 86400000);
+  var phrase = days <= 1 ? ' — last day' : ' — ' + days + ' days left';
+  var el = document.getElementById('bf-left');
+  if (el) el.textContent = phrase;
+  var sub = document.getElementById('bf-bar-sub');
+  if (sub) sub.textContent = days <= 1 ? 'Last day' : days + ' days left';
+})();
+</script>
 <script src="/analytics.js" defer></script>
 <script src="/quote-engine.js" defer></script>
 <script src="/quote.js" defer></script>
