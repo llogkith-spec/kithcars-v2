@@ -35,7 +35,13 @@
      got asked what they actually wanted. If they had come for a service and a bumper, there was
      no way to say so. The page's own flow is now a suggestion that arrives pre-selected on the
      choice step rather than something that skips it. */
-  var STEPS = ['car', 'flow', 'build', 'estimate', 'details', 'calendar', 'done'];
+  /* Details before the price, 22 Nov 2026. The funnel used to hand the estimate over and only
+     then ask who you are, so anyone who looked at the figure and left took their details with
+     them - and at the volume this site runs at, that is most of them. The lead is now captured
+     at the point the customer has done the work of describing the job, and the price is what
+     they get back for it. The copy that promised a price in thirty seconds was changed with it;
+     promising an instant price and then asking for a phone number first is bait. */
+  var STEPS = ['car', 'flow', 'build', 'details', 'estimate', 'calendar', 'done'];
   var STEP_LABEL = { flow: 'Service', car: 'Your car', build: 'The work', estimate: 'Your price', details: 'Details', calendar: 'Your slot', done: 'Booked' };
 
   /* Panels of a car seen from above. key = the price-book panel it charges as. */
@@ -397,11 +403,18 @@
   /* ---------- step: the car ---------- */
   function viewCar() {
     var v = S.vehicle || {}, found = !S.manual && v.make;
-    var h = '<h2 class="kq-h">' + (S.flow === 'tyres' ? 'Which car are the tyres for?' : 'Which car is it?') + '</h2>';
+    /* The heading asks for the reg and says what you get back for it. "Which car is it?" asked
+       the customer to do something without telling them why, on the one step the whole funnel
+       depends on. Once the car is known the heading goes back to naming the step, because by
+       then the price has been promised and the question is whether we got the car right. */
+    var heading = found ? (S.flow === 'tyres' ? 'Which car are the tyres for?' : 'Which car is it?')
+      : S.manual ? 'Tell us about the car'
+      : 'Enter your reg for a price';
+    var h = '<h2 class="kq-h">' + heading + '</h2>';
     if (!found && !S.manual) {
-      return h + '<form class="kq-reg" novalidate><label class="kq-label" for="kq-plate">Enter your registration</label>' +
+      return h + '<form class="kq-reg" novalidate><label class="kq-label" for="kq-plate">Takes about 30 seconds &mdash; no obligation</label>' +
         '<div class="kq-plate"><span class="kq-gb">UK</span><input id="kq-plate" name="reg" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AB12 CDE" value="' + esc(S.reg) + '"/></div>' +
-        '<button class="kq-btn kq-btn-main" type="submit">Find my car</button>' +
+        '<button class="kq-btn kq-btn-main" type="submit">Get my price</button>' +
         '<p class="kq-help">We look up the make, engine, fuel and MOT date. <button type="button" class="kq-link" data-act="manual">No reg to hand?</button></p>' +
         '<p class="kq-err" role="alert" hidden></p></form>';
     }
@@ -1574,7 +1587,7 @@
         : '<p class="kq-small">Includes VAT, parts and labour, and it&rsquo;s worked out with the same pricing rules our estimators use, so <b>your job will land inside this range</b>. Book in and we&rsquo;ll send the exact figure for your reg in writing before any work starts. If anything we find changes it, you decide whether to go ahead, and you owe us nothing for looking. 3-month workmanship warranty.</p>') +
       '</div>' +
       '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="build">Change the job</button>' +
-      '<button type="button" class="kq-btn kq-btn-main" data-act="to-details">' + (eligible ? 'Book and save ' + money(offer.amount) : 'Book this in') + '</button></div>' +
+      '<button type="button" class="kq-btn kq-btn-main" data-act="to-slot">' + (eligible ? 'Book and save ' + money(offer.amount) : 'Book this in') + '</button></div>' +
       /* Was a thin line of grey text under the buttons. The people who reach a price and
          do not book are overwhelmingly the ones with a question the page has not answered, and
          they want a human now rather than a form. Given the weight it deserves. */
@@ -1640,8 +1653,28 @@
   }
 
   function viewDetails() {
-    return '<h2 class="kq-h">Where shall we send it?</h2><p class="kq-help">We&rsquo;ll check the detail for your car and send the full written estimate. Then pick your slot.</p>' +
-      summaryStrip() +
+    /* This step now comes BEFORE the price, so it must not show one. summaryStrip() carries the
+       figure and the struck-through was-price, which gave the estimate away on the step that
+       exists to earn it. The car and the job stay - the customer should see we have understood
+       what they asked for - but no numbers until the details are in.
+
+       The copy says plainly what the exchange is. Asking for a phone number while implying the
+       price is already on its way, or burying why we want it, is the kind of thing that gets a
+       funnel a reputation. We ask, we say what for, and the price appears on the next screen. */
+    var v = S.vehicle || {};
+    // The job in words, taken from the priced lines themselves so it always matches what was
+    // actually costed. No figures - that is the whole point of this step.
+    var jobs = (S.lines || []).map(function (l) { return l && l.name; }).filter(Boolean);
+    var jobText = jobs.length ? jobs.join(' · ') : 'Your job';
+    var carLine = (!S.manual && v.make)
+      ? '<div class="kq-car kq-car-sm"><div class="kq-car-plate">' + esc(v.registrationNumber || S.reg) + '</div><div><strong>' +
+        esc([v.yearOfManufacture, title(v.make), S.model].filter(Boolean).join(' ')) + '</strong><span>' +
+        esc(jobText) + '</span></div></div>'
+      : '<p class="kq-note">' + esc(jobText) + '</p>';
+    return '<h2 class="kq-h">Your price is ready</h2>' +
+      '<p class="kq-help">Tell us where to send it and we&rsquo;ll show you the figure on the next screen, ' +
+      'then follow it up with the full written estimate. No deposit, and nothing starts until you say so.</p>' +
+      carLine +
       '<form class="kq-lead" novalidate><div class="kq-row">' +
       '<div><label class="kq-label" for="kq-name">Name</label><input class="kq-input" id="kq-name" value="' + esc(lead().name || '') + '" name="name" autocomplete="name" required maxlength="60"/></div>' +
       '<div><label class="kq-label" for="kq-phone">Mobile</label><input class="kq-input" id="kq-phone" value="' + esc(lead().phone || '') + '" name="phone" type="tel" inputmode="tel" autocomplete="tel" required maxlength="20"/></div></div>' +
@@ -1649,10 +1682,12 @@
       '<div><label class="kq-label" for="kq-reg2">Reg</label><input class="kq-input" id="kq-reg2" name="reg" maxlength="10" value="' + esc((S.vehicle && S.vehicle.registrationNumber) || S.reg) + '"/></div></div>' +
       '<label class="kq-check"><input type="checkbox" name="collect"' + (lead().collect ? ' checked' : '') + ' data-act="collect-toggle"/> Please collect and return my car</label>' +
       collectUI() +
-      '<button class="kq-btn kq-btn-main" type="submit">' + (callbackFlow() ? 'Send this and call me back' : 'Next: pick my slot') + '</button>' +
+      '<button class="kq-btn kq-btn-main" type="submit">' + (callbackFlow() ? 'Send this and call me back' : 'Show me my price') + '</button>' +
       '<p class="kq-err" role="alert" hidden></p>' +
       '<p class="kq-small">We only use your details to arrange this job.</p></form>' +
-      '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="estimate">Back to the price</button></div>';
+      // The price is no longer behind us, so Back goes to the job, which is the thing a customer
+      // at this step might actually want to change.
+      '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="build">Change the job</button></div>';
   }
   /* On the booking step the service name and the car are the two things the customer is least
      unsure about - they have just chosen both - so that half of the strip was spending the best
@@ -2074,7 +2109,17 @@
           S.band = E.bandFromText(C, [r.vehicle.make, r.vehicle.model].filter(Boolean).join(' ')) || E.guessBand(r.vehicle);
           if (r.vehicle.engineCapacity) S.cc = Number(r.vehicle.engineCapacity) || null;
           S.bandAuto = true; S.bandOpen = false;
-          track('vehicle_found'); render(); save();
+          track('vehicle_found');
+          /* The lookup answered, so the confirmation screen has nothing to ask. It showed the
+             customer their own car and a Next button, which is a step that costs a tap and
+             returns nothing. Go straight on: the car stays visible as a strip on every step
+             after this, with "Not my car" on it, so a wrong lookup is still one tap to fix.
+             And where the page already declares its service - a bodywork landing page, a
+             servicing page - the service picker is skipped too. Asking someone who clicked a
+             bodywork ad what they came for is asking a question we were told the answer to. */
+          save();
+          go(S.flow ? 'build' : 'flow');
+          return;
         }
         // Saved even though nothing was found: the previous car has just been cleared, and
         // without writing that away a reload would bring it back under the new registration.
@@ -2166,9 +2211,9 @@
       var b = f.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Saving…';
       sendLead().then(function (res) {
         track('generate_lead', { value: S.totals ? S.totals.low : 0, currency: 'GBP', flow: S.flow });
-        if (!leadDelivered(res)) { b.disabled = false; b.textContent = callbackFlow() ? 'Send this and call me back' : 'Next: pick my slot'; err.innerHTML = 'That didn’t send. Please <a href="tel:' + PHONE_TEL + '">call ' + PHONE + '</a> or <a href="' + waLink() + '" target="_blank" rel="noopener">WhatsApp us</a>.'; err.hidden = false; return; }
+        if (!leadDelivered(res)) { b.disabled = false; b.textContent = callbackFlow() ? 'Send this and call me back' : 'Show me my price'; err.innerHTML = 'That didn’t send. Please <a href="tel:' + PHONE_TEL + '">call ' + PHONE + '</a> or <a href="' + waLink() + '" target="_blank" rel="noopener">WhatsApp us</a>.'; err.hidden = false; return; }
         if (callbackFlow()) { S.sent = true; track('quote_urgent'); try { sessionStorage.removeItem('kq2'); } catch (x) {} go('done'); return; }
-        go('calendar');
+        go('estimate');
       });
     });
   }
@@ -2233,7 +2278,7 @@
       compute();
       if (!S.expires) S.expires = Date.now() + (coupon().hold_minutes || 15) * 60000;
       track('quote_price', { value: S.totals ? S.totals.low : 0, currency: 'GBP', flow: S.flow });
-      go('estimate');
+      go('details');
       fetchBrain().then(function () { save(); render(); }).catch(function () {});
       fetchAi().then(function () { compute(); save(); render(); }).catch(function () {});
     }
@@ -2242,6 +2287,11 @@
     else if (a === 'to-details') {
       track('quote_book_click', { value: S.totals ? S.totals.low : 0, currency: 'GBP', flow: S.flow });
       go('details');
+    }
+    // From the estimate. The details are already in, so this goes straight to the calendar.
+    else if (a === 'to-slot') {
+      track('quote_book_click', { value: S.totals ? S.totals.low : 0, currency: 'GBP', flow: S.flow });
+      go('calendar');
     }
     else if (a === 'day') { S.day = v; S.time = null; save(); render(); }
     else if (a === 'time') { S.time = v; save(); render(); }
