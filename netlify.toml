@@ -88,3 +88,14 @@
   to = "/dent-repair-:town"
   status = 301
   force = true
+
+# SMART repair is not a service KITH offers; these pages were removed.
+[[redirects]]
+  from = "/smart-repairs-*"
+  to = "/scratch-repair-:splat"
+  status = 301
+
+[[redirects]]
+  from = "/smart-repairs"
+  to = "/bodywork"
+  status = 301

@@ -4,3 +4,8 @@
 /pricing.html     /#quote           301
 # The old paintless-dent-removal town pages were rebuilt as dent-repair-<town>.
 /dent-removal-*   /dent-repair-:splat  301
+
+# SMART repair pages removed: KITH does not offer SMART repair. Every area already
+# has a scratch-repair page for the same damage, so they point there.
+/smart-repairs-*   /scratch-repair-:splat  301
+/smart-repairs     /bodywork               301
