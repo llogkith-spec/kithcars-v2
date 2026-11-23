@@ -60,6 +60,38 @@
   });
 })();
 
+/* ---- The bar's real height ----------------------------------------------------------
+   --bf-h used to be a number typed into the stylesheet. It was wrong the moment the bar
+   wrapped to a second line, and a bar taller than the value sat on top of the header and
+   hid the logo. The browser knows the height; ask it, on load, on resize, and once the
+   webfont has landed and the line may have reflowed. */
+(function () {
+  'use strict';
+  var bar = document.querySelector('a.offerbar');
+  if (!bar) return;
+  var sync = function () {
+    var h = Math.round(bar.getBoundingClientRect().height);
+    if (h > 0) document.documentElement.style.setProperty('--bf-h', h + 'px');
+  };
+  sync();
+  window.addEventListener('resize', sync);
+  if (window.ResizeObserver) new ResizeObserver(sync).observe(bar);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(sync).catch(function () {});
+})();
+
+/* ---- Days left ----------------------------------------------------------------------
+   Written by script rather than into 1,048 pages, so it is right every day instead of on
+   the day it was typed. Same timestamp as everything else to do with this campaign. */
+(function () {
+  'use strict';
+  var ENDS = new Date('2026-11-30T23:59:59+00:00').getTime();
+  var days = Math.ceil((ENDS - Date.now()) / 86400000);
+  if (days < 0) return;
+  var txt = days <= 0 ? ' · last day' : days === 1 ? ' · 1 day left' : ' · ' + days + ' days left';
+  var slots = document.querySelectorAll('.ob-left');
+  for (var i = 0; i < slots.length; i++) slots[i].textContent = txt;
+})();
+
 /* ---- The campaign bar's own off switch ---------------------------------------------
    Its own IIFE, deliberately. The block above returns early on anything wider than a
    phone, so anything added inside it would never run on a desktop - and a stale offer

@@ -169,39 +169,71 @@
    pages must not start depending on it. Values are copied exactly so the two bars
    cannot drift apart, with the literal ink colour rather than var(--ink) because that
    token is not defined on every inner page. */
+/* ---- Black Friday bar ---------------------------------------------------------------
+   Logan's brief: make it big, and make the 30% the thing you see. So the discount is its
+   own element on an amber block rather than a bold run inside a sentence, and the bar is
+   sized to be read across a room rather than squinted at.
+
+   The height is no longer a number written here. It used to be --bf-h: 40px, guessed, and
+   when the homepage's taller bar did not match it the bar sat on top of the header and hid
+   the logo. callbar.js now measures the bar and writes --bf-h itself, on load and on
+   resize, so the fixed-header pages always get back exactly the height the bar really
+   takes. The values below are only a sensible first paint before the script runs. */
 .offerbar{
-  background:#0c0d10;color:#fff;text-align:center;font-size:14px;font-weight:600;
-  padding:9px max(16px,env(safe-area-inset-left,0px));
-  display:block;text-decoration:none;transition:background .15s ease;
+  display:block;text-decoration:none;color:#fff;
+  background:linear-gradient(180deg,#17171c 0%,#0a0a0c 100%);
+  border-bottom:2px solid #ffd166;
+  padding:12px max(16px,env(safe-area-inset-left,0px));
+  transition:background .15s ease;
 }
-/* The homepage bar is .bf-bar, which puts the 30% in dark text on an amber block. callbar.css
-   loads after home.css, so an unscoped `.offerbar b` won the tie on equal specificity and
-   repainted that text salmon on amber - about 1.4:1, and it read as a rendering fault on the
-   one page the Black Friday traffic lands on. */
-.offerbar:not(.bf-bar) b{color:#fca5a5;text-decoration:underline;text-underline-offset:2px}
-.offerbar:hover{background:#1b1d22}
-@media(max-width:560px){.offerbar{font-size:12.5px;line-height:1.4;padding:8px 16px}}
+.offerbar:hover{background:linear-gradient(180deg,#202027 0%,#101014 100%)}
+.ob-in{
+  display:flex;align-items:center;justify-content:center;
+  gap:.55em;flex-wrap:wrap;line-height:1.15;
+}
+/* "Black Friday" - small, amber, spaced out, so it reads as a label and leaves the size
+   for the number. */
+.ob-kicker{
+  font-size:clamp(10px,1.5vw,12px);font-weight:800;letter-spacing:.18em;
+  text-transform:uppercase;color:#ffd166;white-space:nowrap;
+}
+/* The discount. This is the one thing that has to carry across a glance. */
+.ob-pc{
+  background:#ffd166;color:#111318;
+  font-size:clamp(1.45rem,3.6vw,2.1rem);font-weight:900;letter-spacing:-.02em;
+  padding:.06em .32em;border-radius:9px;white-space:nowrap;
+  box-shadow:0 2px 0 rgba(0,0,0,.35);
+}
+.ob-what{font-size:clamp(14px,1.9vw,19px);font-weight:800;white-space:nowrap}
+.ob-end{font-size:clamp(11px,1.4vw,13px);font-weight:600;color:#c9ccd4;white-space:nowrap}
+/* Filled in by callbar.js, because a countdown that is wrong is worse than none. */
+.ob-left{color:#ffd166;font-weight:800}
+.ob-go{
+  font-size:clamp(11px,1.4vw,13px);font-weight:700;color:#fff;
+  text-decoration:underline;text-underline-offset:3px;white-space:nowrap;
+}
+@media(max-width:620px){
+  .offerbar{padding:10px 14px}
+  /* On a phone the row becomes two: the offer, then the deadline under it. The kicker and
+     the "see the offer" nudge are dropped rather than wrapped, because four fragments on a
+     390px screen is a muddle and the number is what matters. */
+  .ob-in{gap:.35em}
+  /* Two lines, not three: the label, the number and what it is off sit on one line, and
+     the deadline on the next. At 86px tall the bar was taking a seventh of a phone screen
+     before the page had said anything. */
+  .ob-kicker{font-size:9.5px;letter-spacing:.1em}
+  .ob-pc{font-size:1.3rem;padding:.05em .28em;border-radius:7px}
+  .ob-what{font-size:13px}
+  .ob-go{display:none}
+  .ob-end{width:100%;font-size:11px}
+}
 
-/* The inner pages' .site-header is position:fixed at top:0, so a bar sitting in normal
-   flow underneath it is simply covered up - invisible on 1,066 pages while looking
-   perfectly correct in the markup. The bar joins the fixed stack above the header, and
-   the header moves down by exactly the bar's height.
-
-   Everything below is scoped to pages that actually have that fixed header. Written as
-   `body > a.offerbar` it also caught the homepage, whose header is sticky and whose bar
-   is the taller .bf-bar: the bar was lifted out of flow on top of the header and hid the
-   logo and nav behind it. That is the same fault Logan reported before, so the scope is
-   now stated in the selector rather than in this comment.
-
-   The homepage keeps its bar in normal flow. It scrolls away, the sticky header then
-   takes the top, and nothing depends on --bf-h matching a bar whose text wraps to two or
-   three lines at narrow widths. */
-:root{--bf-h:40px}
-@media(max-width:560px){:root{--bf-h:34px}}
+/* The bar joins the fixed stack above the header only on pages whose header is itself
+   fixed, and the header and content are moved down by the bar's measured height. The
+   homepage header is sticky and still in flow, so its bar stays in flow too: it scrolls
+   away, the header takes the top, and no height has to agree with anything. */
+:root{--bf-h:64px}
+@media(max-width:620px){:root{--bf-h:74px}}
 body:has(> .site-header) > a.offerbar{position:fixed;top:0;left:0;right:0;z-index:101}
 body:has(> .site-header) > a.offerbar ~ .site-header{top:var(--bf-h)}
-/* The header moved down by the bar's height, so the content has to follow it by the same
-   amount or the breadcrumb ends up under the header - it was eleven pixels under on
-   desktop service pages. The padding sits behind the opaque fixed bar, so it shows as
-   nothing at all. */
 body:has(> .site-header) > a.offerbar ~ main{padding-top:var(--bf-h)}
