@@ -59,3 +59,21 @@
     window.gtag('event', a.dataset.track + '_click', { source: 'sticky_bar' });
   });
 })();
+
+/* ---- The campaign bar's own off switch ---------------------------------------------
+   Its own IIFE, deliberately. The block above returns early on anything wider than a
+   phone, so anything added inside it would never run on a desktop - and a stale offer
+   shouting at desktop visitors is exactly what this exists to prevent.
+
+   One timestamp, matching promo.ends in quote-catalogue.json and the landing page. Once
+   it passes, every bar on the site takes itself off. Nobody is going to remember to
+   strip this out of 1,067 pages by hand on 1 December. */
+(function () {
+  'use strict';
+  var ENDS = new Date('2026-11-30T23:59:59+00:00').getTime();
+  if (Date.now() <= ENDS) return;
+  var bars = document.querySelectorAll('.offerbar');
+  for (var i = 0; i < bars.length; i++) {
+    if (bars[i].parentNode) bars[i].parentNode.removeChild(bars[i]);
+  }
+})();

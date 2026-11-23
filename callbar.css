@@ -158,3 +158,37 @@
   .kc-bar a.kc-bar-wa svg{width:28px;height:28px}
   .kc-bar a.kc-bar-wa span{display:none}
 }
+
+/* ---- Black Friday campaign bar --------------------------------------------------
+   The homepage has carried this since the campaign started and the other 1,067 pages
+   had not, so someone landing on a bodywork or area page from search saw nothing about
+   30% off while the funnel was quietly taking it off their price.
+
+   The homepage styles it in home.css, which only the homepage loads. The rule is
+   repeated here rather than moved: home.css is the homepage's own sheet and the inner
+   pages must not start depending on it. Values are copied exactly so the two bars
+   cannot drift apart, with the literal ink colour rather than var(--ink) because that
+   token is not defined on every inner page. */
+.offerbar{
+  background:#0c0d10;color:#fff;text-align:center;font-size:14px;font-weight:600;
+  padding:9px max(16px,env(safe-area-inset-left,0px));
+  display:block;text-decoration:none;transition:background .15s ease;
+}
+.offerbar b{color:#fca5a5;text-decoration:underline;text-underline-offset:2px}
+.offerbar:hover{background:#1b1d22}
+@media(max-width:560px){.offerbar{font-size:12.5px;line-height:1.4;padding:8px 16px}}
+
+/* The inner pages' .site-header is position:fixed at top:0, so a bar sitting in normal
+   flow underneath it is simply covered up - invisible on 1,066 pages while looking
+   perfectly correct in the markup. The bar joins the fixed stack above the header, and
+   the header moves down by exactly the bar's height. The homepage is untouched: its
+   header is not fixed and its own bar already works. */
+:root{--bf-h:40px}
+@media(max-width:560px){:root{--bf-h:34px}}
+body > a.offerbar{position:fixed;top:0;left:0;right:0;z-index:101}
+body > a.offerbar ~ .site-header{top:var(--bf-h)}
+/* The header moved down by the bar's height, so the content has to follow it by the same
+   amount or the breadcrumb ends up under the header - it was eleven pixels under on
+   desktop service pages. The padding sits behind the opaque fixed bar, so it shows as
+   nothing at all. */
+body > a.offerbar ~ main{padding-top:var(--bf-h)}

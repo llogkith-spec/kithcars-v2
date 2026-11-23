@@ -65,15 +65,19 @@
   z-index: 2;
 }
 
-/* Copy on dark. */
-.page-hero h1,
-.page-hero h2,
-.page-hero .lead,
-.page-hero p {
+/* Copy on dark.
+
+   Scoped away from #kq. The quote funnel sits inside .page-hero but renders on its own
+   WHITE card, and its step heading is an <h2> - so "Enter your reg for a price", the
+   first line of the primary call to action, was white on white and invisible on every
+   inner page carrying the funnel. It measured as present, visible, opacity 1, full
+   width: the only thing wrong with it was that nobody could see it.
+
+   Everything inside #kq keeps the colours quote.css gives it. */
+.page-hero :is(h1, h2, .lead, p):not(#kq *) {
   color: #fff;
 }
-.page-hero .lead,
-.page-hero p {
+.page-hero :is(.lead, p):not(#kq *) {
   color: var(--on-ink-2, #c9ccd4);
 }
 .page-hero .section-label {
