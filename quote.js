@@ -412,7 +412,10 @@
       : 'Enter your reg for a price';
     var h = '<h2 class="kq-h">' + heading + '</h2>';
     if (!found && !S.manual) {
-      return h + '<form class="kq-reg" novalidate><label class="kq-label" for="kq-plate">Takes about 30 seconds &mdash; no obligation</label>' +
+      /* The site stopped promising a price in seconds on 22 Nov, because details now come
+         before the price. This label was the last place still promising it, and it sat on
+         the first step of every funnel on the site. */
+      return h + '<form class="kq-reg" novalidate><label class="kq-label" for="kq-plate">A couple of minutes &mdash; no obligation</label>' +
         '<div class="kq-plate"><span class="kq-gb">UK</span><input id="kq-plate" name="reg" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AB12 CDE" value="' + esc(S.reg) + '"/></div>' +
         '<button class="kq-btn kq-btn-main" type="submit">Get my price</button>' +
         '<p class="kq-help">We look up the make, engine, fuel and MOT date. <button type="button" class="kq-link" data-act="manual">No reg to hand?</button></p>' +

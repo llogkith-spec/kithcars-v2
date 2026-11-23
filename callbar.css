@@ -174,21 +174,34 @@
   padding:9px max(16px,env(safe-area-inset-left,0px));
   display:block;text-decoration:none;transition:background .15s ease;
 }
-.offerbar b{color:#fca5a5;text-decoration:underline;text-underline-offset:2px}
+/* The homepage bar is .bf-bar, which puts the 30% in dark text on an amber block. callbar.css
+   loads after home.css, so an unscoped `.offerbar b` won the tie on equal specificity and
+   repainted that text salmon on amber - about 1.4:1, and it read as a rendering fault on the
+   one page the Black Friday traffic lands on. */
+.offerbar:not(.bf-bar) b{color:#fca5a5;text-decoration:underline;text-underline-offset:2px}
 .offerbar:hover{background:#1b1d22}
 @media(max-width:560px){.offerbar{font-size:12.5px;line-height:1.4;padding:8px 16px}}
 
 /* The inner pages' .site-header is position:fixed at top:0, so a bar sitting in normal
    flow underneath it is simply covered up - invisible on 1,066 pages while looking
    perfectly correct in the markup. The bar joins the fixed stack above the header, and
-   the header moves down by exactly the bar's height. The homepage is untouched: its
-   header is not fixed and its own bar already works. */
+   the header moves down by exactly the bar's height.
+
+   Everything below is scoped to pages that actually have that fixed header. Written as
+   `body > a.offerbar` it also caught the homepage, whose header is sticky and whose bar
+   is the taller .bf-bar: the bar was lifted out of flow on top of the header and hid the
+   logo and nav behind it. That is the same fault Logan reported before, so the scope is
+   now stated in the selector rather than in this comment.
+
+   The homepage keeps its bar in normal flow. It scrolls away, the sticky header then
+   takes the top, and nothing depends on --bf-h matching a bar whose text wraps to two or
+   three lines at narrow widths. */
 :root{--bf-h:40px}
 @media(max-width:560px){:root{--bf-h:34px}}
-body > a.offerbar{position:fixed;top:0;left:0;right:0;z-index:101}
-body > a.offerbar ~ .site-header{top:var(--bf-h)}
+body:has(> .site-header) > a.offerbar{position:fixed;top:0;left:0;right:0;z-index:101}
+body:has(> .site-header) > a.offerbar ~ .site-header{top:var(--bf-h)}
 /* The header moved down by the bar's height, so the content has to follow it by the same
    amount or the breadcrumb ends up under the header - it was eleven pixels under on
    desktop service pages. The padding sits behind the opaque fixed bar, so it shows as
    nothing at all. */
-body > a.offerbar ~ main{padding-top:var(--bf-h)}
+body:has(> .site-header) > a.offerbar ~ main{padding-top:var(--bf-h)}
