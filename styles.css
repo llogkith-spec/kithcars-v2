@@ -3757,3 +3757,11 @@ main {
   .header-inner { padding: 0.4rem 0 !important; }
   .page-hero { padding: calc(52px + 1rem) 0 2rem !important; }
 }
+
+
+/* Buttons with a full sentence on them ("See photos of real jobs from our own bodyshop")
+   are nowrap pills, which at 320px run past the screen edge and get cut. Nothing scrolls,
+   so the end of the label is simply unreachable. Below 480px they are allowed to wrap. */
+@media (max-width:480px){
+  .btn{white-space:normal;text-align:center;max-width:100%}
+}

@@ -520,6 +520,19 @@ a.offerbar b:not(.ob-pc){text-decoration:underline;text-underline-offset:2px}
 /* The funnel docks into the hero rather than the reader being thrown down the page to it.
    The slot inherits the quote card's shape so nothing jumps when the card is swapped out. */
 #kq-hero-host { align-self: center; min-width: 0; }
+
+/* The booking step renders twelve 66px day cards in a row - 880px of them. .kq-days has
+   overflow-x:auto and is meant to scroll, but it never got the chance: in the phone hero
+   the host is a flex column item with align-self:center, which sizes an item to its own
+   content rather than to the column. So the card grew to 922px on a 390px screen and
+   overflowed both edges at once, which is why it looked pushed off to the left rather than
+   simply cut off on the right. Stretching the host to the column width lets the date strip
+   do the scrolling it was always written to do. */
+@media (max-width:1080px){
+  .hero-in #kq-hero-host{align-self:stretch;width:100%}
+}
+#kq{max-width:100%}
+#kq .kq-body,#kq .kq-steps{min-width:0}
 #kq-hero-host #kq {
   background: #fff;
   border-radius: 22px;
@@ -669,3 +682,11 @@ body{padding-bottom:0}
    competing with the reg box the whole page is built around. */
 .mbar .m-call,.mbar .m-q{display:none!important}
 .mbar .m-wa{flex:1}
+
+
+/* Buttons with a full sentence on them ("See photos of real jobs from our own bodyshop")
+   are nowrap pills, which at 320px run past the screen edge and get cut. Nothing scrolls,
+   so the end of the label is simply unreachable. Below 480px they are allowed to wrap. */
+@media (max-width:480px){
+  .btn{white-space:normal;text-align:center;max-width:100%}
+}
