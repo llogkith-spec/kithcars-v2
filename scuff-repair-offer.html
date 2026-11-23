@@ -67,9 +67,27 @@ h1{
 section{padding:34px 0;border-top:1px solid var(--line)}
 h2{font-size:1.4rem;font-weight:800;margin:0 0 16px;letter-spacing:-.01em}
 
-.shots{display:grid;gap:12px;grid-template-columns:1fr}
-@media(min-width:560px){.shots{grid-template-columns:repeat(3,1fr)}}
-.shots figure{margin:0}
+/* Three portrait photos stacked one above the other made this page 3,881px tall on a
+   phone, which put the review, the how-it-works steps and the bottom button roughly four
+   screens below the reg box. On paid traffic almost nobody scrolls that far, so the proof
+   was being paid for and not seen.
+
+   On a phone they become a swipe strip: all three stay full quality, the section costs one
+   screen instead of four, and the scroll-snap makes it obvious there is more than one. From
+   560px up the original three-across grid is unchanged. */
+.shots{
+  display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;
+  padding-bottom:4px;margin-right:calc(-1 * max(18px,env(safe-area-inset-right,0px)));
+}
+.shots::-webkit-scrollbar{display:none}
+.shots figure{margin:0;flex:0 0 68%;scroll-snap-align:start}
+.shots figure:last-child{padding-right:max(18px,env(safe-area-inset-right,0px))}
+@media(min-width:560px){
+  .shots{display:grid;gap:12px;grid-template-columns:repeat(3,1fr);overflow:visible;margin-right:0}
+  .shots figure{flex:none}
+  .shots figure:last-child{padding-right:0}
+}
 .shots img{
   width:100%;height:auto;display:block;border-radius:12px;background:#eef0f3;
   aspect-ratio:9/16;object-fit:cover;
