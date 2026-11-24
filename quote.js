@@ -340,7 +340,18 @@
   /* ---------- progress ---------- */
   function progress() {
     var urgent = callbackFlow();
-    var shown = STEPS.filter(function (s) { return s !== 'done' && !(urgent && s === 'calendar') && !(urgent && s === 'estimate'); });
+    /* A page that declares its own service never asks which service it is - the bodywork
+       landing page sends you straight from the reg to the panels. The bar was still carrying
+       "2 Service" anyway, so six steps were shown on a journey of five and the customer saw a
+       step go by without ever answering it, which reads as something skipped or missed rather
+       than something not needed. It is dropped on those pages, and comes back the moment
+       somebody uses Back to reach the chooser themselves. */
+    var pageFlow = root && root.dataset ? root.dataset.flow : '';
+    var hideFlow = pageFlow && FLOWS[pageFlow] && S.step !== 'flow';
+    var shown = STEPS.filter(function (s) {
+      return s !== 'done' && !(urgent && s === 'calendar') && !(urgent && s === 'estimate')
+        && !(hideFlow && s === 'flow');
+    });
     // "How you want it done" is a second page of the same step, not a sixth dot on the bar: the
     // customer is still answering "the work", and a bar that grows mid-flow reads as going backwards.
     var i = shown.indexOf(S.step === 'options' ? 'build' : S.step);
