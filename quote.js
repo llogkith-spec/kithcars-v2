@@ -1098,13 +1098,10 @@
               (d.size ? '<small>' + esc(d.size) + '</small>' : '') + '</button>';
           }).join('') + '</div>' + markUI(id, p) + '</div>';
       }).join('') : '<p class="kq-note">Nothing selected yet. Tap a panel on the car.</p>') +
-      // A photo settles bodywork faster than any form does, and the customer wants to show us
-      // before they commit, not after. So this is an action here, not a note about later.
-      (picked.length
-        ? '<p class="kq-small kq-photo"><b>Send us a photo and we&rsquo;ll confirm the exact price.</b> ' +
-          'It is the quickest way to be sure of the method and the figure. ' +
-          '<a href="' + waPhotoLink(picked) + '" target="_blank" rel="noopener" data-act="wa-photo">Send a photo on WhatsApp →</a></p>'
-        : '<p class="kq-small">Photos help us price it properly &mdash; you can send one as soon as you have picked a panel.</p>') +
+      // The offer to confirm the exact price by photo used to sit here, while the customer was
+      // still tapping panels. It asks them to settle a figure they have not been shown yet, and
+      // it competes with the one thing this step is for. It now sits beside the range on the
+      // estimate step, which is the moment the question "what exactly will it be?" occurs to them.
       '</div></div>';
     // The count has to include the wheels, or a customer who picked two alloys and a door is told
     // we are pricing one thing.
@@ -1597,7 +1594,15 @@
           (t.low === t.high
             ? 'This is a fixed-method repair, so it is one figure rather than a span.'
             : 'Bodywork moves with how deep the damage goes and what sits behind the panel, which is why we give you the span we stand behind rather than a figure that changes later.') +
-          ' We also decide the repair method, so you don&rsquo;t have to. No deposit, paid on collection. 12-month workmanship warranty. Courtesy car available at &pound;36 a day while your car is with us.</p>'
+          ' We also decide the repair method, so you don&rsquo;t have to. No deposit, paid on collection. 12-month workmanship warranty. Courtesy car available at &pound;36 a day while your car is with us.</p>' +
+          /* Moved here from the panel picker. A span invites exactly one question - what will it
+             actually be? - so the way to settle it belongs next to the span, not two steps earlier
+             while they are still choosing where the damage is. */
+          (Object.keys(S.body).length
+            ? '<p class="kq-small kq-photo"><b>Send us a photo and we&rsquo;ll confirm the exact price.</b> ' +
+              'It is the quickest way to be sure of the method and the figure. ' +
+              '<a href="' + waPhotoLink(Object.keys(S.body)) + '" target="_blank" rel="noopener" data-act="wa-photo">Send a photo on WhatsApp →</a></p>'
+            : '')
         : '<p class="kq-small">Includes VAT, parts and labour, and it&rsquo;s worked out with the same pricing rules our estimators use, so <b>your job will land inside this range</b>. Book in and we&rsquo;ll send the exact figure for your reg in writing before any work starts. If anything we find changes it, you decide whether to go ahead, and you owe us nothing for looking. 3-month workmanship warranty.</p>') +
       '</div>' +
       '<div class="kq-nav"><button type="button" class="kq-btn kq-btn-ghost" data-act="back" data-v="build">Change the job</button>' +
