@@ -155,6 +155,36 @@ ol.steps span{color:var(--muted);font-size:.95rem}
   margin:.9rem 0 0;font-size:.9rem;font-weight:700;color:var(--ink);
   background:#fff8e1;border:1px solid #ffe08a;border-radius:12px;padding:.7rem .85rem;
 }
+
+/* ---- Desktop: the reg box goes beside the pitch, not under it ------------------------
+   The page is one 620px column at every width, so on a 1440px screen the headline, the
+   30% card and the paragraph stacked up and pushed the reg box to 619px down - below the
+   fold - with half the screen empty either side. On traffic we are paying for, the first
+   thing in view should be the thing we want them to do.
+
+   Done by placing the four hero children on a grid rather than by moving any markup:
+   headline, offer card and standfirst down the left, the funnel on the right spanning
+   them. Everything below the funnel goes back to a 620px measure so the body copy still
+   reads at a sensible line length. */
+@media (min-width:1040px){
+  main.wrap{
+    max-width:1160px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,520px);
+    column-gap:56px;
+    align-items:start;
+  }
+  main.wrap > h1{grid-column:1;grid-row:1;margin-top:0}
+  main.wrap > .bf-hero{grid-column:1;grid-row:2}
+  main.wrap > .sub{grid-column:1;grid-row:3;margin-bottom:0}
+  main.wrap > #kq-hero-host{grid-column:2;grid-row:1 / 4;margin-top:0}
+  /* everything after the funnel is ordinary page content again */
+  main.wrap > #kq-hero-host ~ *{
+    grid-column:1 / -1;
+    max-width:620px;width:100%;
+    margin-left:auto;margin-right:auto;
+  }
+}
 </style>
 </head>
 <body>
