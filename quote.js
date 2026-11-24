@@ -1538,8 +1538,14 @@
         if (l.markSize) tags.push('About the size of a ' + l.markSize);
         if (l.blend === true) tags.push('Near the edge, so blended into the next panel');
         else if (l.blend === false) tags.push('Well inside the panel, no blending needed');
+        /* No per-line figure any more. Two panels at £210 and £126 sitting above a total of
+           £335 - £440 invited arithmetic that does not work: the line prices are a point each,
+           the total is a span, and nobody can see how one became the other. The lines now say
+           what the job covers and the range underneath says what it costs. A line we cannot
+           price yet still says so, because that is a gap in the range, not a price. */
+        var tbc = typeof l.low === 'number' ? '' : price;
         return '<li class="kq-line"><div><strong>' + esc(l.name) + '</strong>' + (l.note ? '<p>' + esc(l.note) + '</p>' : '') +
-          (tags.length ? '<small>' + tags.join(' · ') + '</small>' : '') + includesFor(l) + breakdown(l) + '</div>' + price + '</li>';
+          (tags.length ? '<small>' + tags.join(' · ') + '</small>' : '') + includesFor(l) + breakdown(l) + '</div>' + tbc + '</li>';
       }).join('') + '</ul>';
     if (t.count) {
       /* Two pricing systems meet here, and which one speaks depends on whether the rate card
@@ -1560,7 +1566,27 @@
       var shown = bRange ? { low: bRange.lo, high: bRange.hi } : spread(t, S.lines);
       var hLabel = 'Your estimate' + (!bRange && t.unpriced ? ' so far' : '');
       var hTag = bRange ? '<small class="kq-brain-tag">Priced using KITH’s live pricing system' + (bRange.allFirm ? ' (all lines firm from our history)' : '') + '</small>' : '';
-      h += '<div class="kq-total"><span>' + hLabel + '</span><b>' + range(shown.low, shown.high) + '</b>' + hTag + '</div>';
+      /* The full price above the discounted one, struck through, so the 30% is visible as a
+         drop rather than asserted in a banner.
+
+         Both figures come from the one on screen: the struck range is the shown range grossed
+         back up by the campaign percentage. That matters. The old strike added up each line's
+         stored .was, while the headline came from somewhere else entirely - the Brain, or a
+         spread - so the two drifted apart and produced "was £230, now £160 - £245", a sale
+         whose top end was dearer than the price it crossed out. Deriving one from the other
+         makes that impossible: the struck figure is always exactly the shown figure plus the
+         discount, and 30% off is arithmetic the customer can check rather than a claim. */
+      var pp = promoOn();
+      var strike = '';
+      if (pp && pp.percent && shown.low > 0) {
+        var pk = (100 - pp.percent) / 100;
+        strike = '<s class="kq-total-was">' + range(Math.round(shown.low / pk), Math.round(shown.high / pk)) + '</s>';
+      }
+      h += '<div class="kq-total"><span>' + hLabel + '</span>' +
+        '<div class="kq-total-fig">' + strike +
+          '<b>' + range(shown.low, shown.high) + '</b>' +
+          (strike ? '<small class="kq-total-off">' + pp.percent + '% off &mdash; ' + esc(pp.name) + '</small>' : '') +
+        '</div>' + hTag + '</div>';
       /* Compared against the figure actually on screen, and only when the dealer beats the TOP of
          it. This was measuring the dealer against t.low/t.high - the raw local total - while the
          headline showed something else entirely, so a £781-£1,085 estimate sat above "an Audi

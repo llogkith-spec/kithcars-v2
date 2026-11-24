@@ -100,6 +100,20 @@
 #kq .kq-total{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:16px}
 #kq .kq-total span{font-weight:700}
 #kq .kq-total b{font-size:clamp(1.6rem,4vw,2.1rem);font-weight:900;color:var(--red)}
+/* The full price sits above the discounted one, struck through and in a lighter red, so the
+   saving reads as a drop without competing with the figure the customer is actually being
+   quoted. Stacked in their own column so the label stays on its baseline to the left. */
+#kq .kq-total-fig{display:flex;flex-direction:column;align-items:flex-end;gap:1px;min-width:0}
+#kq .kq-total-was{
+  color:#d9534f;opacity:.85;font-weight:700;
+  font-size:clamp(1rem,2.6vw,1.25rem);line-height:1.2;
+  text-decoration-line:line-through;text-decoration-thickness:2px;
+}
+#kq .kq-total-fig b{line-height:1.1}
+#kq .kq-total-off{
+  font-size:12px;font-weight:700;letter-spacing:.02em;
+  color:#0f7a42;background:#ecfdf3;border-radius:999px;padding:2px 9px;margin-top:3px;
+}
 #kq .kq-dealer{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:14px;color:var(--text-2)}
 #kq .kq-dealer s{color:var(--muted)}
 #kq .kq-dealer em{font-style:normal;background:#ecfdf3;color:var(--ok);font-weight:700;border-radius:999px;padding:3px 10px}
