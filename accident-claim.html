@@ -49,6 +49,7 @@ h2{font:800 30px/1.1 Archivo,sans-serif;margin:26px 0 6px}
 input[type=text],input[type=tel],input[type=email],input[type=date],input[type=datetime-local],input[type=number],select,textarea{width:100%;font:16px Archivo,sans-serif;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;min-height:46px}
 textarea{min-height:110px;resize:vertical}
 ::placeholder{color:var(--mute);opacity:.6}
+.photos{margin:0 0 16px;padding:12px 14px 12px 36px;background:var(--soft);border-radius:10px;font-size:15px}.photos li{padding:3px 0}
 .langask{display:flex;align-items:center;gap:10px;width:100%;margin:4px 0 6px;padding:12px 14px;border:1.5px dashed var(--line);border-radius:10px;background:var(--soft);color:var(--ink);font:500 15px Archivo,sans-serif;cursor:pointer;min-height:48px;text-align:start}
 .langask u{color:var(--acc);text-underline-offset:3px}
 textarea{min-height:90px}
@@ -410,6 +411,7 @@ function reviewHTML(){
 
 /* ---------- customer message (WhatsApp / email) and staff import ---------- */
 const WA='447923688259',MAIL='kithcarsinfo@gmail.com';
+const PHOTOS=['Speedometer showing the mileage','VIN number (bottom of the windscreen or driver’s door frame)','Front and driver’s side, whole car in shot','Rear and passenger side, whole car in shot','Each damaged area, from 1 metre away','20–30 second video walking round the car, from 2 metres away'];
 const mlab=q=>q.type==='check'?'Declaration':q.l;
 const mfmt=(q,v)=>q.type==='check'?'Confirmed':(q.type==='date'||q.type==='datetime-local')?fd(v):String(v).replace(/\s*\n+\s*/g,' | ');
 const unfmt=(q,v)=>{
@@ -424,6 +426,7 @@ function msg(){
    if(!q.k||q.type==='note')return;const v=d[q.k];if(v===undefined||v===''||v===false)return;lines.push(mlab(q)+': '+mfmt(q,v))});
   lines=lines.filter((l,i)=>!(l.startsWith('_')&&(i===lines.length-1||lines[i+1].startsWith('_'))));
   if(lines.some(l=>!l.startsWith('_')))out.push('','*'+s.h+'*',...lines)});
+ out.push('','*Photos and video to send next*',...PHOTOS.map((p,i)=>(i+1)+'. '+p));
  return out.join('\n');
 }
 function parseMsg(text){
@@ -443,7 +446,8 @@ function customerReview(){
  const body=STEPS.map((s,i)=>{if(s.review)return'';const rows=s.q.filter(q=>vis(q)&&q.k&&q.type!=='note'&&d[q.k]!==undefined&&d[q.k]!==''&&d[q.k]!==false);if(!rows.length)return'';
   return `<div class="sec"><h3>${esc(s.h)}<button type="button" data-go="${i}">Edit</button></h3><table>${rows.map(q=>`<tr><td>${esc(mlab(q))}</td><td class="v">${esc(mfmt(q,d[q.k]))}</td></tr>`).join('')}</table></div>`}).join('');
  const m=msg();
- return `<p class="lede">Check, then send. Add damage photos in the WhatsApp chat.</p>
+ return `<p class="lede">Check and send your answers, then add these to the same WhatsApp chat:</p>
+ <ol class="photos">${PHOTOS.map(p=>`<li>${esc(p)}</li>`).join('')}</ol>
  <div class="actions"><a class="btn main" href="https://wa.me/${WA}?text=${encodeURIComponent(m)}" target="_blank" rel="noopener">Send on WhatsApp</a><a class="btn" href="mailto:${MAIL}?subject=${encodeURIComponent('Accident claim'+(d.reg?' – '+String(d.reg).toUpperCase():''))}&body=${encodeURIComponent(m)}">Send by email</a><button type="button" class="btn" id="cp">Copy answers</button></div>
  <div class="status" id="st" role="status"></div>
  <div class="sheet">${body||'<p style="padding:16px">No answers yet.</p>'}</div>
