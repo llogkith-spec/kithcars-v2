@@ -48,6 +48,8 @@ h2{font:800 30px/1.1 Archivo,sans-serif;margin:26px 0 6px}
 .help{display:block;color:var(--mute);font-size:14px;margin:-4px 0 8px}
 input[type=text],input[type=tel],input[type=email],input[type=date],input[type=datetime-local],input[type=number],select,textarea{width:100%;font:16px Archivo,sans-serif;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;min-height:46px}
 textarea{min-height:110px;resize:vertical}
+::placeholder{color:var(--mute);opacity:.6}
+textarea{min-height:90px}
 input:focus,select:focus,textarea:focus,button:focus-visible,.pill input:focus-visible+span{outline:3px solid color-mix(in srgb,var(--acc) 45%,transparent);outline-offset:1px;border-color:var(--acc)}
 .short{max-width:220px}
 .pills{display:flex;flex-wrap:wrap;gap:8px}
@@ -208,76 +210,76 @@ const SSTEPS=[
  {t:'Claim form',h:'Your completed claim form',review:1,q:[]}
 ];
 /* customer version: 6 short steps; every Qdos box still has a question (rarer ones in the optional last step) */
-const a3=(p,lab,show)=>[F(p+'1',lab?lab+' house number and street':'House number and street','text',{show}),F(p+'3',lab?lab+' town or city':'Town or city','text',{show}),F(p+'PC',lab?lab+' postcode':'Postcode','text',{show,short:1})];
-const ppl=(p,label,cnt)=>[1,2,3].flatMap(i=>{const show=d=>+(d[cnt]||0)>=i;return[{type:'h',l:label+' '+i,show},F(p+i+'Name','Full name','text',{show}),...a3(p+i,'',show),F(p+i+'Tel','Phone number','tel',{show})]});
+const a3=(p,pre,show)=>[F(p+'1',pre+'Address','text',{show,ph:'e.g. 12 High Street'}),F(p+'3',pre+'Town','text',{show,ph:'e.g. Croydon'}),F(p+'PC',pre+'Postcode','text',{show,short:1,ph:'e.g. CR0 1AA'})];
+const ppl=(p,label,cnt)=>[1,2,3].flatMap(i=>{const show=d=>+(d[cnt]||0)>=i;return[{type:'h',l:label+' '+i,show},F(p+i+'Name','Name','text',{show,ph:'e.g. Jane Smith'}),...a3(p+i,'',show),F(p+i+'Tel','Phone','tel',{show,ph:'e.g. 07700 900123'})]});
 const NOTD=d=>d.drvSame==='No';
 const CSTEPS=[
- {t:'About you',h:'About you',lede:'Takes about 5 minutes. Only questions marked * are needed — skip anything you don’t know.',q:[
-  F('ownName','Full name','text',{req:1}),...a3('own'),
-  F('ownTel','Mobile number','tel',{req:1}),F('ownEmail','Email address','email'),
-  F('ownPref','Best way to reach you?','choice',{o:['Phone call','Text','WhatsApp','Email']}),
+ {t:'About you',h:'About you',lede:'About 5 minutes. Only * questions are needed.',q:[
+  F('ownName','Full name','text',{req:1,ph:'e.g. John Smith'}),...a3('own',''),
+  F('ownTel','Mobile','tel',{req:1,ph:'e.g. 07700 900123'}),F('ownEmail','Email','email',{ph:'e.g. john@gmail.com'}),
+  F('ownPref','Best way to contact you','choice',{o:['Call','Text','WhatsApp','Email']}),
   F('dob','Date of birth','date',{short:1}),
-  F('occ','Your job'),F('emp','Employment status','select',{o:['Employed','Self-employed','Unemployed','Retired','Student','Other']}),
-  F('ni','National Insurance number','text',{short:1,help:'Looks like QQ 12 34 56 C. Skip it if you don’t have it to hand.'}),
-  F('drvSame','Were you the one driving?','choice',{o:YN,req:1}),
+  F('occ','Job','text',{ph:'e.g. Electrician'}),F('emp','Employment','select',{o:['Employed','Self-employed','Unemployed','Retired','Student','Other']}),
+  F('ni','NI number','text',{short:1,ph:'e.g. QQ 12 34 56 C'}),
+  F('drvSame','Were you driving?','choice',{o:YN,req:1}),
   {type:'h',l:'The driver',show:NOTD},
-  F('drvName','Driver’s full name','text',{show:NOTD}),...a3('drv','Driver’s',NOTD),F('drvTel','Driver’s mobile number','tel',{show:NOTD})]},
+  F('drvName','Driver’s name','text',{show:NOTD,ph:'e.g. Jane Smith'}),...a3('drv','Driver’s ',NOTD),F('drvTel','Driver’s mobile','tel',{show:NOTD,ph:'e.g. 07700 900123'})]},
  {t:'Your car',h:'Your car',lede:'',q:[
-  F('reg','Registration','text',{req:1,short:1,up:1}),F('make','Make','text',{help:'e.g. BMW'}),F('model','Model','text',{help:'e.g. 3 Series'}),F('colour','Colour'),
-  F('mileage','Rough mileage','number',{short:1}),
-  F('dmgDesc','What’s damaged?','textarea',{help:'e.g. front bumper, left headlight, airbags went off'}),
-  F('status','Can it still be driven safely?','choice',{o:['Roadworthy','Unroadworthy']}),
-  F('vehLoc','Where is the car now?'),
-  F('preDmg','Any damage on it before this accident?','choice',{o:YN}),
-  F('preArea','Where was the earlier damage?','text',{show:d=>d.preDmg==='Yes'}),
-  F('replace','Do you need a replacement car?','choice',{o:YN})]},
- {t:'The accident',h:'What happened',lede:'',q:[
-  F('nonfault','Was it the other driver’s fault?','choice',{o:['Yes','No','Not sure']}),
-  {type:'note',show:d=>d.nonfault==='No',l:'We can only take on claims where the other driver was at fault. You can still carry on, or call us on 020 4629 9469 and we’ll talk through your repair options.'},
+  F('reg','Registration','text',{req:1,short:1,up:1,ph:'e.g. AB12 CDE'}),F('make','Make','text',{ph:'e.g. BMW'}),F('model','Model','text',{ph:'e.g. 3 Series'}),F('colour','Colour','text',{ph:'e.g. White'}),
+  F('mileage','Mileage','number',{short:1,ph:'e.g. 45000'}),
+  F('dmgDesc','Damage','textarea',{ph:'e.g. front bumper, left headlight, airbags went off'}),
+  F('status','Safe to drive?','choice',{o:['Roadworthy','Unroadworthy']}),
+  F('vehLoc','Car is now at','text',{ph:'e.g. my home address'}),
+  F('preDmg','Any earlier damage?','choice',{o:YN}),
+  F('preArea','Earlier damage','text',{show:d=>d.preDmg==='Yes',ph:'e.g. scratch on rear bumper'}),
+  F('replace','Need a replacement car?','choice',{o:YN})]},
+ {t:'The accident',h:'The accident',lede:'',q:[
+  F('nonfault','Other driver’s fault?','choice',{o:['Yes','No','Not sure']}),
+  {type:'note',show:d=>d.nonfault==='No',l:'We can only take on claims where the other driver was at fault. You can still carry on, or tap the WhatsApp button and we’ll talk through your repair options.'},
   F('when','Date and time','datetime-local',{req:1}),
-  F('loc','Where did it happen?','textarea',{req:1,help:'Road name and town, or the nearest landmark.'}),
-  F('desc','In your own words, what happened?','textarea',{req:1}),
-  F('injured','Were you hurt?','choice',{o:YN}),F('injDesc','Tell us about your injuries','textarea',{show:d=>d.injured==='Yes'}),
-  F('seatbelt','Were you wearing a seatbelt?','choice',{o:YN}),
-  F('police','Did the police come or was it reported?','choice',{o:YN}),F('policeRef','Police reference number','text',{show:d=>d.police==='Yes'}),
-  F('ambulance','Did an ambulance come?','choice',{o:YN}),
-  F('weather','Weather and road','choice',{o:['Dry','Wet','Icy','Dark']}),
+  F('loc','Location','textarea',{req:1,ph:'e.g. High Street, Sutton, near Tesco'}),
+  F('desc','What happened?','textarea',{req:1,ph:'e.g. I was stopped at the lights and the car behind hit me'}),
+  F('injured','Were you hurt?','choice',{o:YN}),F('injDesc','Injuries','textarea',{show:d=>d.injured==='Yes',ph:'e.g. neck pain, bruised hand'}),
+  F('seatbelt','Seatbelt on?','choice',{o:YN}),
+  F('police','Police involved?','choice',{o:YN}),F('policeRef','Police reference','text',{show:d=>d.police==='Yes',ph:'e.g. CAD 1234'}),
+  F('ambulance','Ambulance came?','choice',{o:YN}),
+  F('weather','Weather','choice',{o:['Dry','Wet','Icy','Dark']}),
   F('traffic','Traffic','choice',{o:['Light','Moderate','Heavy','Stationary']}),
-  F('speed','Roughly how fast were you going?','text',{short:1,help:'e.g. stopped, 20 mph'})]},
- {t:'Other driver',h:'The other driver',lede:'Whatever you swapped at the scene — a photo of their details is fine to send us later.',q:[
-  F('tpName','Their name'),...a3('tp','Their'),
-  F('tpReg','Their registration','text',{short:1,up:1}),F('tpMake','Their car make'),F('tpModel','Their car model'),F('tpColour','Their car colour'),
-  F('tpIns','Their insurance company'),F('tpPol','Their policy number'),
-  F('tpAdmit','Did they admit it was their fault?','choice',{o:YN}),
-  F('tpPhotos','Do you have photos of their car?','choice',{o:YN}),
-  F('cctv','Any dashcam or CCTV footage?','choice',{o:YN}),
-  F('tpDesc','Anything about the other driver?','textarea',{help:'Rough age, appearance, how they behaved.'})]},
+  F('speed','Your speed','text',{short:1,ph:'e.g. 20 mph or stopped'})]},
+ {t:'Other driver',h:'The other driver',lede:'Whatever you swapped at the scene.',q:[
+  F('tpName','Name','text',{ph:'e.g. Dave Jones'}),...a3('tp',''),
+  F('tpReg','Registration','text',{short:1,up:1,ph:'e.g. GL75 HGK'}),F('tpMake','Make','text',{ph:'e.g. Ford'}),F('tpModel','Model','text',{ph:'e.g. Focus'}),F('tpColour','Colour','text',{ph:'e.g. Black'}),
+  F('tpIns','Their insurer','text',{ph:'e.g. Aviva'}),F('tpPol','Their policy number','text',{ph:'e.g. AV123456'}),
+  F('tpAdmit','Admitted fault?','choice',{o:YN}),
+  F('tpPhotos','Photos of their car?','choice',{o:YN}),
+  F('cctv','Dashcam or CCTV?','choice',{o:YN}),
+  F('tpDesc','About the driver','textarea',{ph:'e.g. man, about 40, was rude'})]},
  {t:'Insurance',h:'Your insurance',lede:'It’s on your policy email or certificate.',q:[
-  F('insurer','Insurance company'),F('policyNo','Policy number'),
-  F('cover','Type of cover','choice',{o:['Comprehensive','Third party, fire & theft','Third party only','Not sure']}),
-  F('polStart','Policy start date','date',{short:1}),F('polEnd','Policy end date','date',{short:1})]},
- {t:'Extra details',h:'Extra details (optional)',lede:'Nearly done! These help your claim, but skip anything you don’t know — just tick the box at the bottom.',q:[
-  F('paxN','Passengers in your car','choice',{o:['0','1','2','3']}),...ppl('px','Passenger','paxN'),
-  F('witN','Witnesses who saw it','choice',{o:['0','1','2','3']}),...ppl('wt','Witness','witN'),
+  F('insurer','Insurer','text',{ph:'e.g. Admiral'}),F('policyNo','Policy number','text',{ph:'e.g. P1234567'}),
+  F('cover','Cover','choice',{o:['Comprehensive','Third party, fire & theft','Third party only','Not sure']}),
+  F('polStart','Start date','date',{short:1}),F('polEnd','End date','date',{short:1})]},
+ {t:'Extra details',h:'Extra details (optional)',lede:'Nearly done! Skip anything you don’t know, then tick the box at the bottom.',q:[
+  F('paxN','Passengers','choice',{o:['0','1','2','3']}),...ppl('px','Passenger','paxN'),
+  F('witN','Witnesses','choice',{o:['0','1','2','3']}),...ppl('wt','Witness','witN'),
   {type:'h',l:'Your journey'},
-  F('purpose','What was the journey for?','select',{o:['Commuting','Social / domestic','Business','School run','Work / deliveries','Other']}),
-  F('business','Are you insured for business use?','choice',{o:YN}),
-  F('annual','Miles you drive a year','number',{short:1}),
-  F('holiday','Any holidays coming up?','text'),
+  F('purpose','Journey for','select',{o:['Commuting','Social / domestic','Business','School run','Work / deliveries','Other']}),
+  F('business','Insured for business use?','choice',{o:YN}),
+  F('annual','Miles a year','number',{short:1,ph:'e.g. 8000'}),
+  F('holiday','Upcoming holidays','text',{ph:'e.g. 20–27 December'}),
   {type:'h',l:'Your car'},
-  F('firstKeeper','Are you the first registered keeper?','choice',{o:YN}),
-  F('spec','Engine, fuel or trim','text',{help:'e.g. 330e M Sport hybrid'}),
-  F('towbar','Tow bar?','choice',{o:YN}),F('roofbox','Roof box or rack?','choice',{o:YN}),F('satnav','Built-in sat nav?','choice',{o:YN}),F('mobility','Mobility adaptations?','choice',{o:YN}),
-  F('vat','Are you VAT registered?','choice',{o:YN}),
-  F('pubProp','Was any public property damaged?','choice',{o:YN}),
+  F('firstKeeper','First owner?','choice',{o:YN}),
+  F('spec','Engine or trim','text',{ph:'e.g. 2.0 diesel M Sport'}),
+  F('towbar','Tow bar?','choice',{o:YN}),F('roofbox','Roof rack?','choice',{o:YN}),F('satnav','Built-in sat nav?','choice',{o:YN}),F('mobility','Mobility adaptations?','choice',{o:YN}),
+  F('vat','VAT registered?','choice',{o:YN}),
+  F('pubProp','Public property damaged?','choice',{o:YN}),
   {type:'h',l:'The other driver'},
-  F('tpContact','Has their insurer contacted you?','choice',{o:YN}),F('tpRef','Their insurer’s claim reference'),
-  F('tpPax','Did they have passengers?','choice',{o:['None','1','2','3','4 or more','Don’t know']}),
-  F('tpInj','Did they say they were hurt?','choice',{o:YN}),F('tpMed','Did they mention medical conditions?','choice',{o:YN}),F('tpDel','Were they a delivery driver?','choice',{o:YN}),
+  F('tpContact','Their insurer contacted you?','choice',{o:YN}),F('tpRef','Their claim reference','text',{ph:'e.g. CLM-998877'}),
+  F('tpPax','Their passengers','choice',{o:['None','1','2','3','4 or more','Don’t know']}),
+  F('tpInj','Were they hurt?','choice',{o:YN}),F('tpMed','Medical conditions mentioned?','choice',{o:YN}),F('tpDel','Delivery driver?','choice',{o:YN}),
   {type:'h',l:'Finally'},
-  F('ownAlt','Another phone number','tel'),
-  F('extra','Anything else we should know?','textarea'),
-  F('consent','I confirm these answers are true to the best of my knowledge, and I agree to KITH Cars and its claims partner using them to handle my claim.','check',{req:1})]},
+  F('ownAlt','Other phone','tel',{ph:'e.g. 020 8123 4567'}),
+  F('extra','Anything else?','textarea',{ph:'e.g. best time to call you'}),
+  F('consent','I confirm my answers are true and agree to KITH Cars and its claims partner using them for my claim.','check',{req:1})]},
  {t:'Send',h:'Check and send',review:1,q:[]}
 ];
 const STEPS=MODE==='staff'?SSTEPS:CSTEPS;
@@ -299,9 +301,9 @@ function fieldHTML(q){
  let c;
  if(q.type==='choice')c=`<div class="pills" role="radiogroup">${q.o.map(o=>`<label class="pill"><input type="radio" name="${q.k}" value="${esc(o)}"${v===o?' checked':''}><span>${esc(o)}</span></label>`).join('')}</div>`;
  else if(q.type==='select')c=`<select id="${id}" name="${q.k}"><option value="">Choose…</option>${q.o.map(o=>`<option${v===o?' selected':''}>${esc(o)}</option>`).join('')}</select>`;
- else if(q.type==='textarea')c=`<textarea id="${id}" name="${q.k}">${esc(v)}</textarea>`;
+ else if(q.type==='textarea')c=`<textarea id="${id}" name="${q.k}"${q.ph?` placeholder="${esc(q.ph)}"`:''}>${esc(v)}</textarea>`;
  else if(q.type==='check')return `<div class="q" data-k="${q.k}"><label class="check"><input type="checkbox" id="${id}" name="${q.k}"${v?' checked':''}><span>${esc(q.l)}${star}</span></label></div>`;
- else c=`<input id="${id}" name="${q.k}" type="${q.type}" value="${esc(v)}"${q.short?' class="short"':''}${q.type==='tel'?' autocomplete="tel"':''}${q.type==='email'?' autocomplete="email"':''}${q.k.endsWith('PC')||q.up?' autocapitalize="characters"':''}>`;
+ else c=`<input id="${id}" name="${q.k}" type="${q.type}" value="${esc(v)}"${q.short?' class="short"':''}${q.ph?` placeholder="${esc(q.ph)}"`:''}${q.type==='tel'?' autocomplete="tel"':''}${q.type==='email'?' autocomplete="email"':''}${q.k.endsWith('PC')||q.up?' autocapitalize="characters"':''}>`;
  const lab=q.type==='choice'?`<span class="lab">${esc(q.l)}${star}</span>`:`<label for="${id}">${esc(q.l)}${star}</label>`;
  return `<div class="q" data-k="${q.k}">${lab}${help}${c}</div>`;
 }
