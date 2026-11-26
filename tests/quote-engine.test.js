@@ -10,26 +10,29 @@ t('TOP x2 at 1.99', () => assert.ok(Math.abs(E.labourCost(cat, 1.99, 'TOP') - 33
 t('always-x2 stays x2 over threshold', () => assert.strictEqual(E.labourCost(cat, 2.5, 'TOP', true), 420));
 // Panel prices are the SOP's own figures, hard-coded here on purpose: if the catalogue drifts
 // away from the rate card again these fail, which is the whole point of the test.
-t('panel door: SOP £200 ex -> £240 inc, blend free so no spread', () => {
+t('panel door respray: SOP £300 ex -> £360 inc, blend both sides on top', () => {
   const r = E.priceJob(cat, 'panel-door', 'small');
-  assert.strictEqual(r.low, 240); assert.strictEqual(r.high, 240); });
-t('every panel matches the SOP inc VAT', () => {
-  const sop = { 'front-bumper': 288, 'rear-bumper': 180, bonnet: 180, door: 240, 'front-wing': 180,
-                'rear-quarter': 180, roof: 360, boot: 300 };
+  assert.strictEqual(r.low, 360); assert.strictEqual(r.high, 600); });
+t('every panel matches the SOP inc VAT (10 Sep 2026 table)', () => {
+  const sop = { 'front-bumper': 384, 'rear-bumper': 330, bonnet: 360, door: 360, 'front-wing': 330,
+                'rear-quarter': 330, roof: 480, boot: 420 };
   for (const [panel, inc] of Object.entries(sop)) {
     const r = E.priceJob(cat, 'panel-' + panel, 'small');
     assert.strictEqual(r.low, inc, `${panel}: expected £${inc} inc VAT, got £${r.low}`);
   } });
-t('trim priced off the diagram matches the SOP £120 inc', () => {
+t('a scratch or scuff is 10% off the full panel: front bumper 320 x 0.9 -> £345 inc', () => {
+  assert.strictEqual(E.bodyLine(cat, 'front-bumper', 'Front bumper', 'scuff', 'small').low, 345);
+  assert.strictEqual(E.bodyLine(cat, 'front-bumper', 'Front bumper', 'smart', 'small').low, 345); });
+t('trim scratch: 200 x 0.9 -> £215 inc', () => {
   const r = E.bodyLine(cat, 'trim', 'Trim', 'scuff', 'small');
-  assert.strictEqual(r.low, 120); });
-t('blends are free, per the SOP', () => {
-  assert.strictEqual(cat.body_blend_ex_vat.default, 0);
-  assert.strictEqual(cat.body_blend_ex_vat.door, 0); });
-t('SUV surcharge +40 ex: front bumper 240+40 -> £336 inc', () =>
-  assert.strictEqual(E.priceJob(cat, 'panel-front-bumper', 'large').low, Math.round(280 * 1.2)));
-t('van surcharge +100 ex: rear bumper 150+100 -> £300 inc', () =>
-  assert.strictEqual(E.priceJob(cat, 'panel-rear-bumper', 'van').low, Math.round(250 * 1.2)));
+  assert.strictEqual(r.low, 215); });
+t('blends are chargeable: £50 a side, £100 a door', () => {
+  assert.strictEqual(cat.body_blend_ex_vat.default, 50);
+  assert.strictEqual(cat.body_blend_ex_vat.door, 100); });
+t('SUV surcharge +40 ex: front bumper 320+40 -> £432 inc', () =>
+  assert.strictEqual(E.priceJob(cat, 'panel-front-bumper', 'large').low, Math.round(360 * 1.2)));
+t('van surcharge +100 ex: rear bumper 275+100 -> £450 inc', () =>
+  assert.strictEqual(E.priceJob(cat, 'panel-rear-bumper', 'van').low, Math.round(375 * 1.2)));
 t('tyres £20 each', () => assert.strictEqual(E.priceJob(cat, 'tyres', 'small', { qty: 4 }).low, 80));
 t('mot fixed at £50', () => assert.strictEqual(E.priceJob(cat, 'mot', 'medium').low, 50));
 t('labour job: rate-card anchor, +35% headroom, rounded outward to £5', () => {
@@ -166,7 +169,7 @@ for (const id of ['service-interim','service-full','brake-discs-front','clutch',
   // reads narrower than the real one.
   const down5 = n => Math.floor(n / 5) * 5, up5 = n => Math.ceil(n / 5) * 5;
   assert.strictEqual(b.low, down5((door + up.low) * vat), 'door paint + lightest dent, inc VAT');
-  assert.strictEqual(b.high, up5((door + up.high) * vat), 'door paint + worst dent, inc VAT');
+  assert.strictEqual(b.high, up5((door + cat.body_blend_ex_vat.door + up.high) * vat), 'door paint + blend + worst dent, inc VAT');
   assert.ok(b.high > b.low, 'a dent is a range, because severity is');
   assert.strictEqual(E.bodyLine(cat, 'door', 'x', 'dentp', 'medium'), null, 'paintless dent repair is gone');
   assert.strictEqual(E.bodyLine(cat, 'door', 'x', 'nonsense', 'medium'), null);

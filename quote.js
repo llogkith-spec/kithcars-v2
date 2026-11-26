@@ -1293,8 +1293,25 @@
       : [];
     return bits.join(', ') || (FLOWS[S.flow] ? FLOWS[S.flow].label : 'mechanical work');
   }
+  /* Bodywork goes to the Brain too (26 Nov 2026). The panels are already known from the car
+     diagram, so the Brain prices them straight off the SOP table the director edits - no AI
+     call - and the website stops carrying its own copy of the bodywork prices. The local
+     catalogue figure stays as the fallback if the Brain cannot be reached. */
+  function brainBodywork() {
+    var panels = Object.keys(S.body || {}).map(function (id) {
+      var p = CAR_PANELS.filter(function (x) { return x.id === id; })[0];
+      if (!p) return null;
+      var blend = S.mark && S.mark[id] ? needsBlend(id, S.mark[id]) : null;
+      return { panel: p.key, label: p.label, damage: S.body[id], blend: blend };
+    }).filter(Boolean);
+    if (!panels.length) return null;
+    return { panels: panels, size: S.band || 'medium',
+             year: (S.vehicle && Number(S.vehicle.yearOfManufacture)) || null };
+  }
   function fetchBrain() {
-    if (S.flow !== 'mechanical') { S.brainRange = null; S.brainTried = true; return Promise.resolve(); }
+    var bw = S.flow === 'bodywork' ? brainBodywork() : null;
+    if (S.flow !== 'mechanical' && !bw) { S.brainRange = null; S.brainTried = true; return Promise.resolve(); }
+    if (bw) return fetchBrainBodywork(bw);
     if (!S.vehicle || !S.vehicle.make) { S.brainRange = null; S.brainTried = true; return Promise.resolve(); }
     var complaint = brainComplaint();
     if (!complaint) { S.brainRange = null; S.brainTried = true; return Promise.resolve(); }
@@ -1348,6 +1365,28 @@
       console.warn('[KITH Brain] network:', e && e.message);
       S.brainLoading = false; S.brainRange = null;
     });
+  }
+
+  function fetchBrainBodywork(bw) {
+    S.brainTried = true;
+    var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 8000);
+    var vehicle = S.vehicle ? [S.vehicle.yearOfManufacture, S.vehicle.make, S.model || ''].filter(Boolean).join(' ') : (S.model || '');
+    return fetch(BRAIN_URL, {
+      method: 'POST', signal: ctl ? ctl.signal : undefined,
+      headers: { 'Content-Type': 'application/json', 'apikey': BRAIN_KEY, 'Authorization': 'Bearer ' + BRAIN_KEY, 'x-caller': 'website' },
+      body: JSON.stringify({ customer_type: 'retail', vehicle: vehicle,
+        reg: (S.vehicle && S.vehicle.registrationNumber) || '', bodywork: bw })
+    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      clearTimeout(timer);
+      /* Only a Brain that actually priced the panels is used. One that has not been redeployed
+         with the bodywork pricing answers "complaint required" or prices bodywork at nothing;
+         either way the rate-card fallback already on screen stands. */
+      if (d && d.kind === 'bodywork' && d.total_range && d.total_range.lo > 0) {
+        S.brainRange = { lo: Math.round(d.total_range.lo), hi: Math.round(d.total_range.hi),
+                         confidence: d.confidence || 'high', allFirm: !!d.all_firm, usedFallback: false, bodywork: true };
+      } else S.brainRange = null;
+    }).catch(function () { clearTimeout(timer); S.brainRange = null; });
   }
 
   // Countdown view shown while the Brain works out the price (mechanical only).
@@ -1562,8 +1601,17 @@
          AI tags - the Brain is the better answer, because it is reading KITH's actual job history
          rather than a generic book time. So it keeps the total there, and keeps its badge. */
       var firmLocally = t.count > 0 && !t.unpriced;
-      var bRange = (!firmLocally && S.brainRange && S.brainRange.hi > 0) ? S.brainRange : null;
+      var bRange = S.brainRange && S.brainRange.hi > 0 && (S.brainRange.bodywork ? S.flow === 'bodywork' : !firmLocally) ? S.brainRange : null;
       var shown = bRange ? { low: bRange.lo, high: bRange.hi } : spread(t, S.lines);
+      /* The Brain prices bodywork at the full rate card. The campaign discount and any alloys
+         (which the Brain does not price) are applied here, the same way as on the local lines. */
+      if (bRange && bRange.bodywork) {
+        var pb = promoOn(), kb = pb && pb.percent ? (100 - pb.percent) / 100 : 1;
+        shown = { low: Math.round(shown.low * kb), high: Math.round(shown.high * kb) };
+        S.lines.forEach(function (l) {
+          if (l && l.id && String(l.id).indexOf('alloy') === 0 && typeof l.low === 'number') { shown.low += l.low; shown.high += l.high; }
+        });
+      }
       var hLabel = 'Your estimate' + (!bRange && t.unpriced ? ' so far' : '');
       var hTag = bRange ? '<small class="kq-brain-tag">Priced using KITH’s live pricing system' + (bRange.allFirm ? ' (all lines firm from our history)' : '') + '</small>' : '';
       /* The full price above the discounted one, struck through, so the 30% is visible as a

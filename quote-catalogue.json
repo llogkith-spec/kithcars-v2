@@ -45,15 +45,15 @@
     }
   },
   "body_panels_ex_vat": {
-    "roof": 300,
-    "boot": 250,
-    "front-bumper": 240,
-    "bonnet": 150,
-    "door": 200,
-    "rear-bumper": 150,
-    "front-wing": 150,
-    "rear-quarter": 150,
-    "trim": 100
+    "roof": 400,
+    "boot": 350,
+    "front-bumper": 320,
+    "bonnet": 300,
+    "door": 300,
+    "rear-bumper": 275,
+    "front-wing": 275,
+    "rear-quarter": 275,
+    "trim": 200
   },
   "body_band_surcharge_ex_vat": {
     "small": 0,
@@ -63,8 +63,8 @@
     "van": 100
   },
   "body_blend_ex_vat": {
-    "default": 0,
-    "door": 0
+    "default": 50,
+    "door": 100
   },
   "categories": [
     {
@@ -1380,13 +1380,14 @@
       "label": "Light scuff or scratch",
       "size": "Smaller than your phone",
       "hint": "Repaired on the panel without taking it off. We confirm this is the right method when we see it.",
-      "panel_fraction": 0.8
+      "panel_fraction": 0.9
     },
     {
       "id": "scuff",
       "label": "Scuff or scratch",
       "size": "Bigger than your phone",
-      "paint": true
+      "panel_fraction": 0.9,
+      "hint": "Scratches and scuffs are 10% off painting the whole panel. We confirm the method when we see it."
     },
     {
       "id": "dent",
@@ -1913,7 +1914,7 @@
   },
   "vat_rate": 0.2,
   "_readme_rates": "Labour rates INC VAT. Ex VAT is inc / (1 + vat_rate): LOW £50, TOP £70, BODY £70. Retail has two tiers - LOW for servicing and brakes, TOP for everything else (SOP v8). The page shows the ex-VAT rate with 'plus VAT' after it, which is how KITH quotes. BODY is carried for reference only; bodywork prices off body_panels_ex_vat.",
-  "_readme_bodywork": "Panel prices are SOP v4.8 panel painting, 5-seater base, ex VAT, with one exception: the front bumper is 240 rather than the SOP's 200, set by KITH on 16 Oct so a full respray prices above the localised repair. Light scuff / SMART is 240 inc VAT, also KITH's figure, against the SOP's 160. Blends are free per the SOP. No surcharge for aluminium, metallic, pearl or colour change. No multi-panel discount, though the SOP has a 20% second-panel rule. Size surcharges follow the SOP: +40 SUV, +100 van.",
+  "_readme_bodywork": "Panel prices are the SOP bodywork table (10 Sep 2026 rebase), 5-seater base, ex VAT. Any scratch or scuff is 10% off the full panel price (panel_fraction 0.9, Logan 26 Nov 2026). The live figure comes from the KITH Brain, which reads the SOP the director edits; these numbers are only the fallback shown if the Brain cannot be reached, so keep them in step with the SOP. Blends £50 a side, £100 for a door.",
   "body_dent_uplift_ex_vat": {
     "low": 70,
     "high": 300,
