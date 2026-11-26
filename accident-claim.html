@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Start Your Accident Claim | KITH Cars Accident Management</title>
+<meta name="description" content="Had a non-fault accident? Start your claim with KITH Cars Accident Management in six quick steps and send it straight to us on WhatsApp.">
+<link rel="canonical" href="https://www.kithcars.com/accident-claim">
+<meta name="theme-color" content="#111315">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm, clear, reassuring — someone just had a crash; plain words, one thing at a time
+   IDEA: a claims handler's clipboard — one question card at a time, the finished claim form at the end
+   PICTURE: the working questionnaire itself, then the filled claim form laid out like the paper original
+   COLOUR and TYPE: white ground, road-ink charcoal, warning-triangle red accent; Archivo 800 + Archivo
+   LAYOUT: one 720px column; step strip on top, question card, sticky Back/Next bar */
+:root{color-scheme:light dark;
+--bg:light-dark(#ffffff,#111315);--ink:light-dark(#15181c,#eef0f2);--mute:light-dark(#5d636b,#a3a9b0);
+--line:light-dark(#dcdfe3,#2c3136);--soft:light-dark(#f3f4f6,#1a1d20);--acc:light-dark(#c8202b,#ff5a62);
+--accInk:#fff;--ok:light-dark(#1b7a45,#5fd395);--card:light-dark(#ffffff,#16191c)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Archivo,system-ui,sans-serif;overflow-x:clip}
+.top{background:#111315;color:#fff;padding:18px max(5vw,16px) 26px}
+.brand{display:flex;align-items:center;gap:14px;font-weight:600;font-size:15px;color:#fff;text-decoration:none}
+.brand img{height:64px;width:auto;flex:none}
+.brand span{padding-left:14px;border-left:1px solid rgba(255,255,255,.35);line-height:1.2}
+.top h1{font:800 clamp(28px,5vw,42px)/1.05 Archivo,sans-serif;margin:14px 0 8px;text-wrap:balance;max-width:720px}
+.top p{margin:0;max-width:620px;opacity:.85}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px 40px}
+.steps{display:flex;gap:6px;overflow-x:auto;padding:16px 0 10px;scrollbar-width:thin}
+.steps button{flex:none;border:1px solid var(--line);background:var(--card);color:var(--mute);border-radius:99px;padding:8px 14px;font:500 14px Archivo,sans-serif;cursor:pointer;min-height:40px}
+.steps button.done{color:var(--ink)}
+.steps button.done::before{content:"✓ ";color:var(--ok)}
+.steps button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.mode{display:flex;align-items:center;gap:6px;padding-top:16px;font-size:14px;color:var(--mute)}.mode span{margin-right:4px}.mode button{font:500 14px Archivo,sans-serif;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 12px;min-height:40px;cursor:pointer}.mode button.on{border-color:var(--acc);color:var(--acc)}
+footer{max-width:720px;margin:0 auto;padding:0 16px 110px;font-size:13px;color:var(--mute)}
+.bar{height:4px;background:var(--soft);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc);transition:width .3s}
+h2{font:800 30px/1.1 Archivo,sans-serif;margin:26px 0 6px}
+.stage{margin:22px 0 -14px;font-size:14px;color:var(--mute)}.stage b{color:var(--acc)}
+.lede{color:var(--mute);margin:0 0 18px}
+.q{padding:18px 0;border-top:1px solid var(--line)}
+.q>label,.q>.lab{display:block;font-weight:600;margin-bottom:8px}
+.req{color:var(--acc)}
+.help{display:block;color:var(--mute);font-size:14px;margin:-4px 0 8px}
+input[type=text],input[type=tel],input[type=email],input[type=date],input[type=datetime-local],input[type=number],select,textarea{width:100%;font:16px Archivo,sans-serif;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;min-height:46px}
+textarea{min-height:110px;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible,.pill input:focus-visible+span{outline:3px solid color-mix(in srgb,var(--acc) 45%,transparent);outline-offset:1px;border-color:var(--acc)}
+.short{max-width:220px}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill input{position:absolute;opacity:0;pointer-events:none}
+.pill span{display:inline-flex;align-items:center;min-height:44px;padding:8px 18px;border:1.5px solid var(--line);border-radius:10px;cursor:pointer;background:var(--card)}
+.pill input:checked+span{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.sub{font:800 18px Archivo,sans-serif;margin:24px 0 0;padding-top:16px;border-top:2px solid var(--ink)}
+.err input,.err textarea,.err select,.err .pill span{border-color:var(--acc)}
+.errmsg{color:var(--acc);font-size:14px;margin-top:6px}
+.note{background:var(--soft);border-left:4px solid var(--acc);padding:12px 14px;border-radius:6px;margin-top:10px;font-size:15px}
+.check{display:flex;gap:12px;align-items:flex-start;font-weight:500}
+.check input{width:24px;height:24px;flex:none;margin-top:2px;accent-color:var(--acc)}
+.nav{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:12px max(16px,calc((100vw - 720px)/2))}
+.nav .in{display:flex;gap:10px;justify-content:space-between;align-items:center}
+.btn{font:600 16px Archivo,sans-serif;border-radius:10px;padding:12px 22px;min-height:48px;cursor:pointer;border:1.5px solid var(--line);background:var(--card);color:var(--ink)}
+a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.btn.main{background:var(--acc);border-color:var(--acc);color:var(--accInk)}
+.btn[hidden]{display:none}
+.saved{font-size:13px;color:var(--mute)}
+/* review / claim form */
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 18px}
+.status{font-size:14px;color:var(--mute);min-height:20px}
+.sheet{border:1.5px solid var(--ink);border-radius:4px;background:var(--card)}
+.sheet .hd{padding:16px 18px;border-bottom:1.5px solid var(--ink)}
+.sheet .hd b{font:800 22px Archivo,sans-serif;display:block}
+.sheet .hd span{color:var(--mute);font-size:14px}
+.sec{border-bottom:1px solid var(--line)}
+.sec:last-child{border-bottom:0}
+.sec h3{display:flex;justify-content:space-between;align-items:center;margin:0;padding:10px 18px;background:var(--soft);font:800 15px Archivo,sans-serif}
+.sec h3 button{font:500 14px Archivo,sans-serif;background:none;border:0;color:var(--acc);cursor:pointer;min-height:36px;padding:0 4px}
+table{width:100%;border-collapse:collapse}
+td{padding:8px 18px;vertical-align:top;border-top:1px solid var(--line);font-size:15px}
+tr:first-child td{border-top:0}
+td:first-child{width:42%;color:var(--mute)}
+td.blank{color:var(--mute);opacity:.6}
+td.v{white-space:pre-wrap;overflow-wrap:anywhere}
+.miss{font-size:14px;margin:0 0 12px;color:var(--mute)}
+.small{font-size:13px;color:var(--mute);margin-top:14px}
+@media(max-width:600px){td{display:block;width:auto!important;padding:2px 18px}td:first-child{padding-top:10px;font-size:13px}tr td:last-child{padding-bottom:10px}tr:first-child td{border-top:0}tr td+td{border-top:0}h2{font-size:26px}}
+@media(prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="https://www.kithcars.com/"><img src="data:image/webp;base64,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" alt="KITH Cars" width="107" height="64"><span>Accident<br>Management</span></a>
+  <h1>Start your accident claim</h1>
+  <p>Had an accident that wasn’t your fault? Six quick steps, then send it to us — we’ll handle the rest. Questions? Call 020 4629 9469 or WhatsApp 07923 688259.</p>
+</header>
+<main class="wrap">
+  <div class="mode"><span>Layout</span><button type="button" id="mStep">Step by step</button><button type="button" id="mAll">All on one page</button></div>
+  <nav class="steps" id="steps" aria-label="Sections"></nav>
+  <div class="bar"><i id="prog"></i></div>
+  <form id="form" novalidate></form>
+</main>
+<footer>Kith Cars Ltd · Unit 1, Soho Mills, London Road, Hackbridge, SM6 7HN · 020 4629 9469 · kithcars.com · Company No 15013598</footer>
+<div class="nav"><div class="in">
+  <button class="btn" id="back" type="button">Back</button>
+  <span class="saved" id="saved"></span>
+  <button class="btn main" id="next" type="button">Next</button>
+</div></div>
+
+<script>
+{
+const MODE='customer';
+const YN=['Yes','No'];
+const F=(k,l,type='text',x={})=>({k,l,type,...x});
+const addr=(p,show)=>[F(p+'1','Address line 1','text',{show}),F(p+'2','Address line 2','text',{show}),F(p+'3','Town or city','text',{show}),F(p+'4','County','text',{show}),F(p+'PC','Postcode','text',{show,short:1})];
+const person=(p,n,show)=>[{type:'h',l:n,show},F(p+'Name','Full name','text',{show}),...addr(p,show),F(p+'Tel','Phone number or email','text',{show})];
+const people=(p,label,cnt)=>[1,2,3].flatMap(i=>person(p+i,label+' '+i,d=>+(d[cnt]||0)>=i));
+
+const SSTEPS=[
+ {t:'Start',h:'Before we start',lede:'We handle non-fault claims: we arrange your repairs and any replacement car, then recover the costs from the at-fault driver’s insurer.',q:[
+  F('nonfault','Was the accident the other driver’s fault?','choice',{o:['Yes','No','Not sure']}),
+  {type:'note',show:d=>d.nonfault==='No',l:'We can only take on claims where the other driver was at fault. You can still carry on, or call us on 020 4629 9469 and we’ll talk through your repair options.'},
+  F('filler','Who is filling this in?','choice',{o:['The customer','A KITH adviser on the phone'],show:()=>MODE==='staff'}),
+  {type:'import',show:()=>MODE==='staff'}]},
+ {t:'Your details',h:'Your details',lede:'The registered owner of the car.',q:[
+  F('ownName','Full name','text',{req:1}),...addr('own'),
+  F('ownTel','Mobile number','tel',{req:1}),F('ownAlt','Another number (optional)','tel'),F('ownEmail','Email address','email'),
+  F('ownPref','How would you like us to contact you?','choice',{o:['Phone call','Text','WhatsApp','Email']}),
+  F('wa','Happy to receive WhatsApp messages from us?','choice',{o:YN}),
+  F('drvSame','Were you the one driving?','choice',{o:YN,req:1}),
+  {type:'h',l:'The driver',show:d=>d.drvSame==='No'},
+  F('drvName','Driver’s full name','text',{show:d=>d.drvSame==='No'}),...addr('drv',d=>d.drvSame==='No'),
+  F('drvTel','Driver’s mobile number','tel',{show:d=>d.drvSame==='No'}),F('drvAlt','Driver’s other number','tel',{show:d=>d.drvSame==='No'}),
+  F('drvEmail','Driver’s email','email',{show:d=>d.drvSame==='No'}),F('drvWa','Driver happy to receive WhatsApp messages?','choice',{o:YN,show:d=>d.drvSame==='No'})]},
+ {t:'About you',h:'A bit more about you',lede:'The insurer needs these to process the claim.',q:[
+  F('dob','Date of birth','date',{short:1}),
+  F('ni','National Insurance number','text',{short:1,help:'Looks like QQ 12 34 56 C — it’s on your payslip or P60.'}),
+  F('emp','Employment status','select',{o:['Employed','Self-employed','Unemployed','Retired','Student','Other']}),
+  F('occ','Occupation'),
+  F('vat','Are you VAT registered?','choice',{o:YN})]},
+ {t:'Your car',h:'Your car',lede:'',q:[
+  F('reg','Registration','text',{req:1,short:1,up:1}),F('make','Make','text',{help:'e.g. Ford'}),F('model','Model','text',{help:'e.g. Focus Titanium'}),F('colour','Colour'),
+  F('firstKeeper','Are you the first registered keeper?','choice',{o:YN}),
+  F('mileage','Current mileage','number',{short:1}),
+  F('spec','Anything notable about the spec?','textarea',{help:'Engine size, fuel type, trim, any extras or modifications.'}),
+  F('towbar','Does it have a tow bar?','choice',{o:YN}),F('roofbox','Roof box or roof rack?','choice',{o:YN}),
+  F('satnav','Built-in sat nav?','choice',{o:YN}),F('mobility','Any mobility adaptations?','choice',{o:YN})]},
+ {t:'The accident',h:'What happened',lede:'',q:[
+  F('when','Date and time of the accident','datetime-local',{req:1}),
+  F('loc','Where did it happen?','textarea',{req:1,help:'Road name, town, and nearby landmarks or junction.'}),
+  F('desc','In your own words, what happened?','textarea',{req:1,help:'Which way you were each going, and how the other vehicle hit you.'}),
+  F('weather','Weather and road conditions','text',{help:'e.g. dry and clear, wet road, dark'}),
+  F('traffic','How busy was the traffic?','choice',{o:['Light','Moderate','Heavy','Stationary']}),
+  F('purpose','What was the journey for?','select',{o:['Commuting','Social / domestic','Business','School run','Work / deliveries','Other']}),
+  F('speed','Roughly how fast were you going at impact?','text',{short:1,help:'e.g. stationary, 20 mph'}),
+  F('pubProp','Was any public property damaged (signs, bollards, walls)?','choice',{o:YN}),
+  F('police','Was it reported to the police?','choice',{o:YN}),
+  F('policeRef','Police reference or log number','text',{show:d=>d.police==='Yes'}),
+  F('ambulance','Did an ambulance attend?','choice',{o:YN})]},
+ {t:'Injuries',h:'Were you hurt?',lede:'',q:[
+  F('injured','Were you injured in the accident?','choice',{o:YN}),
+  F('injDesc','Tell us about your injuries','textarea',{show:d=>d.injured==='Yes'}),
+  F('seatbelt','Were you wearing a seatbelt?','choice',{o:YN})]},
+ {t:'Passengers & witnesses',h:'Passengers and witnesses',lede:'',q:[
+  F('paxN','How many passengers were in your car?','choice',{o:['0','1','2','3']}),
+  ...people('px','Passenger','paxN'),
+  F('witN','Did anyone see it happen? How many witnesses?','choice',{o:['0','1','2','3']}),
+  ...people('wt','Witness','witN')]},
+ {t:'Damage',h:'Damage to your car',lede:'',q:[
+  F('dmgDesc','Describe the damage from this accident','textarea',{help:'Which panels or parts, e.g. rear bumper, boot lid, offside rear light.'}),
+  F('preDmg','Was there any damage on the car before this accident?','choice',{o:YN}),
+  F('preArea','Where was the earlier damage?','text',{show:d=>d.preDmg==='Yes'}),
+  F('status','Can the car still be driven safely?','choice',{o:['Roadworthy','Unroadworthy']}),
+  F('vehLoc','Where is the car now?','text',{help:'Your address, a garage, a recovery yard…'}),
+  F('replace','Do you need a replacement car while yours is off the road?','choice',{o:YN})]},
+ {t:'Your insurance',h:'Your insurance',lede:'Your policy schedule or certificate has these.',q:[
+  F('cover','Type of cover','choice',{o:['Comprehensive','Third party, fire & theft','Third party only','Not sure']}),
+  F('insurer','Insurance company'),F('policyNo','Policy number'),
+  F('polStart','Policy start date','date',{short:1}),F('polEnd','Policy end date','date',{short:1}),
+  F('business','Is the car insured for business use?','choice',{o:YN}),
+  F('annual','Average miles you drive a year','number',{short:1}),
+  F('holiday','Any holidays or time away coming up?','text',{help:'So we can work repairs around it.'})]},
+ {t:'Other driver',h:'The other driver',lede:'Whatever you swapped at the scene.',q:[
+  F('tpName','Their full name'),...addr('tp'),
+  {type:'h',l:'Their vehicle'},
+  F('tpReg','Registration','text',{short:1,up:1}),F('tpMake','Make'),F('tpModel','Model'),F('tpColour','Colour'),
+  {type:'h',l:'Their insurance'},
+  F('tpIns','Their insurance company'),F('tpPol','Their policy number'),F('tpRef','Claim reference from their insurer (if any)'),
+  F('tpContact','Has their insurer been in touch with you?','choice',{o:YN}),
+  {type:'h',l:'At the scene'},
+  F('tpAdmit','Did they admit it was their fault?','choice',{o:YN}),
+  F('tpPax','Did they have passengers?','choice',{o:['None','1','2','3','4 or more','Don’t know']}),
+  F('tpInj','Did they say they were hurt?','choice',{o:YN}),
+  F('tpMed','Did they mention any medical conditions?','choice',{o:YN}),
+  F('tpDel','Were they a delivery driver?','choice',{o:YN}),
+  F('tpDesc','Describe the other driver','textarea',{help:'Rough age, appearance, how they behaved.'})]},
+ {t:'Evidence',h:'Evidence and anything else',lede:'',q:[
+  F('tpPhotos','Do you have photos of the other vehicle?','choice',{o:YN}),
+  F('cctv','Is there dashcam or CCTV footage?','choice',{o:YN}),
+  F('extra','Anything else we should know?','textarea'),
+  F('consent','I confirm these answers are true to the best of my knowledge, and I agree to KITH Cars and its claims partner using them to handle my claim.','check',{req:1})]},
+ {t:'Claim form',h:'Your completed claim form',review:1,q:[]}
+];
+/* customer version: 6 short steps; every Qdos box still has a question (rarer ones in the optional last step) */
+const a3=(p,lab,show)=>[F(p+'1',lab?lab+' house number and street':'House number and street','text',{show}),F(p+'3',lab?lab+' town or city':'Town or city','text',{show}),F(p+'PC',lab?lab+' postcode':'Postcode','text',{show,short:1})];
+const ppl=(p,label,cnt)=>[1,2,3].flatMap(i=>{const show=d=>+(d[cnt]||0)>=i;return[{type:'h',l:label+' '+i,show},F(p+i+'Name','Full name','text',{show}),...a3(p+i,'',show),F(p+i+'Tel','Phone number','tel',{show})]});
+const NOTD=d=>d.drvSame==='No';
+const CSTEPS=[
+ {t:'About you',h:'About you',lede:'Takes about 5 minutes. Only questions marked * are needed — skip anything you don’t know.',q:[
+  F('ownName','Full name','text',{req:1}),...a3('own'),
+  F('ownTel','Mobile number','tel',{req:1}),F('ownEmail','Email address','email'),
+  F('ownPref','Best way to reach you?','choice',{o:['Phone call','Text','WhatsApp','Email']}),
+  F('dob','Date of birth','date',{short:1}),
+  F('occ','Your job'),F('emp','Employment status','select',{o:['Employed','Self-employed','Unemployed','Retired','Student','Other']}),
+  F('ni','National Insurance number','text',{short:1,help:'Looks like QQ 12 34 56 C. Skip it if you don’t have it to hand.'}),
+  F('drvSame','Were you the one driving?','choice',{o:YN,req:1}),
+  {type:'h',l:'The driver',show:NOTD},
+  F('drvName','Driver’s full name','text',{show:NOTD}),...a3('drv','Driver’s',NOTD),F('drvTel','Driver’s mobile number','tel',{show:NOTD})]},
+ {t:'Your car',h:'Your car',lede:'',q:[
+  F('reg','Registration','text',{req:1,short:1,up:1}),F('make','Make','text',{help:'e.g. BMW'}),F('model','Model','text',{help:'e.g. 3 Series'}),F('colour','Colour'),
+  F('mileage','Rough mileage','number',{short:1}),
+  F('dmgDesc','What’s damaged?','textarea',{help:'e.g. front bumper, left headlight, airbags went off'}),
+  F('status','Can it still be driven safely?','choice',{o:['Roadworthy','Unroadworthy']}),
+  F('vehLoc','Where is the car now?'),
+  F('preDmg','Any damage on it before this accident?','choice',{o:YN}),
+  F('preArea','Where was the earlier damage?','text',{show:d=>d.preDmg==='Yes'}),
+  F('replace','Do you need a replacement car?','choice',{o:YN})]},
+ {t:'The accident',h:'What happened',lede:'',q:[
+  F('nonfault','Was it the other driver’s fault?','choice',{o:['Yes','No','Not sure']}),
+  {type:'note',show:d=>d.nonfault==='No',l:'We can only take on claims where the other driver was at fault. You can still carry on, or call us on 020 4629 9469 and we’ll talk through your repair options.'},
+  F('when','Date and time','datetime-local',{req:1}),
+  F('loc','Where did it happen?','textarea',{req:1,help:'Road name and town, or the nearest landmark.'}),
+  F('desc','In your own words, what happened?','textarea',{req:1}),
+  F('injured','Were you hurt?','choice',{o:YN}),F('injDesc','Tell us about your injuries','textarea',{show:d=>d.injured==='Yes'}),
+  F('seatbelt','Were you wearing a seatbelt?','choice',{o:YN}),
+  F('police','Did the police come or was it reported?','choice',{o:YN}),F('policeRef','Police reference number','text',{show:d=>d.police==='Yes'}),
+  F('ambulance','Did an ambulance come?','choice',{o:YN}),
+  F('weather','Weather and road','choice',{o:['Dry','Wet','Icy','Dark']}),
+  F('traffic','Traffic','choice',{o:['Light','Moderate','Heavy','Stationary']}),
+  F('speed','Roughly how fast were you going?','text',{short:1,help:'e.g. stopped, 20 mph'})]},
+ {t:'Other driver',h:'The other driver',lede:'Whatever you swapped at the scene — a photo of their details is fine to send us later.',q:[
+  F('tpName','Their name'),...a3('tp','Their'),
+  F('tpReg','Their registration','text',{short:1,up:1}),F('tpMake','Their car make'),F('tpModel','Their car model'),F('tpColour','Their car colour'),
+  F('tpIns','Their insurance company'),F('tpPol','Their policy number'),
+  F('tpAdmit','Did they admit it was their fault?','choice',{o:YN}),
+  F('tpPhotos','Do you have photos of their car?','choice',{o:YN}),
+  F('cctv','Any dashcam or CCTV footage?','choice',{o:YN}),
+  F('tpDesc','Anything about the other driver?','textarea',{help:'Rough age, appearance, how they behaved.'})]},
+ {t:'Insurance',h:'Your insurance',lede:'It’s on your policy email or certificate.',q:[
+  F('insurer','Insurance company'),F('policyNo','Policy number'),
+  F('cover','Type of cover','choice',{o:['Comprehensive','Third party, fire & theft','Third party only','Not sure']}),
+  F('polStart','Policy start date','date',{short:1}),F('polEnd','Policy end date','date',{short:1})]},
+ {t:'Extra details',h:'Extra details (optional)',lede:'Nearly done! These help your claim, but skip anything you don’t know — just tick the box at the bottom.',q:[
+  F('paxN','Passengers in your car','choice',{o:['0','1','2','3']}),...ppl('px','Passenger','paxN'),
+  F('witN','Witnesses who saw it','choice',{o:['0','1','2','3']}),...ppl('wt','Witness','witN'),
+  {type:'h',l:'Your journey'},
+  F('purpose','What was the journey for?','select',{o:['Commuting','Social / domestic','Business','School run','Work / deliveries','Other']}),
+  F('business','Are you insured for business use?','choice',{o:YN}),
+  F('annual','Miles you drive a year','number',{short:1}),
+  F('holiday','Any holidays coming up?','text'),
+  {type:'h',l:'Your car'},
+  F('firstKeeper','Are you the first registered keeper?','choice',{o:YN}),
+  F('spec','Engine, fuel or trim','text',{help:'e.g. 330e M Sport hybrid'}),
+  F('towbar','Tow bar?','choice',{o:YN}),F('roofbox','Roof box or rack?','choice',{o:YN}),F('satnav','Built-in sat nav?','choice',{o:YN}),F('mobility','Mobility adaptations?','choice',{o:YN}),
+  F('vat','Are you VAT registered?','choice',{o:YN}),
+  F('pubProp','Was any public property damaged?','choice',{o:YN}),
+  {type:'h',l:'The other driver'},
+  F('tpContact','Has their insurer contacted you?','choice',{o:YN}),F('tpRef','Their insurer’s claim reference'),
+  F('tpPax','Did they have passengers?','choice',{o:['None','1','2','3','4 or more','Don’t know']}),
+  F('tpInj','Did they say they were hurt?','choice',{o:YN}),F('tpMed','Did they mention medical conditions?','choice',{o:YN}),F('tpDel','Were they a delivery driver?','choice',{o:YN}),
+  {type:'h',l:'Finally'},
+  F('ownAlt','Another phone number','tel'),
+  F('extra','Anything else we should know?','textarea'),
+  F('consent','I confirm these answers are true to the best of my knowledge, and I agree to KITH Cars and its claims partner using them to handle my claim.','check',{req:1})]},
+ {t:'Send',h:'Check and send',review:1,q:[]}
+];
+const STEPS=MODE==='staff'?SSTEPS:CSTEPS;
+
+let d={},cur=0,all=false;const NEXTLAST=MODE==='staff'?'See claim form':'Check and send';
+try{d=JSON.parse(localStorage.getItem('kith-claim-c')||'{}')||{};cur=+localStorage.getItem('kith-claim-step')||0;all=localStorage.getItem('kith-claim-mode')==='all'}catch(e){}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const vis=q=>!q.show||q.show(d);
+const save=()=>{try{localStorage.setItem('kith-claim-c',JSON.stringify(d));localStorage.setItem('kith-claim-step',cur);$('saved').textContent='Draft saved on this device'}catch(e){}};
+const filled=s=>s.q.some(q=>q.k&&d[q.k]);
+
+function fieldHTML(q){
+ if(q.type==='h')return `<div class="sub">${esc(q.l)}</div>`;
+ if(q.type==='note')return `<div class="note">${esc(q.l)}</div>`;
+ if(q.type==='import')return `<div class="q imp"><span class="lab">Got answers from a customer?</span><span class="help">Paste the WhatsApp or email message they sent from the customer questionnaire. It fills in every answer and takes you to the claim form.</span><textarea id="imp" placeholder="Paste the customer’s message here"></textarea><div class="actions"><button type="button" class="btn main" id="impBtn">Fill in from message</button></div><div class="status" id="impSt" role="status"></div></div>`;
+ const id='f_'+q.k,v=d[q.k]??'',star=q.req?' <span class="req">*</span>':'';
+ const help=q.help?`<span class="help">${esc(q.help)}</span>`:'';
+ let c;
+ if(q.type==='choice')c=`<div class="pills" role="radiogroup">${q.o.map(o=>`<label class="pill"><input type="radio" name="${q.k}" value="${esc(o)}"${v===o?' checked':''}><span>${esc(o)}</span></label>`).join('')}</div>`;
+ else if(q.type==='select')c=`<select id="${id}" name="${q.k}"><option value="">Choose…</option>${q.o.map(o=>`<option${v===o?' selected':''}>${esc(o)}</option>`).join('')}</select>`;
+ else if(q.type==='textarea')c=`<textarea id="${id}" name="${q.k}">${esc(v)}</textarea>`;
+ else if(q.type==='check')return `<div class="q" data-k="${q.k}"><label class="check"><input type="checkbox" id="${id}" name="${q.k}"${v?' checked':''}><span>${esc(q.l)}${star}</span></label></div>`;
+ else c=`<input id="${id}" name="${q.k}" type="${q.type}" value="${esc(v)}"${q.short?' class="short"':''}${q.type==='tel'?' autocomplete="tel"':''}${q.type==='email'?' autocomplete="email"':''}${q.k.endsWith('PC')||q.up?' autocapitalize="characters"':''}>`;
+ const lab=q.type==='choice'?`<span class="lab">${esc(q.l)}${star}</span>`:`<label for="${id}">${esc(q.l)}${star}</label>`;
+ return `<div class="q" data-k="${q.k}">${lab}${help}${c}</div>`;
+}
+
+function render(){
+ if(MODE!=='staff'){all=false;document.querySelector('.mode').style.display='none'}
+ $('mStep').className=all?'':'on';$('mAll').className=all?'on':'';
+ const s=STEPS[cur];
+ if(all&&!s.review){
+  $('steps').innerHTML=STEPS.slice(0,-1).map((x,i)=>`<button type="button" data-j="${i}" class="${filled(x)?'done':''}">${esc(x.t)}</button>`).join('');
+  $('prog').style.width='0%';$('back').hidden=true;$('next').hidden=false;$('next').textContent=NEXTLAST;
+  $('form').innerHTML=STEPS.slice(0,-1).map((x,i)=>`<section id="s${i}"><h2>${esc(x.h)}</h2>${x.lede?`<p class="lede">${esc(x.lede)}</p>`:''}${x.q.filter(vis).map(fieldHTML).join('')}</section>`).join('');
+  return}
+ $('steps').innerHTML=STEPS.map((x,i)=>`<button type="button" data-i="${i}" class="${i===cur?'on':(i<cur||filled(x))?'done':''}">${MODE!=='staff'&&!x.review?(i+1)+'. ':''}${esc(x.t)}</button>`).join('');
+ $('steps').querySelector('.on')?.scrollIntoView({inline:'center',block:'nearest'});
+ $('prog').style.width=(cur/(STEPS.length-1)*100)+'%';
+ $('back').hidden=cur===0;
+ $('next').hidden=!!s.review;
+ $('next').textContent=cur===STEPS.length-2?NEXTLAST:'Next';
+ const N=STEPS.length-1,trk=MODE!=='staff'&&!s.review?`<p class="stage"><b>Step ${cur+1} of ${N}</b> · ${cur===N-1?'last step — nearly done!':'about '+(N-cur)+' min left'}</p>`:'';
+ $('form').innerHTML=trk+`<h2>${esc(s.h)}</h2>${s.lede?`<p class="lede">${esc(s.lede)}</p>`:''}`+(s.review?reviewHTML():s.q.filter(vis).map(fieldHTML).join(''));
+}
+
+function go(i){cur=Math.max(0,Math.min(STEPS.length-1,i));save();render();window.scrollTo({top:0})}
+
+function validate(){
+ let first=null;
+ $('form').querySelectorAll('.q').forEach(el=>{el.classList.remove('err');el.querySelector('.errmsg')?.remove()});
+ (all&&!STEPS[cur].review?STEPS.flatMap(x=>x.q):STEPS[cur].q).filter(q=>q.req&&vis(q)).forEach(q=>{
+  if(!d[q.k]){const el=$('form').querySelector(`.q[data-k="${q.k}"]`);if(!el)return;el.classList.add('err');el.insertAdjacentHTML('beforeend','<div class="errmsg">Please answer this one.</div>');first=first||el}
+ });
+ if(first){first.scrollIntoView({block:'center'});return false}
+ return true;
+}
+
+/* ---------- claim form mapping (mirrors the paper form) ---------- */
+const fd=s=>{if(!s)return'';const m=s.match(/^(\d{4})-(\d\d)-(\d\d)(?:T(\d\d:\d\d))?/);return m?`${m[3]}/${m[2]}/${m[1]}${m[4]?' '+m[4]:''}`:s};
+const g=k=>d[k]||'';
+const same=()=>d.drvSame!=='No';
+const dv=(o,k)=>()=>same()?g(o):g(k);
+const addrRows=p=>[['First Line Address',p+'1'],['Second Line Address',p+'2'],['Third Line Address',p+'3'],['Fourth Line Address',p+'4'],['Postal Code',p+'PC']];
+function sections(){
+ const pp=(p,lab,cnt,step)=>{const n=+(d[cnt]||0);if(!n)return[[lab+' Details',[[lab+'s',()=>d[cnt]?'None':'']],step]];
+  return Array.from({length:n},(_,j)=>{const x=p+(j+1);return[`${lab} ${j+1} Details`,[[lab+' Name',x+'Name'],...addrRows(x),['Contact Details',x+'Tel']],step]})};
+ return [
+ ['Vehicle Owner Details',[['Vehicle Owner Full Name','ownName'],...addrRows('own'),['Contact Number','ownTel'],['Alternative Contact Number','ownAlt'],['Email Address','ownEmail'],['Preferred Method of Contact','ownPref']],1],
+ ['Driver Details',[['Driver Full Name',dv('ownName','drvName')],['First Line Address',dv('own1','drv1')],['Second Line Address',dv('own2','drv2')],['Third Line Address',dv('own3','drv3')],['Fourth Line Address',dv('own4','drv4')],['Postal Code',dv('ownPC','drvPC')],['Contact Number',dv('ownTel','drvTel')],['Alternative Contact Number',dv('ownAlt','drvAlt')],['Email Address',dv('ownEmail','drvEmail')],['Receive WhatsApp Messages',dv('wa','drvWa')]],1],
+ ['Personal Details',[['Date of Birth',()=>fd(g('dob'))],['National Insurance Number',()=>g('ni').toUpperCase()],['Employment Status','emp'],['Occupation','occ'],['VAT Registered','vat'],['Sustained Personal Injury','injured'],['Description of Injury','injDesc'],['Seatbelt Worn','seatbelt'],['Estimated Speed of Impact','speed']],2],
+ ['Vehicle Details',[['Make','make'],['Model','model'],['Vehicle Registration',()=>g('reg').toUpperCase()],['Colour','colour'],['First Registered Keeper','firstKeeper'],['Current Mileage','mileage'],['Vehicle Specifications','spec'],['Tow Bar','towbar'],['Roof Box/Rack','roofbox'],['Integrated SAT Nav','satnav'],['Mobility Adaptions','mobility']],3],
+ ['Accident Details',[['Date & Time',()=>fd(g('when'))],['Accident Location','loc'],['Accident Description','desc']],4],
+ ['Additional Questions',[['Weather & Road Conditions','weather'],['Damages to Public Property','pubProp'],['Reported to the Police','police'],['Police Reference/Log Number','policeRef']],4],
+ ...pp('px','Passenger','paxN',6),...pp('wt','Witness','witN',6),
+ ['Vehicle Damages',[['Pre-existing Damages','preDmg'],['Area of Pre-existing Damages','preArea'],['Vehicle Status','status'],['Vehicle Location','vehLoc'],['Is Replacement Required','replace'],['Description of Vehicle Damages','dmgDesc']],7],
+ ['Client Insurance Details',[['Insurance Cover Type','cover'],['Name of Insurer','insurer'],['Policy Number','policyNo'],['Policy Start & Policy End Date',()=>(d.polStart||d.polEnd)?`${fd(g('polStart'))||'?'} – ${fd(g('polEnd'))||'?'}`:'']],8],
+ ['Additional Information',[['Ambulance At Scene','ambulance'],['Traffic Condition','traffic'],['Purpose of Journey','purpose'],['Vehicle Covered for Business Use','business'],['Average Annual Mileage','annual'],['Upcoming Holiday Dates','holiday']],8],
+ ['Third-Party Details',[['Third-Party Name','tpName'],...addrRows('tp')],9],
+ ['Third-Party Vehicle Details',[['Make','tpMake'],['Model','tpModel'],['Vehicle Registration',()=>g('tpReg').toUpperCase()],['Colour','tpColour']],9],
+ ['Third-Party Insurer Details',[['Insurer Name','tpIns'],['Third-Party Policy Number','tpPol'],['Insurer Reference','tpRef']],9],
+ ['Third-Party Additional Questions',[['Images of Third-Party Vehicle','tpPhotos'],['Dashcam or CCTV Footage','cctv'],['Third-Party Delivery Driver','tpDel'],['Third-Party Insurer Contact Yourself','tpContact'],['Third-Party Had Medical Conditions','tpMed'],['Third-Party Admitted Liability at Scene','tpAdmit'],['Third-Party Had Passengers','tpPax'],['Third-Party Injured at Scene','tpInj']],9],
+ ['Description of Third-Party',[['Description','tpDesc']],9],
+ ['Other Notes',[['Customer’s view of fault','nonfault'],['Completed by','filler'],['Anything else','extra'],['Declaration',()=>d.consent?'Confirmed by customer':'']],10]
+ ];
+}
+const val=r=>String(typeof r[1]==='function'?r[1]():g(r[1]));
+
+function reviewHTML(){
+ if(MODE!=='staff')return customerReview();
+ const S=sections();let blank=0,total=0;
+ const body=S.map(([h,rows,step])=>`<div class="sec"><h3>${esc(h)}<button type="button" data-go="${step}">Edit</button></h3><table>${rows.map(r=>{const v=val(r);total++;if(!v)blank++;return`<tr><td>${esc(r[0])}</td><td class="${v?'v':'blank'}">${v?esc(v):'—'}</td></tr>`}).join('')}</table></div>`).join('');
+ return `<p class="lede">Check it over, then download the Qdos claim form with every box filled in, ready to send to them.</p>
+ <div class="actions"><button type="button" class="btn main" id="dl">Download filled Qdos claim form</button><button type="button" class="btn" id="cp">Copy as text</button><button type="button" class="btn" id="clr">Start a new claim</button></div>
+ <div class="status" id="st" role="status"></div>
+ <p class="miss">${total-blank} of ${total} boxes filled${blank?` — tap Edit on a section to fill the blanks.`:'.'}</p>
+ <div class="sheet"><div class="hd"><b>Vehicle Collision Claim Form</b><span>Prepared by KITH Cars · ${esc(new Date().toLocaleDateString('en-GB'))}</span></div>${body}</div>
+ <p class="small">The download is Qdos’s own Vehicle Collision Claim Form with your answers typed into each box and the Yes/No boxes ticked. “Fault”, “completed by” and “anything else” aren’t on the Qdos form, so they’re only in Copy as text. Answers are kept only in this browser until you start a new claim.</p>`;
+}
+
+/* ---------- customer message (WhatsApp / email) and staff import ---------- */
+const WA='447923688259',MAIL='kithcarsinfo@gmail.com';
+const mlab=q=>q.type==='check'?'Declaration':q.l;
+const mfmt=(q,v)=>q.type==='check'?'Confirmed':(q.type==='date'||q.type==='datetime-local')?fd(v):String(v).replace(/\s*\n+\s*/g,' | ');
+const unfmt=(q,v)=>{
+ if(q.type==='check')return true;
+ if(q.type==='date'||q.type==='datetime-local'){const m=v.match(/^(\d\d)\/(\d\d)\/(\d{4})(?: (\d\d:\d\d))?/);if(m)return `${m[3]}-${m[2]}-${m[1]}${q.type==='datetime-local'?'T'+(m[4]||'00:00'):''}`}
+ return v.replace(/ \| /g,'\n');
+};
+function msg(){
+ const out=['*KITH Cars Accident Management – new claim*','Sent from the KITH Cars accident claim form'];
+ STEPS.forEach(s=>{if(s.review)return;let lines=[];
+  s.q.forEach(q=>{if(!vis(q))return;if(q.type==='h'){lines.push('_'+q.l+'_');return}
+   if(!q.k||q.type==='note')return;const v=d[q.k];if(v===undefined||v===''||v===false)return;lines.push(mlab(q)+': '+mfmt(q,v))});
+  lines=lines.filter((l,i)=>!(l.startsWith('_')&&(i===lines.length-1||lines[i+1].startsWith('_'))));
+  if(lines.some(l=>!l.startsWith('_')))out.push('','*'+s.h+'*',...lines)});
+ return out.join('\n');
+}
+function parseMsg(text){
+ const scoped=CSTEPS.map(s=>{let cur=null;return s.q.filter(q=>{if(q.type==='h'){cur=q.l;return false}q._sub=cur;return !!q.k})});
+ const nd={};let step=null,sub=null;
+ for(const raw of String(text).split(/\r?\n/)){
+  const line=raw.replace(/^\[[^\]]*\]\s*[^:]*:\s(?=\*)/,'').trim();let m;
+  if(m=line.match(/^\*(.+)\*$/)){const i=CSTEPS.findIndex(s=>s.h===m[1].trim());if(i>=0){step=i;sub=null}continue}
+  if(m=line.match(/^_(.+)_$/)){sub=m[1].trim();continue}
+  if(step===null)continue;const i=line.indexOf(': ');if(i<0)continue;
+  const L=line.slice(0,i).trim(),V=line.slice(i+2).trim(),c=scoped[step].filter(q=>mlab(q)===L);if(!c.length||!V)continue;
+  const q=c.length>1?(c.find(x=>x._sub===sub&&nd[x.k]===undefined)||c.find(x=>nd[x.k]===undefined)):c[0];if(q)nd[q.k]=unfmt(q,V);
+ }
+ return nd;
+}
+function customerReview(){
+ const body=STEPS.map((s,i)=>{if(s.review)return'';const rows=s.q.filter(q=>vis(q)&&q.k&&q.type!=='note'&&d[q.k]!==undefined&&d[q.k]!==''&&d[q.k]!==false);if(!rows.length)return'';
+  return `<div class="sec"><h3>${esc(s.h)}<button type="button" data-go="${i}">Edit</button></h3><table>${rows.map(q=>`<tr><td>${esc(mlab(q))}</td><td class="v">${esc(mfmt(q,d[q.k]))}</td></tr>`).join('')}</table></div>`}).join('');
+ const m=msg();
+ return `<p class="lede">Check your answers, then send them to us. On WhatsApp, add your photos of the damage in the same chat.</p>
+ <div class="actions"><a class="btn main" href="https://wa.me/${WA}?text=${encodeURIComponent(m)}" target="_blank" rel="noopener">Send on WhatsApp</a><a class="btn" href="mailto:${MAIL}?subject=${encodeURIComponent('Accident claim'+(d.reg?' – '+String(d.reg).toUpperCase():''))}&body=${encodeURIComponent(m)}">Send by email</a><button type="button" class="btn" id="cp">Copy answers</button></div>
+ <div class="status" id="st" role="status"></div>
+ <p class="miss">WhatsApp 07923 688259 · Email ${MAIL} · Phone 020 4629 9469</p>
+ <div class="sheet">${body||'<p style="padding:16px">No answers yet.</p>'}</div>
+ <p class="small">Your answers stay on this device until you send them. We only use them to handle your claim.</p>`;
+}
+
+function plain(){
+ return 'VEHICLE COLLISION CLAIM FORM\nPrepared by KITH Cars (Kith Cars Ltd), '+new Date().toLocaleDateString('en-GB')+'\n\n'+
+  sections().map(([h,rows])=>h.toUpperCase()+'\n'+rows.map(r=>`${r[0]}: ${val(r)||'—'}`).join('\n')).join('\n\n');
+}
+
+const xe=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* Qdos claim form (their original layout) with {{markers}} in each answer box */
+const QDOS_TPL="";
+function qv(k){
+ const u=x=>g(x).toUpperCase();
+ const X={xDrvName:dv('ownName','drvName'),xDrv1:dv('own1','drv1'),xDrv2:dv('own2','drv2'),xDrv3:dv('own3','drv3'),xDrv4:dv('own4','drv4'),xDrvPC:dv('ownPC','drvPC'),xDrvTel:dv('ownTel','drvTel'),xDrvAlt:dv('ownAlt','drvAlt'),xDrvEmail:dv('ownEmail','drvEmail'),xWa:()=>same()?(g('wa')||(g('ownPref')==='WhatsApp'?'Yes':'')):g('drvWa'),
+  xDob:()=>fd(g('dob')),xNi:()=>u('ni'),xReg:()=>u('reg'),xWhen:()=>fd(g('when')),xPolStart:()=>fd(g('polStart')),xPolEnd:()=>fd(g('polEnd')),xTpReg:()=>u('tpReg')};
+ const v=X[k]?X[k]():g(k);
+ return /PC$/.test(k)?String(v).toUpperCase():String(v);
+}
+async function makeDocx(){
+ const z=await JSZip.loadAsync(QDOS_TPL,{base64:true});
+ let x=await z.file('word/document.xml').async('string');
+ x=x.replace(/<w:t(?: [^>]*)?>([^<]*)<\/w:t>/g,(m,inner)=>{
+  if(!inner.includes('{{'))return m;
+  const out=inner.replace(/\{\{([A-Za-z0-9]+)(?:=([^}]+))?\}\}/g,(mm,k,opt)=>{
+   if(opt!==undefined)return (qv(k)===opt?'\u2612 ':'\u2610 ')+opt;
+   return xe(qv(k)).replace(/\n/g,'</w:t><w:br/><w:t xml:space="preserve">');
+  });
+  return '<w:t xml:space="preserve">'+out+'</w:t>';
+ });
+ x=x.split('<w:trPr/>').join('<w:trPr><w:cantSplit/></w:trPr>');
+ x=x.replace(/<w:trPr>(?!<w:cantSplit\/>)/g,'<w:trPr><w:cantSplit/>');
+ x=x.replace(/(<w:tr(?: [^>]*)?>)(?!<w:trPr)/g,'$1<w:trPr><w:cantSplit/></w:trPr>');
+ z.file('word/document.xml',x);
+ return z.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+}
+
+let downloads=null;
+
+let clrArm=false;
+$('form').addEventListener('click',async e=>{
+ const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.go){if(all){cur=0;save();render();$('s'+b.dataset.go)?.scrollIntoView({block:'start'})}else go(+b.dataset.go);return}
+ const st=$('st');
+ if(b.id==='cp'){try{await navigator.clipboard.writeText(MODE==='staff'?plain():msg());st.textContent='Copied — paste it into an email or message.'}catch(err){st.textContent=MODE==='staff'?'Copy was blocked here — use the Word download instead.':'Copy was blocked here — use the WhatsApp or email button instead.'}}
+ if(b.id==='impBtn'){const nd=parseMsg($('imp').value),n=Object.keys(nd).length;if(!n){$('impSt').textContent='No answers found — paste the whole message, starting from “KITH Cars accident claim”.';return}d=nd;save();go(STEPS.length-1);return}
+ if(b.id==='dl'){
+  if(!downloads||typeof JSZip==='undefined'){st.textContent='Downloading isn’t available in this view — use Copy as text instead.';return}
+  st.textContent='Preparing the file…';
+  try{const blob=await makeDocx();const name=`Qdos claim form ${(g('reg')||'').toUpperCase()} ${g('ownName')}`.replace(/[^\w \-]/g,'').replace(/\s+/g,' ').trim()||'Claim form';
+   await downloads.save({filename:name+'.docx',data:blob});st.textContent='Saved.'}
+  catch(err){st.textContent=err&&err.code==='declined'?'Download cancelled.':'Couldn’t save the file — try Copy as text.'}
+ }
+ if(b.id==='clr'){if(!clrArm){clrArm=true;b.textContent='Tap again to clear all answers';setTimeout(()=>{clrArm=false;if(b.isConnected)b.textContent='Start a new claim'},4000);return}
+  d={};clrArm=false;try{localStorage.removeItem('kith-claim-c')}catch(err){}go(0)}
+});
+$('form').addEventListener('input',e=>{
+ const t=e.target;if(!t.name)return;
+ d[t.name]=t.type==='checkbox'?t.checked:t.value;save();
+ const q=STEPS.flatMap(x=>x.q).find(x=>x.k===t.name);
+ if(t.type==='radio'||t.tagName==='SELECT'){const y=window.scrollY;render();window.scrollTo(0,y)}
+ const el=t.closest('.q');if(el&&q&&q.req&&d[q.k]){el.classList.remove('err');el.querySelector('.errmsg')?.remove()}
+});
+$('form').addEventListener('submit',e=>e.preventDefault());
+$('steps').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.j!==undefined){$('s'+b.dataset.j)?.scrollIntoView({block:'start'});return}go(+b.dataset.i)});
+const setMode=a=>{all=a;try{localStorage.setItem('kith-claim-mode',a?'all':'step')}catch(e){}if(STEPS[cur].review&&a)cur=0;render();window.scrollTo({top:0})};
+$('mStep').addEventListener('click',()=>setMode(false));$('mAll').addEventListener('click',()=>setMode(true));
+$('back').addEventListener('click',()=>go(all&&STEPS[cur].review?0:cur-1));
+$('next').addEventListener('click',()=>{if(validate())go(all?STEPS.length-1:cur+1)});
+if(cur>=STEPS.length)cur=0;
+render();
+}
+</script>
+</body>
+</html>
