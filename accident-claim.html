@@ -445,13 +445,42 @@ function parseMsg(text){
 function customerReview(){
  const body=STEPS.map((s,i)=>{if(s.review)return'';const rows=s.q.filter(q=>vis(q)&&q.k&&q.type!=='note'&&d[q.k]!==undefined&&d[q.k]!==''&&d[q.k]!==false);if(!rows.length)return'';
   return `<div class="sec"><h3>${esc(s.h)}<button type="button" data-go="${i}">Edit</button></h3><table>${rows.map(q=>`<tr><td>${esc(mlab(q))}</td><td class="v">${esc(mfmt(q,d[q.k]))}</td></tr>`).join('')}</table></div>`}).join('');
- const m=msg();
- return `<p class="lede">Check and send your answers, then add these to the same WhatsApp chat:</p>
+ const m=msg(),done=submittedAt();
+ const photoMsg=`Hi KITH Cars, I’ve just submitted my accident claim${d.reg?' for '+String(d.reg).toUpperCase():''}${d.ownName?' ('+d.ownName+')':''}. Here are my photos and video:`;
+ return `<p class="lede">Check your answers, then submit. After that, send us your photos on WhatsApp.</p>
+ <div class="actions"><button type="button" class="btn main" id="sub"${done?' disabled':''}>${done?'Claim submitted ✓':'Submit my claim'}</button></div>
+ <div class="status" id="st" role="status">${done?'We’ve got your claim. Now send your photos below.':''}</div>
+ <p class="lab" style="margin:14px 0 6px">Then send these on WhatsApp:</p>
  <ol class="photos">${PHOTOS.map(p=>`<li>${esc(p)}</li>`).join('')}</ol>
- <div class="actions"><a class="btn main" href="https://wa.me/${WA}?text=${encodeURIComponent(m)}" target="_blank" rel="noopener">Send on WhatsApp</a><a class="btn" href="mailto:${MAIL}?subject=${encodeURIComponent('Accident claim'+(d.reg?' – '+String(d.reg).toUpperCase():''))}&body=${encodeURIComponent(m)}">Send by email</a><button type="button" class="btn" id="cp">Copy answers</button></div>
- <div class="status" id="st" role="status"></div>
+ <div class="actions"><a class="btn${done?' main':''}" id="waPhotos" href="https://wa.me/${WA}?text=${encodeURIComponent(photoMsg)}" target="_blank" rel="noopener">Send photos on WhatsApp</a></div>
+ <p class="small">Problem submitting? <a href="https://wa.me/${WA}?text=${encodeURIComponent(m)}" target="_blank" rel="noopener">Send your answers on WhatsApp</a> or <a href="mailto:${MAIL}?subject=${encodeURIComponent('Accident claim'+(d.reg?' – '+String(d.reg).toUpperCase():''))}&body=${encodeURIComponent(m)}">by email</a>.</p>
  <div class="sheet">${body||'<p style="padding:16px">No answers yet.</p>'}</div>
- <p class="small">Saved on this device until you send. Only used for your claim.</p>`;
+ <p class="small">Saved on this device until you submit. Only used for your claim.</p>`;
+}
+/* ---------- submit: email (Web3Forms, same key as the website quote form) + KITH unified inbox ---------- */
+const W3K='db31da4b-5331-453a-9b9c-d6fb1fbbd264';
+const INBOX='https://mxyrxyhvjndgjqupgstu.supabase.co/functions/v1/inbox-ingest';
+const INKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14eXJ4eWh2am5kZ2pxdXBnc3R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMTMyNjgsImV4cCI6MjA5Nzc4OTI2OH0.z7F_sUqx56bIcBLxjWFJSP3rT1jhNPAL9_1SWZ7cUog';
+function submittedAt(){try{return localStorage.getItem('kith-claim-sent')||''}catch(e){return''}}
+async function submitClaim(){
+ const m=msg(),reg=String(d.reg||'').toUpperCase().replace(/\s+/g,'');
+ const form=new FormData();
+ form.append('access_key',W3K);
+ form.append('subject','ACCIDENT CLAIM: '+(reg||'no reg')+' · '+(d.ownName||'no name'));
+ form.append('from_name','KITH Accident Management form');
+ form.append('Name',d.ownName||'');form.append('Mobile',d.ownTel||'');
+ if(d.ownEmail){form.append('email',d.ownEmail);form.append('Email',d.ownEmail)}
+ form.append('Registration',reg||'-');
+ form.append('Accident',(d.when?fd(d.when):'-')+(d.loc?' · '+d.loc:''));
+ form.append('Other driver’s fault',d.nonfault||'not answered');
+ form.append('Needs replacement car',d.replace||'not answered');
+ form.append('Full answers (paste into the staff tool)',m);
+ const email=fetch('https://api.web3forms.com/submit',{method:'POST',body:form}).then(r=>r.json()).then(j=>j&&j.success?'sent':'failed').catch(()=>'failed');
+ const inbox=fetch(INBOX,{method:'POST',headers:{'Content-Type':'application/json',apikey:INKEY,Authorization:'Bearer '+INKEY,'x-caller':'kithcars_accident_claim'},
+  body:JSON.stringify({channel:'website',sender_name:d.ownName||'',sender_phone:d.ownTel||'',reg,message_text:'Accident claim (non-fault) from kithcars.com/accident-claim\n\n'+m})})
+  .then(r=>r.ok?'sent':'failed').catch(()=>'failed');
+ const [e,i]=await Promise.all([email,inbox]);
+ return {email:e,inbox:i,ok:e==='sent'||i==='sent'};
 }
 
 function plain(){
@@ -495,6 +524,15 @@ $('form').addEventListener('click',async e=>{
  if(b.dataset.go){if(all){cur=0;save();render();$('s'+b.dataset.go)?.scrollIntoView({block:'start'})}else go(+b.dataset.go);return}
  const st=$('st');
  if(b.id==='cp'){try{await navigator.clipboard.writeText(MODE==='staff'?plain():msg());st.textContent='Copied — paste it into an email or message.'}catch(err){st.textContent=MODE==='staff'?'Copy was blocked here — use the Word download instead.':'Copy was blocked here — use the WhatsApp or email button instead.'}}
+ if(b.id==='sub'){
+  b.disabled=true;b.textContent='Submitting…';st.textContent='';
+  const r=await submitClaim();
+  if(r.ok){try{localStorage.setItem('kith-claim-sent',new Date().toISOString())}catch(x){}
+   try{if(window.dataLayer)window.dataLayer.push({event:'generate_lead',form:'accident-claim'})}catch(x){}
+   b.textContent='Claim submitted ✓';st.textContent='We’ve got your claim. Now send your photos below.';
+   const w=$('waPhotos');if(w)w.classList.add('main');}
+  else{b.disabled=false;b.textContent='Submit my claim';st.textContent='That didn’t send. Please try again, or use “Send your answers on WhatsApp” below.'}
+  return}
  if(b.id==='impBtn'){const nd=parseMsg($('imp').value),n=Object.keys(nd).length;if(!n){$('impSt').textContent='No answers found — paste the whole message, starting from “KITH Cars accident claim”.';return}d=nd;save();go(STEPS.length-1);return}
  if(b.id==='dl'){
   if(!downloads||typeof JSZip==='undefined'){st.textContent='Downloading isn’t available in this view — use Copy as text instead.';return}
@@ -504,7 +542,7 @@ $('form').addEventListener('click',async e=>{
   catch(err){st.textContent=err&&err.code==='declined'?'Download cancelled.':'Couldn’t save the file — try Copy as text.'}
  }
  if(b.id==='clr'){if(!clrArm){clrArm=true;b.textContent='Tap again to clear all answers';setTimeout(()=>{clrArm=false;if(b.isConnected)b.textContent='Start a new claim'},4000);return}
-  d={};clrArm=false;try{localStorage.removeItem('kith-claim-c')}catch(err){}go(0)}
+  d={};clrArm=false;try{localStorage.removeItem('kith-claim-c');localStorage.removeItem('kith-claim-sent')}catch(err){}go(0)}
 });
 $('form').addEventListener('input',e=>{
  const t=e.target;if(!t.name)return;
