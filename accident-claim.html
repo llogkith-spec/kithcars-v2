@@ -458,6 +458,9 @@ function customerReview(){
  <div class="sheet">${body||'<p style="padding:16px">No answers yet.</p>'}</div>
  <p class="small">Saved on this device until you submit. Only used for your claim.</p>`;
 }
+const b64e=t=>btoa(unescape(encodeURIComponent(t))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const b64d=t=>decodeURIComponent(escape(atob(t.replace(/-/g,'+').replace(/_/g,'/'))));
+const STAFF_URL='https://www.kithcars.com/claims-staff';
 /* ---------- submit: email (Web3Forms, same key as the website quote form) + KITH unified inbox ---------- */
 const W3K='db31da4b-5331-453a-9b9c-d6fb1fbbd264';
 const INBOX='https://mxyrxyhvjndgjqupgstu.supabase.co/functions/v1/inbox-ingest';
@@ -475,6 +478,7 @@ async function submitClaim(){
  form.append('Accident',(d.when?fd(d.when):'-')+(d.loc?' · '+d.loc:''));
  form.append('Other driver’s fault',d.nonfault||'not answered');
  form.append('Needs replacement car',d.replace||'not answered');
+ form.append('Download the filled Qdos form',STAFF_URL+'#claim='+b64e(m));
  form.append('Full answers (paste into the staff tool)',m);
  const email=fetch('https://api.web3forms.com/submit',{method:'POST',body:form}).then(r=>r.json()).then(j=>j&&j.success?'sent':'failed').catch(()=>'failed');
  const inbox=fetch(INBOX,{method:'POST',headers:{'Content-Type':'application/json',apikey:INKEY,Authorization:'Bearer '+INKEY,'x-caller':'kithcars_accident_claim'},
@@ -536,10 +540,12 @@ $('form').addEventListener('click',async e=>{
   return}
  if(b.id==='impBtn'){const nd=parseMsg($('imp').value),n=Object.keys(nd).length;if(!n){$('impSt').textContent='No answers found — paste the whole message, starting from “KITH Cars accident claim”.';return}d=nd;save();go(STEPS.length-1);return}
  if(b.id==='dl'){
-  if(!downloads||typeof JSZip==='undefined'){st.textContent='Downloading isn’t available in this view — use Copy as text instead.';return}
+  if(typeof JSZip==='undefined'){st.textContent='Downloading isn’t available in this view — use Copy as text instead.';return}
   st.textContent='Preparing the file…';
   try{const blob=await makeDocx();const name=`Qdos claim form ${(g('reg')||'').toUpperCase()} ${g('ownName')}`.replace(/[^\w \-]/g,'').replace(/\s+/g,' ').trim()||'Claim form';
-   await downloads.save({filename:name+'.docx',data:blob});st.textContent='Saved.'}
+   if(downloads){await downloads.save({filename:name+'.docx',data:blob})}
+   else{const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name+'.docx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}
+   st.textContent='Saved — check your downloads.'}
   catch(err){st.textContent=err&&err.code==='declined'?'Download cancelled.':'Couldn’t save the file — try Copy as text.'}
  }
  if(b.id==='clr'){if(!clrArm){clrArm=true;b.textContent='Tap again to clear all answers';setTimeout(()=>{clrArm=false;if(b.isConnected)b.textContent='Start a new claim'},4000);return}
@@ -559,7 +565,10 @@ $('mStep').addEventListener('click',()=>setMode(false));$('mAll').addEventListen
 $('back').addEventListener('click',()=>go(all&&STEPS[cur].review?0:cur-1));
 $('next').addEventListener('click',()=>{if(validate())go(all?STEPS.length-1:cur+1)});
 if(cur>=STEPS.length)cur=0;
+if(MODE==='staff'){try{const h=location.hash||'';if(h.indexOf('#claim=')===0){const nd=parseMsg(b64d(h.slice(7)));if(Object.keys(nd).length){d=nd;save();cur=STEPS.length-1;all=false}
+ try{history.replaceState(null,'',location.pathname)}catch(e){}}}catch(e){}}
 render();
+if(MODE==='staff'&&STEPS[cur].review&&$('st')&&!$('st').textContent)$('st').textContent='Check it over, then press Download filled Qdos claim form.';
 }
 
 /* ---------- language picker: shows the form through Google Translate; answers still reach KITH with English questions ---------- */
